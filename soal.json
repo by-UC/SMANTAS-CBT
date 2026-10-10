@@ -1,0 +1,24 @@
+[
+  {
+    "idTes": "TEST-DEFAULT",
+    "no": 1,
+    "teks": "Berapakah hasil dari 2 + 2?",
+    "a": "2",
+    "b": "3",
+    "c": "4",
+    "d": "5",
+    "e": "6",
+    "kunci": "C"
+  },
+  {
+    "idTes": "TEST-DEFAULT",
+    "no": 2,
+    "teks": "Ibukota negara Indonesia adalah...",
+    "a": "Surabaya",
+    "b": "Bandung",
+    "c": "Jakarta",
+    "d": "Medan",
+    "e": "Yogyakarta",
+    "kunci": "C"
+  }
+]

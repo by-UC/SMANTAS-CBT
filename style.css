@@ -1,0 +1,26 @@
+input, select, textarea { 
+  font-size: 16px !important; 
+}
+.no-select { 
+  -webkit-touch-callout: none; 
+  -webkit-user-select: none; 
+  user-select: none; 
+}
+body { 
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); 
+  -webkit-tap-highlight-color: transparent; 
+}
+.no-scrollbar::-webkit-scrollbar { 
+  display: none; 
+}
+.no-scrollbar { 
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}
+img { 
+  max-width: 100%; 
+  height: auto; 
+  display: block; 
+  border-radius: 0.5rem; 
+  margin: 0.5rem auto; 
+}

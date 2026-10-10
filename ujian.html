@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SMANTAS CBT - Pengerjaan Ujian</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen no-select">
+
+  <!-- ENGINE UJIAN -->
+  <div id="engine-ujian" class="flex flex-col h-screen fixed inset-0 bg-gray-100 z-50 no-select">
+     <div class="bg-white px-3 sm:px-4 py-2.5 shadow-sm border-b flex justify-between items-center shrink-0">
+        <div class="pr-2 overflow-hidden">
+          <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Mata Pelajaran</span>
+          <h3 class="font-extrabold text-xs sm:text-base text-blue-800 truncate" id="uji-mapel">Mata Pelajaran</h3>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+           <button onclick="toggleModalDaftarSoal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-bold text-xs border flex items-center">Daftar</button>
+           <div class="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-mono font-bold text-xs sm:text-base border border-rose-200" id="timer-display">00:00:00</div>
+        </div>
+     </div>
+
+     <div class="bg-white px-3 sm:px-4 py-2 border-b shadow-sm flex justify-between items-center gap-2 shrink-0">
+        <button onclick="soalSebelumnya()" id="btn-prev" class="flex-1 bg-gray-600 text-white py-2.5 rounded-xl font-bold text-xs sm:text-sm">SEBELUMNYA</button>
+        <button onclick="toggleModalDaftarSoal()" class="px-3 py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs border shrink-0">
+           <span id="label-nomor-posisi">1/1</span>
+        </button>
+        <button onclick="soalBerikutnya()" id="btn-next" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-xs sm:text-sm">SELANJUTNYA</button>
+        <button onclick="submitUjian('SELESAI')" id="btn-finish" class="hidden flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-xs sm:text-sm">SELESAI UJIAN</button>
+     </div>
+
+     <div class="flex-1 overflow-y-auto p-3 sm:p-6" id="area-soal"></div>
+
+     <div id="modal-daftar-soal" class="hidden fixed inset-0 bg-black/50 z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
+        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 max-h-[80vh] flex flex-col">
+           <div class="flex justify-between items-center mb-3 border-b pb-2">
+              <h4 class="font-bold text-sm text-gray-800">Daftar & Navigasi Soal</h4>
+              <button onclick="toggleModalDaftarSoal()" class="text-gray-400 font-bold text-lg px-2">&times;</button>
+           </div>
+           <div id="grid-no-soal" class="grid grid-cols-5 gap-2 overflow-y-auto p-1 flex-1"></div>
+           <button onclick="toggleModalDaftarSoal()" class="mt-4 bg-gray-800 text-white py-2.5 rounded-xl font-bold text-xs w-full">Tutup Navigasi</button>
+        </div>
+     </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

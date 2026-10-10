@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SMANTAS CBT - Login & Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen no-select">
+
+  <!-- OVERLAY LOADING GLOBAL -->
+  <div id="loading-overlay" class="hidden fixed inset-0 bg-black/80 z-[999999] flex flex-col items-center justify-center text-white backdrop-blur-sm">
+      <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+      <h3 id="loading-text" class="font-bold text-sm sm:text-base tracking-wide text-center px-4">Memproses Sistem...</h3>
+  </div>
+
+  <div id="app" class="min-h-screen flex flex-col justify-between">
+    
+    <!-- HALAMAN LOGIN -->
+    <div id="view-login" class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-sm border-t-4 border-blue-600">
+        <h2 class="text-2xl font-black text-center mb-1 text-blue-700 tracking-tight">SMANTAS CBT</h2>
+        <p class="text-xs text-center text-gray-400 font-medium mb-6">Standalone GitHub Pages Engine</p>
+        
+        <div class="flex justify-center mb-6 space-x-1 bg-gray-100 p-1.5 rounded-xl border">
+          <button onclick="setRole('SISWA')" id="btn-Siswa" class="w-1/2 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-sm transition">SISWA</button>
+          <button onclick="setRole('ADMIN')" id="btn-Admin" class="w-1/2 py-2.5 text-gray-600 rounded-lg font-bold text-xs sm:text-sm transition">ADMIN</button>
+        </div>
+
+        <input type="hidden" id="login-role" value="SISWA">
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-gray-600 font-bold mb-1.5 block">Username</label>
+            <input type="text" id="username" placeholder="Masukkan Username" class="w-full p-3.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 focus:bg-white transition">
+          </div>
+          <div>
+            <label class="text-xs text-gray-600 font-bold mb-1.5 block">Password</label>
+            <input type="password" id="password" placeholder="Masukkan Password" class="w-full p-3.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 focus:bg-white transition">
+          </div>
+          <button onclick="prosesLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition text-sm">LOGIN MASUK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD ADMIN -->
+    <div id="view-admin" class="hidden p-3 sm:p-6 max-w-7xl mx-auto w-full">
+      <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow mb-4 gap-3">
+        <h1 class="text-base sm:text-xl font-bold text-blue-700 text-center md:text-left">Admin Dashboard - SMANTAS CBT</h1>
+        <div class="flex flex-wrap gap-1.5 justify-center w-full md:w-auto">
+          <button onclick="downloadTemplateSiswa()" class="flex-1 md:flex-initial text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded font-bold">F-Siswa</button>
+          <button onclick="downloadTemplateSoal()" class="flex-1 md:flex-initial text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded font-bold">F-Soal</button>
+          <button onclick="gantiPassword()" class="flex-1 md:flex-initial text-[10px] bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded font-bold">Pass Admin</button>
+          <button onclick="resetAllDatabase()" class="flex-1 md:flex-initial text-[10px] bg-rose-700 hover:bg-rose-800 text-white px-2.5 py-1.5 rounded font-bold">Reset DB</button>
+          <button onclick="logout()" class="flex-1 md:flex-initial text-[10px] bg-gray-600 hover:bg-gray-700 text-white px-2.5 py-1.5 rounded font-bold">Logout</button>
+        </div>
+      </div>
+
+      <!-- TAB NAVIGATION ADMIN -->
+      <div class="mb-4 border-b border-gray-200 overflow-x-auto no-scrollbar">
+        <ul class="flex whitespace-nowrap text-xs sm:text-sm font-medium text-center" id="admin-tabs">
+          <li class="mr-2">
+            <button class="inline-block p-3 sm:p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg tab-btn font-bold" onclick="switchAdminTab('tab-pengaturan', this)">Pengaturan & Siswa</button>
+          </li>
+          <li class="mr-2">
+            <button class="inline-block p-3 sm:p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 tab-btn font-bold" onclick="switchAdminTab('tab-ujian', this)">Manajemen Ujian</button>
+          </li>
+          <li class="mr-2">
+            <button class="inline-block p-3 sm:p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 tab-btn font-bold" onclick="switchAdminTab('tab-soal', this)">Daftar Soal</button>
+          </li>
+          <li class="mr-2">
+            <button class="inline-block p-3 sm:p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 tab-btn font-bold" onclick="switchAdminTab('tab-monitor', this)">Live Monitoring</button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- TAB 1: PENGATURAN & DATA SISWA -->
+      <div id="tab-pengaturan" class="admin-tab-content space-y-6">
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
+          <h3 class="font-bold text-base mb-4 text-gray-700">Pengaturan Mata Pelajaran & Kelas</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-bold text-gray-600 block mb-1">Daftar Mata Pelajaran</label>
+              <div class="flex">
+                <input type="text" id="input-mapel" placeholder="Tambah Mapel..." class="w-full p-2.5 text-sm border rounded-l-lg focus:outline-none">
+                <button onclick="tambahItem('mapel')" class="bg-blue-600 text-white px-4 rounded-r-lg font-bold">+</button>
+              </div>
+              <ul id="list-mapel-ui" class="mt-2 border rounded-lg h-36 overflow-y-auto p-2 bg-gray-50 text-sm divide-y"></ul>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-gray-600 block mb-1">Daftar Kelas</label>
+              <div class="flex">
+                <input type="text" id="input-kelas" placeholder="Tambah Kelas..." class="w-full p-2.5 text-sm border rounded-l-lg focus:outline-none">
+                <button onclick="tambahItem('kelas')" class="bg-blue-600 text-white px-4 rounded-r-lg font-bold">+</button>
+              </div>
+              <ul id="list-kelas-ui" class="mt-2 border rounded-lg h-36 overflow-y-auto p-2 bg-gray-50 text-sm divide-y"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow border-l-4 border-indigo-500">
+          <h3 class="font-bold text-base mb-4 text-gray-700">Tambah Siswa Manual</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <input type="text" id="manual-nama" placeholder="Nama Lengkap" class="p-2.5 border rounded-lg text-sm w-full">
+            <select id="manual-kelas" class="p-2.5 border rounded-lg text-sm w-full">
+              <option value="">- Pilih Kelas -</option>
+            </select>
+            <input type="text" id="manual-user" placeholder="Username Login" class="p-2.5 border rounded-lg text-sm w-full">
+            <input type="text" id="manual-pass" placeholder="Password Login" class="p-2.5 border rounded-lg text-sm w-full">
+          </div>
+          <button onclick="tambahSiswaSatu()" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-bold text-sm w-full md:w-auto">Simpan Data Siswa</button>
+        </div>
+
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow border-l-4 border-rose-500">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-base text-gray-700">Kelola / Hapus Siswa</h3>
+            <button onclick="loadTabelSiswa()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg">Refresh</button>
+          </div>
+          <div class="overflow-x-auto border rounded-lg max-h-60 overflow-y-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm" id="tabel-kelola-siswa">
+              <thead class="bg-gray-100 font-bold text-gray-700 sticky top-0">
+                <tr>
+                  <th class="p-2.5 border">Nama</th>
+                  <th class="p-2.5 border">Kelas</th>
+                  <th class="p-2.5 border">Username</th>
+                  <th class="p-2.5 border">Password</th>
+                  <th class="p-2.5 border text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow border-l-4 border-emerald-500">
+          <h3 class="font-bold text-base mb-1 text-gray-700">Upload Massal Data Siswa</h3>
+          <p class="text-xs text-gray-500 mb-3">Unggah File Excel (.xlsx) sesuai format standar.</p>
+          <input type="file" id="fileExcelSiswa" class="w-full p-2 border rounded-lg mb-3 text-xs sm:text-sm bg-gray-50" accept=".xlsx, .xls">
+          <button onclick="prosesUploadSiswa()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl w-full md:w-auto font-bold text-sm">Unggah Data Siswa</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: MANAJEMEN UJIAN -->
+      <div id="tab-ujian" class="admin-tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 bg-white p-4 sm:p-6 rounded-xl shadow border-l-4 border-blue-500">
+            <h3 class="font-bold text-base mb-3 text-gray-700">Buat Ujian & Unggah Soal</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs font-bold text-gray-600 mb-1 block">Judul Ujian:</label>
+                <input type="text" id="tes-judul" placeholder="Judul Tes (cth: PAS Ganjil)" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs font-bold text-gray-600 mb-1 block">Mata Pelajaran:</label>
+                <select id="tes-mapel" class="w-full p-2.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="">- Mata Pelajaran -</option>
+                </select>
+              </div>
+              <div class="border rounded-lg p-3 bg-gray-50">
+                <label class="text-xs font-bold text-gray-600 mb-2 block">Pilih Target Kelas:</label>
+                <div id="tes-kelas-container" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs max-h-32 overflow-y-auto"></div>
+              </div>
+              <div>
+                <label class="text-xs font-bold text-gray-600 mb-1 block">Durasi Ujian (Menit):</label>
+                <input type="number" id="tes-durasi" value="60" placeholder="Durasi (Menit)" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs font-bold text-gray-600 block mb-1">Unggah Dokumen Soal (Format Word / Excel / HTML):</label>
+                <input type="file" id="fileExcelSoal" class="w-full p-2 border rounded-lg text-xs sm:text-sm bg-gray-50" accept=".xlsx, .xls, .doc, .docx, .html, .htm">
+              </div>
+              <label class="flex items-center space-x-2 text-sm pt-1 cursor-pointer">
+                <input type="checkbox" id="tes-acak" value="YA" class="w-4 h-4 text-blue-600 rounded">
+                <span class="font-medium text-gray-700">Acak Urutan Soal Siswa</span>
+              </label>
+              <button onclick="buatUjianTerpadu()" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl w-full font-bold text-sm shadow transition">Proses Ujian & Soal</button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 bg-white p-4 sm:p-6 rounded-xl shadow border-l-4 border-rose-500">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-base text-gray-700">Daftar Ujian Aktif</h3>
+            </div>
+            <div class="overflow-x-auto border rounded-lg max-h-[520px] overflow-y-auto">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm" id="tabel-daftar-ujian">
+                <thead class="bg-gray-100 font-bold text-gray-700 sticky top-0 z-10 border-b">
+                  <tr>
+                    <th class="p-2.5 border-r">ID Tes</th>
+                    <th class="p-2.5 border-r">Judul & Mapel</th>
+                    <th class="p-2.5 border-r">Kelas</th>
+                    <th class="p-2.5 border-r text-center">Durasi</th>
+                    <th class="p-2.5 border-r text-center">Acak</th>
+                    <th class="p-2.5 border-r text-center">Soal</th>
+                    <th class="p-2.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: DAFTAR SOAL -->
+      <div id="tab-soal" class="admin-tab-content hidden space-y-4">
+        <div class="bg-white p-3 sm:p-5 rounded-xl shadow border-l-4 border-blue-600">
+          <h3 class="font-bold text-sm sm:text-base text-gray-800 mb-0.5">Kelola Soal</h3>
+          <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-gray-50 p-2.5 rounded-xl border">
+            <select id="select-soal-idtes" class="p-2 border rounded-lg text-xs sm:text-sm bg-white flex-1">
+              <option value="">- Pilih ID Ujian -</option>
+            </select>
+            <button onclick="loadDaftarSoalAdmin()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm shadow transition shrink-0">Tampilkan Soal</button>
+          </div>
+          <div id="container-daftar-soal-admin" class="space-y-3">
+             <p class="text-xs text-gray-400 italic">Silakan pilih Ujian di atas lalu klik "Tampilkan Soal".</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: REALTIME MONITORING & EKSPOR -->
+      <div id="tab-monitor" class="admin-tab-content hidden space-y-6">
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+             <h3 class="font-bold text-base text-gray-700">Monitoring & Hasil Ujian Siswa</h3>
+             <button onclick="loadLiveMonitor()" class="text-xs bg-blue-100 text-blue-700 font-bold px-3 py-2 rounded-lg hover:bg-blue-200 w-full sm:w-auto">Refresh Data</button>
+          </div>
+
+          <div class="p-4 bg-purple-50 border border-purple-200 rounded-xl mb-4 flex flex-col sm:flex-row gap-3 items-end">
+             <div class="flex-1 w-full">
+               <label class="text-xs font-bold text-gray-600 block mb-1">Nama File Download:</label>
+               <input type="text" id="ekspor-filename" value="Hasil_Ujian_CBT" class="w-full p-2 border rounded-lg text-xs bg-white">
+             </div>
+             <button onclick="eksporHasil()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg text-xs font-bold w-full sm:w-auto">Download Excel (.xlsx)</button>
+          </div>
+
+          <div class="overflow-x-auto border rounded-lg">
+             <table class="w-full text-left border-collapse text-xs sm:text-sm" id="tabel-monitor">
+                <thead class="bg-gray-100 font-bold text-gray-700">
+                  <tr>
+                    <th class="p-2.5 border">User</th>
+                    <th class="p-2.5 border">Nama</th>
+                    <th class="p-2.5 border">Kelas</th>
+                    <th class="p-2.5 border">ID Tes</th>
+                    <th class="p-2.5 border">Status</th>
+                    <th class="p-2.5 border">Nilai</th>
+                    <th class="p-2.5 border text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y"></tbody>
+             </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HALAMAN SISWA -->
+    <div id="view-siswa" class="hidden min-h-screen bg-gray-50 flex-col w-full">
+      <div id="siswa-header" class="bg-blue-700 text-white px-4 py-3 shadow-md flex justify-between items-center sticky top-0 z-20">
+         <div>
+           <h2 class="font-bold text-sm sm:text-base leading-tight" id="profil-nama">Nama Siswa</h2>
+           <p class="text-xs text-blue-200" id="profil-kelas">Kelas</p>
+         </div>
+         <button onclick="logout()" class="bg-rose-500 hover:bg-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold">Logout</button>
+      </div>
+
+      <div id="siswa-dashboard" class="p-3 sm:p-6 max-w-4xl mx-auto w-full flex-1">
+         <div class="bg-rose-50 border-l-4 border-rose-500 text-rose-800 p-4 mb-4 rounded-2xl shadow-sm">
+             <h4 class="font-bold text-xs sm:text-sm mb-1 uppercase flex items-center">Aturan Ujian Ketat</h4>
+             <ul class="list-disc ml-5 text-xs sm:text-sm space-y-1">
+                 <li><b>Mode Layar Penuh:</b> Wajib berada di mode layar penuh.</li>
+                 <li><b>Dilarang Keluar Aplikasi / Split Layar:</b> Pindah tab, keluar fullscreen, atau berganti aplikasi akan menghentikan ujian secara otomatis.</li>
+             </ul>
+         </div>
+
+         <h3 class="font-bold text-base sm:text-lg mb-3 text-gray-800">Daftar Ujian Aktif</h3>
+         <div id="daftar-tes-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

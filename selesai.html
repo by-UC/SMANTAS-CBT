@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SMANTAS CBT - Hasil Ujian</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen no-select">
+
+  <!-- HASIL UJIAN -->
+  <div id="view-hasil" class="flex items-center justify-center min-h-screen p-4">
+     <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-xl max-w-md w-full border-t-8 border-emerald-500 text-center">
+        <h2 class="text-xl sm:text-2xl font-bold mb-2" id="hasil-status">UJIAN SELESAI</h2>
+        <p class="text-xs sm:text-sm text-gray-600 mb-6" id="hasil-msg">Terima kasih telah mengikuti ujian.</p>
+        <div class="text-5xl font-black text-blue-600 mb-6" id="hasil-nilai">0</div>
+        <button onclick="window.location.href='index.html'" class="w-full bg-gray-900 text-white py-3.5 rounded-xl text-sm font-bold shadow-lg">Kembali ke Dashboard</button>
+     </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
