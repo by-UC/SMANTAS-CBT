@@ -1,14 +1,12 @@
-// Deteksi siswa keluar tab / pindah aplikasi
+// Pemantau Pindah Tab & Layar Penuh (Dijalankan sewaktu ujian berlangsung)
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && cheatDetectionActive) {
-    alert("Peringatan! Anda terdeteksi meninggalkan halaman ujian.");
-    // Anda bisa mencatat pelanggaran ini ke database
+  if (document.hidden && typeof cheatDetectionActive !== 'undefined' && cheatDetectionActive) {
+    alert("PERINGATAN: Anda terdeteksi meninggalkan halaman ujian!");
   }
 });
 
-// Deteksi keluar dari Fullscreen
 document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement && cheatDetectionActive) {
-    alert("Anda harus tetap berada dalam mode layar penuh (fullscreen) selama ujian!");
+  if (!document.fullscreenElement && typeof cheatDetectionActive !== 'undefined' && cheatDetectionActive) {
+    alert("PERINGATAN: Anda wajib berada dalam mode skrin penuh (fullscreen) semasa ujian!");
   }
 });
