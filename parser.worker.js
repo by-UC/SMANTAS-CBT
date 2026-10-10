@@ -12,10 +12,9 @@ self.onmessage = function(e) {
     let lowerName = (fileName || "").toLowerCase();
     let isHtmlDoc = lowerName.endsWith('.doc') || lowerName.endsWith('.htm') || lowerName.endsWith('.html') || text.includes('<table') || text.includes('<html');
 
-    let cleanRows = [];
+    let rows = [];
 
     if (isHtmlDoc && (text.includes('<table') || text.includes('<TABLE'))) {
-      // Parsing cepat menggunakan DOMParser bawaan worker (jika didukung) atau regex/string manipulation massal
       let parser = new DOMParser();
       let doc = parser.parseFromString(text, 'text/html');
       let tables = doc.querySelectorAll('table');
@@ -27,7 +26,6 @@ self.onmessage = function(e) {
           let tds = tr.querySelectorAll('td, th');
           tds.forEach(td => {
             let clone = td.cloneNode(true);
-            // Ubah tag gambar menjadi penanda teks [img]url[/img]
             clone.querySelectorAll('img').forEach(img => {
               let src = img.getAttribute('src');
               if (src) {
@@ -42,13 +40,11 @@ self.onmessage = function(e) {
         });
       });
     } else {
-      // Fallback menggunakan SheetJS untuk file Excel (.xlsx / .xls)
       let workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array', dense: true});
       let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, raw: false});
     }
 
-    // Kirim kembali hasil parsing yang sudah bersih ke script utama
     self.postMessage({ success: true, rows: rows });
   } catch (error) {
     self.postMessage({ success: false, error: error.message });
