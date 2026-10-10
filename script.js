@@ -33,7 +33,6 @@ const DB = {
 };
 DB.initLocal();
 
-// FORMAT GAMBAR & TAG HTML DALAM TEKS SOAL/JAWABAN (Regex diperbaiki)
 function formatTextWithImages(str) {
   if (!str) return '';
   let text = String(str);
@@ -52,7 +51,6 @@ function formatTextWithImages(str) {
   return text;
 }
 
-// DOWNLOAD TEMPLATE EXCEL SISWA
 function downloadTemplateSiswa() {
   let data = [
     ["Nama Lengkap", "Kelas", "Username", "Password"],
@@ -65,7 +63,6 @@ function downloadTemplateSiswa() {
   XLSX.writeFile(wb, "Template_Form_Siswa.xlsx");
 }
 
-// DOWNLOAD TEMPLATE SOAL (WORD / HTML)
 function downloadTemplateSoal() {
   let header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Template Soal CBT</title></head><body>";
   let footer = "</body></html>";
@@ -98,7 +95,7 @@ function downloadTemplateSoal() {
   document.body.removeChild(downloadLink);
 }
 
-// STATE VARIABELS
+// STATE VARIABLES
 let currentUser = {}; 
 let currentTest = {}; 
 let soalData = [];
@@ -133,13 +130,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Inisialisasi Halaman Ujian
     let activeExam = sessionStorage.getItem('cbt_activeExam');
     if (activeExam && document.getElementById('engine-ujian')) {
         let examData = JSON.parse(activeExam);
         currentTest = examData.currentTest;
         soalData = examData.soalData;
-        jawabanSiswa = examData.jawabanSiswa;
+        jawabanSiswa = examData.jawabanSiswa || {};
         currentIndex = examData.currentIndex || 0;
         currentEndTime = examData.endTime;
         
@@ -151,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => { cheatDetectionActive = true; }, 3000);
     }
 
-    // Inisialisasi Halaman Selesai
     let lastResult = sessionStorage.getItem('cbt_lastResult');
     if (lastResult && document.getElementById('hasil-status')) {
         let res = JSON.parse(lastResult);
@@ -161,7 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// LOGIN & NAVIGASI VIEW
 function setRole(role) {
   let roleInput = document.getElementById('login-role');
   let btnSiswa = document.getElementById('btn-Siswa');
@@ -231,7 +225,6 @@ function switchAdminTab(tabId, btn) {
   if(tabId === 'tab-monitor') loadLiveMonitor(); 
 }
 
-// ADMIN SETTINGS & SISWA MANAGEMENT
 function muatPengaturan() {
   let mapel = DB.get('mapel'); let kelas = DB.get('kelas');
   let listM = document.getElementById('list-mapel-ui'); let listK = document.getElementById('list-kelas-ui');
@@ -336,7 +329,7 @@ function resetAllDatabase() {
   }
 }
 
-// MANAJEMEN UJIAN & WEB WORKER PARSER
+// PEMBINAAN & PARSING UJIAN
 function buatUjianTerpadu() {
   let judulEl = document.getElementById('tes-judul');
   let mapelEl = document.getElementById('tes-mapel');
@@ -358,7 +351,7 @@ function buatUjianTerpadu() {
   if(!formUjian.judul || !formUjian.mapel || formUjian.kelas.length === 0) return alert("Lengkapi Form dan pilih minimal satu kelas!");
   if(fileEl.files.length === 0) return alert("Pilih file Soal!");
 
-  uiLoading(true, "Memproses Dokumen dengan Web Worker...");
+  uiLoading(true, "Memproses Dokumen...");
   let file = fileEl.files[0];
   let reader = new FileReader();
 
@@ -377,4 +370,367 @@ function buatUjianTerpadu() {
       };
     } else {
       uiLoading(false);
-      alert
+      try {
+        let workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
+        let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        let rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, raw: false});
+        prosesSimpanSoalKeDB(formUjian, rows);
+      } catch (err) {
+        alert("Gagal memproses dokumen: " + err.message);
+      }
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function prosesSimpanSoalKeDB(formUjian, rows) {
+  let listSoal = [];
+  let currentSoal = null;
+
+  rows.forEach(r => {
+    let col0 = String(r[0] || '').trim();
+    let col1 = String(r[1] || '').trim();
+    let col2 = String(r[2] || '').trim();
+
+    if (!isNaN(col0) && col0 !== '') {
+      if (currentSoal) listSoal.push(currentSoal);
+      currentSoal = {
+        idTes: formUjian.idTes,
+        no: parseInt(col0),
+        teks: col1,
+        a: '', b: '', c: '', d: '', e: '',
+        kunci: col2 ? col2.toUpperCase() : 'A'
+      };
+    } else if (currentSoal) {
+      let optKey = col0.toUpperCase();
+      if (['A', 'B', 'C', 'D', 'E'].includes(optKey)) {
+        currentSoal[optKey.toLowerCase()] = col1;
+      }
+    }
+  });
+  if (currentSoal) listSoal.push(currentSoal);
+
+  if (listSoal.length === 0) {
+    uiLoading(false);
+    return alert("Soal tidak terdeteksi! Pastikan format file sesuai template.");
+  }
+
+  let ujianDB = DB.get('ujian');
+  formUjian.jumlahSoal = listSoal.length;
+  ujianDB.push(formUjian);
+  DB.set('ujian', ujianDB);
+
+  let soalDB = DB.get('soal');
+  soalDB = soalDB.concat(listSoal);
+  DB.set('soal', soalDB);
+
+  uiLoading(false);
+  alert("Ujian & Soal berhasil disimpan!");
+  document.getElementById('tes-judul').value = '';
+  document.getElementById('fileExcelSoal').value = '';
+  loadDaftarUjianAdmin();
+}
+
+function loadDaftarUjianAdmin() {
+  let ujian = DB.get('ujian');
+  let tbody = document.querySelector('#tabel-daftar-ujian tbody');
+  if (!tbody) return;
+  tbody.innerHTML = ujian.length === 0 ? '<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada ujian.</td></tr>' :
+    ujian.map(u => `<tr>
+      <td class="p-2 border font-mono text-xs">${u.idTes}</td>
+      <td class="p-2 border"><b>${u.judul}</b><br><span class="text-xs text-gray-500">${u.mapel}</span></td>
+      <td class="p-2 border">${u.kelas.join(', ')}</td>
+      <td class="p-2 border text-center">${u.durasi} Min</td>
+      <td class="p-2 border text-center">${u.acak}</td>
+      <td class="p-2 border text-center font-bold">${u.jumlahSoal || 0}</td>
+      <td class="p-2 border text-center">
+        <button onclick="hapusUjian('${u.idTes}')" class="bg-rose-600 text-white px-2 py-1 rounded text-xs">Hapus</button>
+      </td>
+    </tr>`).join('');
+}
+
+function hapusUjian(idTes) {
+  if (confirm("Hapus ujian dan seluruh soal terkait?")) {
+    DB.set('ujian', DB.get('ujian').filter(x => x.idTes !== idTes));
+    DB.set('soal', DB.get('soal').filter(x => x.idTes !== idTes));
+    loadDaftarUjianAdmin();
+  }
+}
+
+function loadSelectUjianAdminSoal() {
+  let ujian = DB.get('ujian');
+  let sel = document.getElementById('select-soal-idtes');
+  if (sel) {
+    sel.innerHTML = '<option value="">- Pilih ID Ujian -</option>' + ujian.map(u => `<option value="${u.idTes}">${u.judul} (${u.mapel})</option>`).join('');
+  }
+}
+
+function loadDaftarSoalAdmin() {
+  let idTes = document.getElementById('select-soal-idtes').value;
+  let cont = document.getElementById('container-daftar-soal-admin');
+  if (!idTes || !cont) return;
+  
+  let soalList = DB.get('soal').filter(s => s.idTes === idTes);
+  if (soalList.length === 0) {
+    cont.innerHTML = '<p class="text-xs text-gray-500">Tidak ada soal ditemukan.</p>';
+    return;
+  }
+
+  cont.innerHTML = soalList.map(s => `
+    <div class="p-3 border rounded-lg bg-gray-50 space-y-1 text-xs sm:text-sm">
+      <div class="font-bold text-blue-700">Soal No. ${s.no} (Kunci: ${s.kunci})</div>
+      <div>${formatTextWithImages(s.teks)}</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600 pt-1">
+        <div><b>A.</b> ${formatTextWithImages(s.a)}</div>
+        <div><b>B.</b> ${formatTextWithImages(s.b)}</div>
+        <div><b>C.</b> ${formatTextWithImages(s.c)}</div>
+        <div><b>D.</b> ${formatTextWithImages(s.d)}</div>
+        <div><b>E.</b> ${formatTextWithImages(s.e)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// DASAR PENGURUSAN SISWA & UJIAN
+function loadDaftarTesSiswa() {
+  let container = document.getElementById('daftar-tes-container');
+  if (!container) return;
+  
+  let ujianList = DB.get('ujian').filter(u => u.kelas.includes(currentUser.kelas));
+  let sesiList = DB.get('sesi');
+
+  if (ujianList.length === 0) {
+    container.innerHTML = '<p class="text-xs text-gray-500 col-span-2">Belum ada ujian tersedia untuk kelas Anda.</p>';
+    return;
+  }
+
+  container.innerHTML = ujianList.map(u => {
+    let sesi = sesiList.find(s => s.idTes === u.idTes && s.username === currentUser.username);
+    let sudahSelesai = sesi && sesi.status === 'SELESAI';
+    
+    return `
+      <div class="bg-white p-4 rounded-xl shadow border border-gray-100 flex flex-col justify-between">
+        <div>
+          <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">${u.mapel}</span>
+          <h4 class="font-bold text-sm sm:text-base text-gray-800 mt-1">${u.judul}</h4>
+          <p class="text-xs text-gray-500 mt-1">Durasi: ${u.durasi} Menit | Soal: ${u.jumlahSoal || 0}</p>
+        </div>
+        <div class="mt-4">
+          ${sudahSelesai ? 
+            `<button disabled class="w-full bg-gray-300 text-gray-600 py-2.5 rounded-lg font-bold text-xs">Ujian Selesai (Nilai: ${sesi.nilai})</button>` :
+            `<button onclick="mulaikanUjian('${u.idTes}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold text-xs shadow transition">MULAILAH UJIAN</button>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function mulaikanUjian(idTes) {
+  let ujian = DB.get('ujian').find(u => u.idTes === idTes);
+  let daftarSoal = DB.get('soal').filter(s => s.idTes === idTes);
+  if (!ujian || daftarSoal.length === 0) return alert("Data soal tidak ditemukan!");
+
+  if (ujian.acak === 'YA') {
+    daftarSoal.sort(() => Math.random() - 0.5);
+  }
+
+  currentTest = ujian;
+  soalData = daftarSoal;
+  currentIndex = 0;
+  jawabanSiswa = {};
+  currentEndTime = new Date().getTime() + (parseInt(ujian.durasi) * 60 * 1000);
+
+  let examData = {
+    currentTest,
+    soalData,
+    jawabanSiswa,
+    currentIndex,
+    endTime: currentEndTime
+  };
+  sessionStorage.setItem('cbt_activeExam', JSON.stringify(examData));
+
+  // Mod Layar Penuh
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+
+  window.location.href = 'ujian.html';
+}
+
+function renderTampilanSoalSingle() {
+  let area = document.getElementById('area-soal');
+  let labelPos = document.getElementById('label-nomor-posisi');
+  if (!area || soalData.length === 0) return;
+
+  let s = soalData[currentIndex];
+  if(labelPos) labelPos.innerText = `${currentIndex + 1} / ${soalData.length}`;
+
+  let opsiHTML = ['a', 'b', 'c', 'd', 'e'].map(o => {
+    let checked = jawabanSiswa[s.no] === o.toUpperCase() ? 'checked' : '';
+    let textOpsi = s[o];
+    if (!textOpsi) return '';
+    return `
+      <label class="flex items-start space-x-3 p-3 border rounded-xl bg-white hover:bg-blue-50/50 cursor-pointer transition">
+        <input type="radio" name="jawaban" value="${o.toUpperCase()}" onchange="pilihJawaban('${s.no}', '${o.toUpperCase()}')" ${checked} class="mt-1 w-4 h-4 text-blue-600">
+        <div class="text-xs sm:text-sm text-gray-800"><b class="uppercase">${o}.</b> ${formatTextWithImages(textOpsi)}</div>
+      </label>
+    `;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 max-w-3xl mx-auto">
+      <div class="font-bold text-xs text-blue-600">SOAL NO. ${currentIndex + 1}</div>
+      <div class="text-sm sm:text-base text-gray-800 leading-relaxed">${formatTextWithImages(s.teks)}</div>
+      <div class="space-y-2 pt-2">${opsiHTML}</div>
+    </div>
+  `;
+
+  let btnPrev = document.getElementById('btn-prev');
+  let btnNext = document.getElementById('btn-next');
+  let btnFinish = document.getElementById('btn-finish');
+
+  if(btnPrev) btnPrev.classList.toggle('hidden', currentIndex === 0);
+  if(btnNext) btnNext.classList.toggle('hidden', currentIndex === soalData.length - 1);
+  if(btnFinish) btnFinish.classList.toggle('hidden', currentIndex !== soalData.length - 1);
+}
+
+function pilihJawaban(noSoal, val) {
+  jawabanSiswa[noSoal] = val;
+  let activeExam = JSON.parse(sessionStorage.getItem('cbt_activeExam') || '{}');
+  activeExam.jawabanSiswa = jawabanSiswa;
+  sessionStorage.setItem('cbt_activeExam', JSON.stringify(activeExam));
+}
+
+function soalSebelumnya() {
+  if (currentIndex > 0) { currentIndex--; renderTampilanSoalSingle(); }
+}
+
+function soalBerikutnya() {
+  if (currentIndex < soalData.length - 1) { currentIndex++; renderTampilanSoalSingle(); }
+}
+
+function toggleModalDaftarSoal() {
+  let m = document.getElementById('modal-daftar-soal');
+  if(!m) return;
+  m.classList.toggle('hidden');
+  if (!m.classList.contains('hidden')) {
+    let grid = document.getElementById('grid-no-soal');
+    grid.innerHTML = soalData.map((s, idx) => {
+      let diisi = jawabanSiswa[s.no] ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700';
+      return `<button onclick="lompatKeSoal(${idx})" class="p-2.5 font-bold rounded-lg text-xs ${diisi}">${idx + 1}</button>`;
+    }).join('');
+  }
+}
+
+function lompatKeSoal(idx) {
+  currentIndex = idx;
+  toggleModalDaftarSoal();
+  renderTampilanSoalSingle();
+}
+
+function lanjutkanTimer(endTime) {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    let now = new Date().getTime();
+    let distance = endTime - now;
+
+    if (distance <= 0) {
+      clearInterval(timerInterval);
+      alert("Waktu ujian telah habis!");
+      submitUjian('SELESAI');
+      return;
+    }
+
+    let h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    let m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    let s = Math.floor((distance % (1000 * 60)) / 1000);
+
+    let display = document.getElementById('timer-display');
+    if(display) {
+      display.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+  }, 1000);
+}
+
+function submitUjian(status = 'SELESAI') {
+  if (isUjianSelesai) return;
+  isUjianSelesai = true;
+  clearInterval(timerInterval);
+
+  let benar = 0;
+  soalData.forEach(s => {
+    if (jawabanSiswa[s.no] && jawabanSiswa[s.no] === s.kunci) {
+      benar++;
+    }
+  });
+
+  let nilaiAkhir = Math.round((benar / soalData.length) * 100);
+
+  let sesiList = DB.get('sesi');
+  let idx = sesiList.findIndex(s => s.idTes === currentTest.idTes && s.username === currentUser.username);
+  
+  let dataSesi = {
+    idTes: currentTest.idTes,
+    username: currentUser.username,
+    nama: currentUser.nama,
+    kelas: currentUser.kelas,
+    status: status,
+    nilai: nilaiAkhir,
+    jawaban: jawabanSiswa
+  };
+
+  if (idx >= 0) sesiList[idx] = dataSesi;
+  else sesiList.push(dataSesi);
+  
+  DB.set('sesi', sesiList);
+
+  sessionStorage.removeItem('cbt_activeExam');
+  sessionStorage.setItem('cbt_lastResult', JSON.stringify({ status, nilai: nilaiAkhir }));
+
+  window.location.href = 'selesai.html';
+}
+
+// MONITORING & EKSPORT
+function loadLiveMonitor() {
+  let sesi = DB.get('sesi');
+  let tbody = document.querySelector('#tabel-monitor tbody');
+  if(!tbody) return;
+  tbody.innerHTML = sesi.length === 0 ? '<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada aktivitas ujian.</td></tr>' :
+    sesi.map(s => `<tr>
+      <td class="p-2 border font-mono text-xs">${s.username}</td>
+      <td class="p-2 border">${s.nama}</td>
+      <td class="p-2 border">${s.kelas}</td>
+      <td class="p-2 border font-mono text-xs">${s.idTes}</td>
+      <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'SELESAI' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status}</span></td>
+      <td class="p-2 border font-bold">${s.nilai}</td>
+      <td class="p-2 border text-center"><button onclick="resetSesiSiswa('${s.idTes}', '${s.username}')" class="bg-rose-600 text-white px-2 py-1 rounded text-xs">Reset</button></td>
+    </tr>`).join('');
+}
+
+function resetSesiSiswa(idTes, user) {
+  if(confirm("Reset sesi ujian siswa ini agar dapat mengulang kembali?")) {
+    let sesi = DB.get('sesi').filter(s => !(s.idTes === idTes && s.username === user));
+    DB.set('sesi', sesi);
+    loadLiveMonitor();
+  }
+}
+
+function eksporHasil() {
+  let sesi = DB.get('sesi');
+  if(sesi.length === 0) return alert("Belum ada data nilai untuk dieksport!");
+  
+  let filename = document.getElementById('ekspor-filename').value.trim() || 'Hasil_Ujian_CBT';
+  let ws = XLSX.utils.json_to_sheet(sesi.map(s => ({
+    Username: s.username,
+    Nama: s.nama,
+    Kelas: s.kelas,
+    ID_Tes: s.idTes,
+    Status: s.status,
+    Nilai: s.nilai
+  })));
+  
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Hasil Ujian");
+  XLSX.writeFile(wb, filename + ".xlsx");
+}
