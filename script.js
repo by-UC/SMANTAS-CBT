@@ -161,8 +161,16 @@ function setRole(role) {
   let btnSiswa = document.getElementById('btn-Siswa');
   let btnAdmin = document.getElementById('btn-Admin');
   if(roleInput) roleInput.value = role;
-  if(btnSiswa) btnSiswa.className = role === 'SISWA' ? 'w-1/2 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-sm transition' : 'w-1/2 py-2.5 text-gray-600 rounded-lg font-bold text-xs sm:text-sm transition';
-  if(btnAdmin) btnAdmin.className = role === 'ADMIN' ? 'w-1/2 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-sm transition' : 'w-1/2 py-2.5 text-gray-600 rounded-lg font-bold text-xs sm:text-sm transition';
+  if(btnSiswa) {
+    btnSiswa.className = role === 'SISWA' ? 
+      'w-1/2 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-sm transition cursor-pointer' : 
+      'w-1/2 py-2.5 text-gray-600 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer';
+  }
+  if(btnAdmin) {
+    btnAdmin.className = role === 'ADMIN' ? 
+      'w-1/2 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs sm:text-sm shadow-sm transition cursor-pointer' : 
+      'w-1/2 py-2.5 text-gray-600 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer';
+  }
 }
 
 function showView(id) {
@@ -188,21 +196,30 @@ function prosesLogin() {
   if(!u || !p) return alert("Harap isi username dan password.");
 
   if (r === 'ADMIN') {
-    let adminU = localStorage.getItem('cbt_adminUser'); 
-    let adminP = localStorage.getItem('cbt_adminPass');
+    let adminU = localStorage.getItem('cbt_adminUser') || 'admin'; 
+    let adminP = localStorage.getItem('cbt_adminPass') || 'admin37';
     if (u === adminU && p === adminP) {
       currentUser = { nama: 'Administrator', role: 'ADMIN' };
       sessionStorage.setItem('cbt_loggedUser', JSON.stringify(currentUser));
-      showView('view-admin'); muatPengaturan(); loadTabelSiswa(); loadLiveMonitor(); loadSelectUjianAdminSoal();
-    } else { alert("Username atau Password Admin salah!"); }
+      showView('view-admin'); 
+      muatPengaturan(); 
+      loadTabelSiswa(); 
+      loadLiveMonitor(); 
+      loadSelectUjianAdminSoal();
+    } else { 
+      alert("Username atau Password Admin salah!"); 
+    }
   } else {
     let daftarSiswa = DB.get('siswa');
     let s = daftarSiswa.find(x => x.user === u && x.pass === p);
     if (s) {
       currentUser = { nama: s.nama, kelas: s.kelas, username: s.user };
       sessionStorage.setItem('cbt_loggedUser', JSON.stringify(currentUser));
-      showView('view-siswa'); loadDaftarTesSiswa();
-    } else { alert("Username atau Password Siswa salah!"); }
+      showView('view-siswa'); 
+      loadDaftarTesSiswa();
+    } else { 
+      alert("Username atau Password Siswa salah!"); 
+    }
   }
 }
 
@@ -248,8 +265,11 @@ function tambahItem(tipe) {
 }
 
 function hapusItem(tipe, val) {
-  let data = DB.get(tipe).filter(x => x !== val);
-  DB.set(tipe, data); muatPengaturan();
+  if (confirm(`Apakah Anda yakin ingin menghapus ${tipe} "${val}"?`)) {
+    let data = DB.get(tipe).filter(x => x !== val);
+    DB.set(tipe, data); 
+    muatPengaturan();
+  }
 }
 
 function tambahSiswaSatu() {
@@ -282,11 +302,18 @@ function loadTabelSiswa() {
     </tr>`).join('');
 }
 
+// PERINGATAN KONFIRMASI PENGHAPUSAN SISWA
 function hapusSiswa(idx) {
   let siswa = DB.get('siswa');
-  siswa.splice(idx, 1);
-  DB.set('siswa', siswa);
-  loadTabelSiswa();
+  let targetSiswa = siswa[idx];
+  let namaSiswa = targetSiswa ? targetSiswa.nama : "ini";
+
+  if (confirm(`PERINGATAN: Apakah Anda yakin ingin menghapus data siswa "${namaSiswa}"? Tindakan ini tidak dapat dibatalkan.`)) {
+    siswa.splice(idx, 1);
+    DB.set('siswa', siswa);
+    loadTabelSiswa();
+    alert("Data siswa berhasil dihapus.");
+  }
 }
 
 function prosesUploadSiswa() {
@@ -314,22 +341,21 @@ function prosesUploadSiswa() {
 
 function gantiPassword() {
   let pBaru = prompt("Masukkan Password Admin Baru:");
-  if(pBaru) {
-    localStorage.setItem('cbt_adminPass', pBaru);
+  if(pBaru && pBaru.trim() !== "") {
+    localStorage.setItem('cbt_adminPass', pBaru.trim());
     alert("Password admin berhasil diubah!");
   }
 }
 
 function resetAllDatabase() {
-  if(confirm("PERINGATAN: Seluruh data ujian, soal, siswa, dan nilai akan dihapus permanen! Lanjutkan?")) {
+  if(confirm("PERINGATAN KERAS: Seluruh data ujian, soal, siswa, dan nilai akan dihapus permanen dan dikembalikan ke setelan awal! Lanjutkan?")) {
     localStorage.clear();
     DB.initLocal();
-    alert("Database berhasil direset.");
+    alert("Database berhasil direset penuh.");
     location.reload();
   }
 }
 
-// PEMBINAAN & PARSING UJIAN
 function buatUjianTerpadu() {
   let judulEl = document.getElementById('tes-judul');
   let mapelEl = document.getElementById('tes-mapel');
@@ -449,11 +475,14 @@ function loadDaftarUjianAdmin() {
     </tr>`).join('');
 }
 
+// PERINGATAN KONFIRMASI HAPUS UJIAN
 function hapusUjian(idTes) {
-  if (confirm("Hapus ujian dan seluruh soal terkait?")) {
+  if (confirm(`PERINGATAN: Apakah Anda yakin ingin menghapus ujian "${idTes}" beserta seluruh bank soal dan sesi terkait?`)) {
     DB.set('ujian', DB.get('ujian').filter(x => x.idTes !== idTes));
     DB.set('soal', DB.get('soal').filter(x => x.idTes !== idTes));
+    DB.set('sesi', DB.get('sesi').filter(x => x.idTes !== idTes));
     loadDaftarUjianAdmin();
+    alert("Ujian berhasil dihapus.");
   }
 }
 
@@ -491,7 +520,6 @@ function loadDaftarSoalAdmin() {
   `).join('');
 }
 
-// DASAR PENGURUSAN SISWA & UJIAN
 function loadDaftarTesSiswa() {
   let container = document.getElementById('daftar-tes-container');
   if (!container) return;
@@ -550,7 +578,6 @@ function mulaikanUjian(idTes) {
   };
   sessionStorage.setItem('cbt_activeExam', JSON.stringify(examData));
 
-  // Mod Layar Penuh
   if (document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(()=>{});
   }
@@ -677,7 +704,7 @@ function submitUjian(status = 'SELESAI') {
     kelas: currentUser.kelas,
     status: status,
     nilai: nilaiAkhir,
-    jawaban: jawabanSiswa
+    jawaban: jawabanSISHEDAT = jawabanSiswa
   };
 
   if (idx >= 0) sesiList[idx] = dataSesi;
@@ -691,7 +718,6 @@ function submitUjian(status = 'SELESAI') {
   window.location.href = 'selesai.html';
 }
 
-// MONITORING & EKSPORT
 function loadLiveMonitor() {
   let sesi = DB.get('sesi');
   let tbody = document.querySelector('#tabel-monitor tbody');
@@ -708,11 +734,13 @@ function loadLiveMonitor() {
     </tr>`).join('');
 }
 
+// PERINGATAN KONFIRMASI RESET SESI SISWA
 function resetSesiSiswa(idTes, user) {
-  if(confirm("Reset sesi ujian siswa ini agar dapat mengulang kembali?")) {
+  if(confirm(`PERINGATAN: Apakah Anda yakin ingin mereset sesi ujian untuk siswa dengan username "${user}" pada ujian "${idTes}"? Siswa akan dapat mengerjakan ulang.`)) {
     let sesi = DB.get('sesi').filter(s => !(s.idTes === idTes && s.username === user));
     DB.set('sesi', sesi);
     loadLiveMonitor();
+    alert("Sesi siswa berhasil direset.");
   }
 }
 
