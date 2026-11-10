@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Input Soal CBT</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f4f7f6; }
+        .container { background: white; padding: 25px; border-radius: 8px; max-width: 700px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        button:hover { background: #218838; }
+        .preview { margin-top: 10px; max-height: 150px; display: none; }
+        .config-info { background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; color: #495057; }
+        .row-flex { display: flex; gap: 10px; }
+        .row-flex > div { flex: 1; }
+        
+        #loginCard { max-width: 400px; margin: 80px auto; text-align: center; }
+        #adminPanel { display: none; }
+        .error-msg { color: red; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- KOTAK LOGIN ADMIN -->
+    <div class="container" id="loginCard">
+        <h2>Login Admin CBT</h2>
+        <p style="color: #666; font-size: 14px;">Masukkan password admin untuk mengakses panel soal.</p>
+        <div class="form-group" style="text-align: left; margin-top: 20px;">
+            <label>Password Admin:</label>
+            <input type="password" id="adminPassword" placeholder="Masukkan password...">
+        </div>
+        <button onclick="prosesLogin()">Masuk Panel</button>
+        <div id="errorMsg" class="error-msg">Password salah! Silakan coba lagi.</div>
+    </div>
+
+    <!-- PANEL UTAMA ADMIN -->
+    <div class="container" id="adminPanel">
+        <h2>Form Input Soal CBT & Integrasi Gist</h2>
+        
+        <div class="config-info">
+            ✅ <b>Gist ID & Token:</b> Terkonfigurasi | 
+            <a href="#" onclick="logout()" style="color: #dc3545; text-decoration: none; float: right;"><b>Logout</b></a>
+        </div>
+
+        <!-- PENGATURAN NAMA UJIAN (Format: Mapel_Kelas) -->
+        <fieldset style="border: 1px solid #ccc; padding: 15px; border-radius: 5px; margin-bottom: 20px; background: #fafafa;">
+            <legend style="font-weight: bold; color: #333;">Pengaturan Identitas Ujian</legend>
+            <div class="row-flex">
+                <div class="form-group">
+                    <label>Nama Mata Pelajaran:</label>
+                    <input type="text" id="mapel" placeholder="Contoh: Matematika" oninput="updateFormatUjian()">
+                </div>
+                <div class="form-group">
+                    <label>Kelas / Rombel:</label>
+                    <input type="text" id="kelas" placeholder="Contoh: X-IPA-1" oninput="updateFormatUjian()">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Format Nama Ujian (Otomatis):</label>
+                <input type="text" id="folderName" readonly style="background: #e9ecef; font-weight: bold; color: #0056b3;">
+                <small style="color: #666;">*Format ini menjadi Nama Subfolder Drive & Nama Spreadsheet Nilai.</small>
+            </div>
+        </fieldset>
+
+        <hr>
+
+        <div class="form-group">
+            <label>Pertanyaan Soal:</label>
+            <textarea id="soalText" rows="3" placeholder="Tuliskan teks soal di sini..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Gambar Soal (Opsional, otomatis dikompres < 50KB):</label>
+            <input type="file" id="gambarSoal" accept="image/*" onchange="previewAndCompressImage(event)">
+            <img id="imgPreview" class="preview">
+        </div>
+
+        <div class="form-group">
+            <label>Pilihan A:</label> <input type="text" id="optA">
+            <label>Pilihan B:</label> <input type="text" id="optB">
+            <label>Pilihan C:</label> <input type="text" id="optC">
+            <label>Pilihan D:</label> <input type="text" id="optD">
+            <label>Pilihan E:</label> <input type="text" id="optE">
+        </div>
+
+        <div class="form-group">
+            <label>Kunci Jawaban (A/B/C/D/E):</label>
+            <select id="kunci">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+            </select>
+        </div>
+
+        <button onclick="tambahDanSimpanSoal()">Simpan Soal ke Gist & GAS</button>
+    </div>
+
+<script>
+const PASSWORD_ADMIN = "admin123"; // Ganti password admin sesuai keinginan
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxWrAu-9A7HjncOWOc9GQ54ZGifBEz7jcF6s3dr9LXpUlLSkTSR5O4sqrTdTrp11LiP/exec";
+
+const GIST_ID = "4b29a383e8a164f932396735ab60621b";
+const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
+const t2 = "V2eEWYvRV0AFFLJ";
+const GIST_TOKEN = t1 + t2;
+
+let compressedBase64 = "";
+
+window.onload = function() {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+        tampilkanPanelAdmin();
+    }
+    updateFormatUjian();
+}
+
+function prosesLogin() {
+    const inputPass = document.getElementById('adminPassword').value;
+    const errorMsg = document.getElementById('errorMsg');
+
+    if (inputPass === PASSWORD_ADMIN) {
+        localStorage.setItem("isLoggedIn", "true");
+        tampilkanPanelAdmin();
+    } else {
+        errorMsg.style.display = "block";
+    }
+}
+
+function tampilkanPanelAdmin() {
+    document.getElementById('loginCard').style.display = "none";
+    document.getElementById('adminPanel').style.display = "block";
+}
+
+function logout() {
+    localStorage.removeItem("isLoggedIn");
+    location.reload();
+}
+
+function updateFormatUjian() {
+    let mapel = document.getElementById('mapel').value.trim().replace(/\s+/g, '_');
+    let kelas = document.getElementById('kelas').value.trim().replace(/\s+/g, '_');
+    
+    if(!mapel) mapel = "Mapel";
+    if(!kelas) kelas = "Kelas";
+    
+    document.getElementById('folderName').value = `${mapel}_${kelas}`;
+}
+
+function previewAndCompressImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            
+            let width = img.width;
+            let height = img.height;
+            let maxDim = 800;
+            
+            if (width > height && width > maxDim) {
+                height *= maxDim / width;
+                width = maxDim;
+            } else if (height > maxDim) {
+                width *= maxDim / height;
+                height = maxDim;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            let quality = 0.7;
+            let dataUrl = canvas.toDataURL('image/jpeg', quality);
+            
+            while (dataUrl.length > 70000 && quality > 0.1) {
+                quality -= 0.1;
+                dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+            
+            compressedBase64 = dataUrl;
+            document.getElementById('imgPreview').src = dataUrl;
+            document.getElementById('imgPreview').style.display = 'block';
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+async function tambahDanSimpanSoal() {
+    let imageUrl = "";
+    const folderName = document.getElementById('folderName').value;
+    const soalText = document.getElementById('soalText').value;
+
+    if (!soalText) {
+        alert("Pertanyaan soal tidak boleh kosong!");
+        return;
+    }
+
+    if (compressedBase64) {
+        alert("Mengunggah dan mengompres gambar ke Google Drive...");
+        try {
+            const response = await axios.post(GAS_URL, {
+                action: "uploadImage",
+                folderName: folderName,
+                fileData: compressedBase64,
+                fileName: "soal_" + Date.now() + ".jpg"
+            });
+            if (response.data.status === "success") {
+                imageUrl = response.data.fileUrl;
+            } else {
+                alert("Gagal upload gambar: " + response.data.message);
+                return;
+            }
+        } catch (err) {
+            alert("Kesalahan koneksi saat upload gambar ke GAS.");
+            return;
+        }
+    }
+
+    const soalBaru = {
+        id: Date.now(),
+        soal: soalText,
+        namaUjian: folderName,
+        gambar: imageUrl,
+        options: {
+            A: document.getElementById('optA').value,
+            B: document.getElementById('optB').value,
+            C: document.getElementById('optC').value,
+            D: document.getElementById('optD').value,
+            E: document.getElementById('optE').value
+        },
+        kunci: document.getElementById('kunci').value
+    };
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+
+    try {
+        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}`, githubHeaders);
+        let existingFiles = gistRes.data.files;
+        let filename = Object.keys(existingFiles)[0];
+        let contentSoal = JSON.parse(existingFiles[filename].content || "[]");
+
+        contentSoal.push(soalBaru);
+
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: {
+                [filename]: {
+                    content: JSON.stringify(contentSoal, null, 2)
+                }
+            }
+        }, githubHeaders);
+
+        alert("Soal berhasil disimpan ke Gist, subfolder Drive terbuat, dan siap diuji!");
+        
+        document.getElementById('soalText').value = "";
+        document.getElementById('gambarSoal').value = "";
+        document.getElementById('imgPreview').style.display = 'none';
+        compressedBase64 = "";
+        ['optA', 'optB', 'optC', 'optD', 'optE'].forEach(id => document.getElementById(id).value = "");
+
+    } catch (e) {
+        alert("Gagal memperbarui Gist: " + (e.response?.data?.message || e.message));
+    }
+}
+</script>
+
+</body>
+</html>

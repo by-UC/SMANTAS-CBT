@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT Online - Ujian Siswa</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 700px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #0056b3; margin-top: 0; }
+        .info-ujian { background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; text-align: center; font-weight: bold; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .soal-box { margin-bottom: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 20px; }
+        .soal-box p { font-size: 16px; line-height: 1.5; font-weight: bold; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 10px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 8px; padding: 8px 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        .option-label:hover { background: #f1f3f5; }
+        .option-label input { margin-right: 10px; }
+        button { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #quizSection, #loadingSection { display: none; }
+        .loading-text { text-align: center; font-size: 18px; color: #555; padding: 40px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <h2>Ujian CBT Online</h2>
+    
+    <div id="loginSection">
+        <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 20px;">Silakan masukkan identitas Anda untuk mulai mengerjakan ujian.</p>
+        <div class="form-group">
+            <label>Nomor Induk Siswa (NIS):</label>
+            <input type="text" id="nis" placeholder="Contoh: 102938">
+        </div>
+        <div class="form-group">
+            <label>Nama Lengkap:</label>
+            <input type="text" id="nama" placeholder="Contoh: Budi Santoso">
+        </div>
+        <button onclick="mulaiUjian()">Mulai Mengerjakan</button>
+    </div>
+
+    <div id="loadingSection" class="loading-text">
+        <h3 id="loadingMsg">Memuat soal ujian, mohon tunggu...</h3>
+    </div>
+
+    <div id="quizSection">
+        <div class="info-ujian" id="infoUjianText">Mata Pelajaran: Memuat...</div>
+        <div id="soalContainer"></div>
+        <button onclick="selesaiUjian()" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
+    </div>
+</div>
+
+<script>
+const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/f8eadb333b77b0e74b7a73c699a32be72356ef68/soal.json"; 
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxWrAu-9A7HjncOWOc9GQ54ZGifBEz7jcF6s3dr9LXpUlLSkTSR5O4sqrTdTrp11LiP/exec";
+
+let listSoal = [];
+let jawabanSiswa = {};
+let namaUjianAktif = "Ujian_CBT_Umum";
+
+async function mulaiUjian() {
+    const nis = document.getElementById('nis').value.trim();
+    const nama = document.getElementById('nama').value.trim();
+    
+    if(!nis || !nama) {
+        alert("Mohon isi NIS dan Nama Lengkap terlebih dahulu!");
+        return;
+    }
+
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('loadingSection').style.display = 'block';
+
+    try {
+        let res = await axios.get(GIST_RAW_URL + "?t=" + new Date().getTime());
+        listSoal = res.data;
+        
+        if(!Array.isArray(listSoal) || listSoal.length === 0) {
+            alert("Belum ada soal tersedia di sistem.");
+            location.reload();
+            return;
+        }
+
+        if(listSoal[0].namaUjian) {
+            namaUjianAktif = listSoal[0].namaUjian;
+        }
+
+        document.getElementById('infoUjianText').innerText = "Mata Pelajaran / Ujian: " + namaUjianAktif.replace(/_/g, ' ');
+        
+        document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('quizSection').style.display = 'block';
+        renderSoal();
+
+    } catch(err) {
+        alert("Gagal memuat soal dari GitHub Gist. Periksa kembali koneksi Anda.");
+        location.reload();
+    }
+}
+
+function renderSoal() {
+    let html = "";
+    listSoal.forEach((item, index) => {
+        html += `<div class="soal-box">
+            <p>Soal ${index + 1}. ${item.soal}</p>`;
+        
+        if(item.gambar) {
+            html += `<img src="${item.gambar}" class="img-soal" alt="Gambar Soal ${index + 1}">`;
+        }
+        
+        html += `<div style="margin-top: 12px;">`;
+        ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+            if(item.options && item.options[opt]) {
+                html += `<label class="option-label">
+                    <input type="radio" name="soal_${index}" value="${opt}" onclick="simpanJawaban(${index}, '${opt}')"> 
+                    <b>${opt}.</b> ${item.options[opt]}
+                </label>`;
+            }
+        });
+        html += `</div></div>`;
+    });
+    document.getElementById('soalContainer').innerHTML = html;
+}
+
+function simpanJawaban(indexSoal, pilihan) {
+    jawabanSiswa[indexSoal] = pilihan;
+}
+
+async function selesaiUjian() {
+    if(!confirm("Apakah Anda yakin ingin mengumpulkan jawaban ujian ini? Pastikan semua soal telah dijawab.")) return;
+
+    document.getElementById('quizSection').style.display = 'none';
+    document.getElementById('loadingMsg').innerText = "Sedang mengirim jawaban ke server, mohon jangan tutup halaman ini...";
+    document.getElementById('loadingSection').style.display = 'block';
+
+    let benar = 0;
+    listSoal.forEach((item, index) => {
+        if(jawabanSiswa[index] === item.kunci) {
+            benar++;
+        }
+    });
+
+    let nilaiAkhir = Number(((benar / listSoal.length) * 100).toFixed(2));
+
+    let payload = {
+        action: "submitResult",
+        namaUjian: namaUjianAktif,
+        nis: document.getElementById('nis').value,
+        nama: document.getElementById('nama').value,
+        nilai: nilaiAkhir,
+        jawaban: jawabanSiswa
+    };
+
+    let randomDelay = Math.floor(Math.random() * 3000) + 1000;
+
+    setTimeout(async () => {
+        try {
+            let res = await axios.post(GAS_URL, JSON.stringify(payload));
+            if(res.data.status === "success") {
+                alert(`Ujian Selesai!\n\nNama: ${document.getElementById('nama').value}\nNIS: ${document.getElementById('nis').value}\nNilai Anda: ${nilaiAkhir}`);
+                location.reload();
+            } else {
+                alert("Gagal menyimpan hasil: " + res.data.message);
+                location.reload();
+            }
+        } catch(err) {
+            alert("Terjadi kesalahan koneksi saat mengirim hasil ujian. Silakan hubungi pengawas.")
+            location.reload();
+        }
+    }, randomDelay);
+}
+</script>
+
+</body>
+</html>
