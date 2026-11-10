@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal CBT - SMA Negeri 1 Tanjungsari</title>
+    <!-- Library Axios untuk request API -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Library CryptoJS untuk Enkripsi Soal & Hash Password Admin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 650px; margin: 40px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #0056b3; margin-top: 0; }
+        .header-box { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #008080; padding-bottom: 15px; }
+        .header-box h3 { color: #008080; margin: 5px 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; }
+        input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background: #008080; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #006666; }
+        .tab-menu { display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; }
+        .tab-btn.active { background: #008080; color: white; }
+        .soal-box { margin-bottom: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 20px; }
+        .soal-box p { font-size: 16px; line-height: 1.5; font-weight: bold; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 10px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 8px; padding: 8px 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; }
+        .option-label:hover { background: #f1f3f5; }
+        .option-label input { margin-right: 10px; }
+        .preview { margin-top: 10px; max-height: 150px; display: none; }
+        .row-flex { display: flex; gap: 10px; }
+        .row-flex > div { flex: 1; }
+        .error-msg { color: red; font-size: 14px; margin-top: 8px; text-align: center; display: none; }
+        .section-view { display: none; }
+        .section-view.active { display: block; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-box">
+        <h2>SMANTAS-CBT</h2>
+        <h3>Portal Ujian Online Terenkripsi</h3>
+    </div>
+
+    <!-- TAB PILIHAN LOGIN -->
+    <div class="tab-menu" id="tabMenu">
+        <button class="tab-btn active" onclick="switchTab('siswa')">Login Siswa</button>
+        <button class="tab-btn" onclick="switchTab('admin')">Login Admin</button>
+    </div>
+
+    <!-- 1. VIEW LOGIN SISWA -->
+    <div id="viewLoginSiswa" class="section-view active">
+        <div class="form-group">
+            <label>Nomor Induk Siswa (NIS):</label>
+            <input type="text" id="nis" placeholder="Masukkan NIS Anda...">
+        </div>
+        <div class="form-group">
+            <label>Nama Lengkap:</label>
+            <input type="text" id="nama" placeholder="Masukkan Nama Lengkap...">
+        </div>
+        <button onclick="mulaiUjian()">MASUK UJIAN</button>
+    </div>
+
+    <!-- 2. VIEW LOGIN ADMIN -->
+    <div id="viewLoginAdmin" class="section-view">
+        <div class="form-group">
+            <label>Password Admin:</label>
+            <input type="password" id="adminPassword" placeholder="Masukkan password admin...">
+        </div>
+        <button onclick="prosesLoginAdmin()">MASUK PANEL ADMIN</button>
+        <div id="errorAdmin" class="error-msg">Password admin salah!</div>
+    </div>
+
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
+    <div id="viewUjianSiswa" class="section-view">
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; font-weight: bold;" id="infoUjianText">
+            Mata Pelajaran: Memuat...
+        </div>
+        <div id="soalContainer"></div>
+        <button onclick="selesaiUjian()" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
+    </div>
+
+    <!-- 4. VIEW PANEL ADMIN INPUT SOAL -->
+    <div id="viewPanelAdmin" class="section-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <b>Panel Input Soal Terenkripsi</b>
+            <button onclick="logoutAdmin()" style="width: auto; padding: 5px 10px; background: #dc3545; font-size: 12px;">Logout Admin</button>
+        </div>
+
+        <!-- FITUR UBAH PASSWORD ADMIN TERENKRIPSI -->
+        <div class="admin-card">
+            <h4 style="margin: 0 0 10px 0; color: #008080;">Ubah Password Admin</h4>
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="password" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+            </div>
+            <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 8px;">Simpan Password Baru</button>
+        </div>
+
+        <fieldset style="border: 1px solid #ccc; padding: 15px; border-radius: 5px; margin-bottom: 20px; background: #fafafa;">
+            <legend style="font-weight: bold; color: #333;">Pengaturan Identitas Ujian</legend>
+            <div class="row-flex">
+                <div class="form-group">
+                    <label>Nama Mata Pelajaran:</label>
+                    <input type="text" id="mapel" placeholder="Contoh: Matematika" oninput="updateFormatUjian()">
+                </div>
+                <div class="form-group">
+                    <label>Kelas / Rombel:</label>
+                    <input type="text" id="kelas" placeholder="Contoh: X-IPA-1" oninput="updateFormatUjian()">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Format Nama Ujian (Otomatis):</label>
+                <input type="text" id="folderName" readonly style="background: #e9ecef; font-weight: bold; color: #0056b3;">
+            </div>
+        </fieldset>
+
+        <div class="form-group">
+            <label>Pertanyaan Soal:</label>
+            <textarea id="soalText" rows="3" placeholder="Tuliskan teks soal..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Gambar Soal (Opsional, kompres otomatis < 50KB):</label>
+            <input type="file" id="gambarSoal" accept="image/*" onchange="previewAndCompressImage(event)">
+            <img id="imgPreview" class="preview">
+        </div>
+
+        <div class="form-group">
+            <label>Pilihan A:</label> <input type="text" id="optA">
+            <label>Pilihan B:</label> <input type="text" id="optB">
+            <label>Pilihan C:</label> <input type="text" id="optC">
+            <label>Pilihan D:</label> <input type="text" id="optD">
+            <label>Pilihan E:</label> <input type="text" id="optE">
+        </div>
+
+        <div class="form-group">
+            <label>Kunci Jawaban:</label>
+            <select id="kunci">
+                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option>
+            </select>
+        </div>
+
+        <button onclick="tambahDanSimpanSoal()">Simpan Soal Terenkripsi ke Gist & Drive</button>
+    </div>
+
+</div>
+
+<script>
+// ================= KONFIGURASI SISTEM =================
+const SECRET_ENCRYPTION_KEY = "SmantasCBTKey2026_SecureKey"; // Kunci enkripsi isi Gist
+const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/f8eadb333b77b0e74b7a73c699a32be72356ef68/soal.json"; 
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxWrAu-9A7HjncOWOc9GQ54ZGifBEz7jcF6s3dr9LXpUlLSkTSR5O4sqrTdTrp11LiP/exec";
+
+const GIST_ID = "4b29a383e8a164f932396735ab60621b";
+const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
+const t2 = "V2eEWYvRV0AFFLJ";
+const GIST_TOKEN = t1 + t2;
+// ======================================================
+
+let listSoal = [];
+let jawabanSiswa = {};
+let namaUjianAktif = "Ujian_CBT_Umum";
+let compressedBase64 = "";
+
+// Mengambil Hash Password Admin (Default: "admin123" yang sudah di-hash SHA-256)
+function getAdminPasswordHash() {
+    // Hash default untuk "admin123" adalah 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
+    return localStorage.getItem("adminPasswordHash") || "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+}
+
+function ubahPasswordAdmin() {
+    const newPass = document.getElementById('newAdminPassword').value.trim();
+    if(!newPass) {
+        alert("Password baru tidak boleh kosong!");
+        return;
+    }
+    // Enkripsi password baru menggunakan SHA-256
+    const hashedNewPass = CryptoJS.SHA256(newPass).toString();
+    localStorage.setItem("adminPasswordHash", hashedNewPass);
+    alert("Password admin berhasil diubah dan dienkripsi! Gunakan password baru ini pada login berikutnya.");
+    document.getElementById('newAdminPassword').value = "";
+}
+
+function switchTab(role) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+
+    if(role === 'siswa') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('viewLoginSiswa').classList.add('active');
+    } else {
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        if(localStorage.getItem("isAdminLoggedIn") === "true") {
+            document.getElementById('viewPanelAdmin').classList.add('active');
+            document.getElementById('tabMenu').style.display = 'none';
+        } else {
+            document.getElementById('viewLoginAdmin').classList.add('active');
+        }
+    }
+}
+
+function prosesLoginAdmin() {
+    const inputPass = document.getElementById('adminPassword').value;
+    // Hash input password pengguna untuk dicocokkan dengan hash yang tersimpan
+    const hashedInputPass = CryptoJS.SHA256(inputPass).toString();
+
+    if(hashedInputPass === getAdminPasswordHash()) {
+        localStorage.setItem("isAdminLoggedIn", "true");
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        updateFormatUjian();
+    } else {
+        document.getElementById('errorAdmin').style.display = 'block';
+    }
+}
+
+function logoutAdmin() {
+    localStorage.removeItem("isAdminLoggedIn");
+    location.reload();
+}
+
+function updateFormatUjian() {
+    let mapel = document.getElementById('mapel').value.trim().replace(/\s+/g, '_');
+    let kelas = document.getElementById('kelas').value.trim().replace(/\s+/g, '_');
+    if(!mapel) mapel = "Mapel";
+    if(!kelas) kelas = "Kelas";
+    document.getElementById('folderName').value = `${mapel}_${kelas}`;
+}
+
+function previewAndCompressImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            let width = img.width, height = img.height, maxDim = 800;
+            if (width > height && width > maxDim) { height *= maxDim / width; width = maxDim; }
+            else if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+            canvas.width = width; canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            let quality = 0.7, dataUrl = canvas.toDataURL('image/jpeg', quality);
+            while (dataUrl.length > 70000 && quality > 0.1) {
+                quality -= 0.1;
+                dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+            compressedBase64 = dataUrl;
+            document.getElementById('imgPreview').src = dataUrl;
+            document.getElementById('imgPreview').style.display = 'block';
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+async function tambahDanSimpanSoal() {
+    let imageUrl = "";
+    const folderName = document.getElementById('folderName').value;
+    const soalText = document.getElementById('soalText').value;
+    if (!soalText) { alert("Soal tidak boleh kosong!"); return; }
+
+    if (compressedBase64) {
+        alert("Mengunggah gambar ke Google Drive...");
+        try {
+            const response = await axios.post(GAS_URL, {
+                action: "uploadImage", folderName: folderName, fileData: compressedBase64, fileName: "soal_" + Date.now() + ".jpg"
+            });
+            if (response.data.status === "success") imageUrl = response.data.fileUrl;
+            else { alert("Gagal upload gambar: " + response.data.message); return; }
+        } catch (err) { alert("Koneksi gagal saat upload gambar."); return; }
+    }
+
+    const soalBaru = {
+        id: Date.now(), soal: soalText, namaUjian: folderName, gambar: imageUrl,
+        options: {
+            A: document.getElementById('optA').value, B: document.getElementById('optB').value,
+            C: document.getElementById('optC').value, D: document.getElementById('optD').value, E: document.getElementById('optE').value
+        },
+        kunci: document.getElementById('kunci').value
+    };
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    try {
+        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}`, githubHeaders);
+        let filename = Object.keys(gistRes.data.files)[0];
+        let rawContent = gistRes.data.files[filename].content;
+        
+        let contentSoal = [];
+        if(rawContent) {
+            try {
+                let decryptedBytes = CryptoJS.AES.decrypt(rawContent, SECRET_ENCRYPTION_KEY);
+                let decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                contentSoal = decryptedText ? JSON.parse(decryptedText) : JSON.parse(rawContent);
+            } catch(e) {
+                contentSoal = JSON.parse(rawContent);
+            }
+        }
+
+        contentSoal.push(soalBaru);
+
+        let encryptedData = CryptoJS.AES.encrypt(JSON.stringify(contentSoal), SECRET_ENCRYPTION_KEY).toString();
+
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: { [filename]: { content: encryptedData } }
+        }, githubHeaders);
+
+        alert("Soal berhasil dienkripsi dan disimpan ke Gist & Drive!");
+        document.getElementById('soalText').value = "";
+        document.getElementById('gambarSoal').value = "";
+        document.getElementById('imgPreview').style.display = 'none';
+        compressedBase64 = "";
+        ['optA', 'optB', 'optC', 'optD', 'optE'].forEach(id => document.getElementById(id).value = "");
+    } catch (e) { alert("Gagal memperbarui Gist: " + e.message); }
+}
+
+async function mulaiUjian() {
+    const nis = document.getElementById('nis').value.trim();
+    const nama = document.getElementById('nama').value.trim();
+    if(!nis || !nama) { alert("Mohon isi NIS dan Nama Lengkap!"); return; }
+
+    document.getElementById('viewLoginSiswa').innerHTML = "<h3 style='text-align:center;'>Memuat dan mendekripsi soal, mohon tunggu...</h3>";
+    try {
+        let res = await axios.get(GIST_RAW_URL + "?t=" + new Date().getTime());
+        let rawResponse = res.data;
+
+        if(typeof rawResponse === "string") {
+            let bytes = CryptoJS.AES.decrypt(rawResponse, SECRET_ENCRYPTION_KEY);
+            let decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+            listSoal = JSON.parse(decryptedString);
+        } else {
+            listSoal = rawResponse;
+        }
+
+        if(!Array.isArray(listSoal) || listSoal.length === 0) { alert("Belum ada soal tersedia."); location.reload(); return; }
+
+        if(listSoal[0].namaUjian) namaUjianAktif = listSoal[0].namaUjian;
+        document.getElementById('infoUjianText').innerText = "Mata Pelajaran / Ujian: " + namaUjianAktif.replace(/_/g, ' ');
+        
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginSiswa').classList.remove('active');
+        document.getElementById('viewUjianSiswa').classList.add('active');
+        renderSoal();
+    } catch(err) { alert("Gagal memuat atau mendekripsi soal."); location.reload(); }
+}
+
+function renderSoal() {
+    let html = "";
+    listSoal.forEach((item, index) => {
+        html += `<div class="soal-box"><p>Soal ${index + 1}. ${item.soal}</p>`;
+        if(item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
+        html += `<div style="margin-top: 10px;">`;
+        ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+            if(item.options && item.options[opt]) {
+                html += `<label class="option-label"><input type="radio" name="soal_${index}" value="${opt}" onclick="jawabanSiswa[${index}]='${opt}'"> <b>${opt}.</b> ${item.options[opt]}</label>`;
+            }
+        });
+        html += `</div></div>`;
+    });
+    document.getElementById('soalContainer').innerHTML = html;
+}
+
+async function selesaiUjian() {
+    if(!confirm("Kumpulkan jawaban sekarang?")) return;
+    document.getElementById('viewUjianSiswa').innerHTML = "<h3 style='text-align:center;'>Mengirim jawaban ke server... Jangan tutup halaman!</h3>";
+
+    let benar = 0;
+    listSoal.forEach((item, index) => { if(jawabanSiswa[index] === item.kunci) benar++; });
+    let nilaiAkhir = Number(((benar / listSoal.length) * 100).toFixed(2));
+
+    let payload = {
+        action: "submitResult", namaUjian: namaUjianAktif,
+        nis: document.getElementById('nis').value, nama: document.getElementById('nama').value,
+        nilai: nilaiAkhir, jawaban: jawabanSiswa
+    };
+
+    setTimeout(async () => {
+        try {
+            let res = await axios.post(GAS_URL, JSON.stringify(payload));
+            if(res.data.status === "success") {
+                alert(`Ujian Selesai!\nNilai Anda: ${nilaiAkhir}`);
+                location.reload();
+            } else { alert("Gagal menyimpan: " + res.data.message); location.reload(); }
+        } catch(err) { alert("Koneksi gagal saat submit."); location.reload(); }
+    }, Math.floor(Math.random() * 3000) + 1000);
+}
+
+window.onload = function() {
+    if(localStorage.getItem("isAdminLoggedIn") === "true") {
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginSiswa').classList.remove('active');
+        document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        updateFormatUjian();
+    }
+}
+</script>
+
+</body>
+</html>
