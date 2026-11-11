@@ -478,7 +478,6 @@ async function hapusMapel(index) {
     initDropdowns();
 }
 
-// BACA FILE WORD (.docx) ATAU TEXT (.txt) OTOMATIS
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -759,7 +758,6 @@ function renderTabelSiswaLogin() {
     });
 }
 
-// 1. AUTENTIKASI SISWA HANYA DENGAN USERNAME & PASSWORD
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
@@ -784,7 +782,6 @@ async function autentikasiSiswa() {
     namaSiswaLogin = siswa.nama;
     kelasSiswaLogin = siswa.kelas;
 
-    // Tampilkan panel pilihan ujian aktif untuk kelas siswa tersebut
     document.getElementById('salamSiswa').innerText = `Selamat Datang, ${siswa.nama}`;
     document.getElementById('infoKelasSiswa').innerText = `Kelas: ${siswa.kelas}`;
     
@@ -814,7 +811,6 @@ function logoutSiswa() {
     document.getElementById('viewLoginSiswa').classList.add('active');
 }
 
-// 2. MULAI UJIAN SETELAH MEMILIH MAPEL
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
     if(!mapel) { alert("Pilih mata pelajaran ujian terlebih dahulu!"); return; }
@@ -839,7 +835,6 @@ async function mulaiUjianPilihan() {
 
     mapelSiswaLogin = mapel;
 
-    // Kirim log status login ke Spreadsheet via GAS
     try {
         await axios.post(GAS_URL, JSON.stringify({
             action: "logLogin",
@@ -939,7 +934,7 @@ async function selesaiUjian() {
             let res = await axios.post(GAS_URL, JSON.stringify(payload));
             hideLoading();
             if(res.data.status === "success") {
-                alert(`Ujian Selesai!\nNilai Anda: ${nilaiAkhir}`);
+                alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
                 location.reload();
             } else { alert("Gagal menyimpan: " + res.data.message); location.reload(); }
         } catch(err) { 
@@ -1036,5 +1031,6 @@ window.onload = function() {
         switchAdminTab('monitoring');
     }
 }
+</script>
 </body>
 </html>
