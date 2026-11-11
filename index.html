@@ -4,64 +4,125 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal CBT - SMA Negeri 1 Tanjungsari</title>
-    <!-- Library Axios untuk request API -->
+    <!-- Axios & CryptoJS & SheetJS & Mammoth -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <!-- Library CryptoJS untuk Enkripsi Soal & Hash Password Admin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; color: #333; }
-        .container { background: white; padding: 30px; border-radius: 8px; max-width: 650px; margin: 40px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #0056b3; margin-top: 0; }
-        .header-box { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #008080; padding-bottom: 15px; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f4f7f6; color: #333; }
+        .container { background: white; padding: 15px; border-radius: 8px; max-width: 950px; margin: 10px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2, h3 { text-align: center; color: #0056b3; }
+        .header-box { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #008080; padding-bottom: 10px; }
         .header-box h3 { color: #008080; margin: 5px 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; }
-        input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        button { background: #008080; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 14px; }
+        input[type="text"], input[type="password"], input[type="datetime-local"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background: #008080; color: white; padding: 12px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; width: 100%; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #006666; }
-        .tab-menu { display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; }
-        .tab-btn.active { background: #008080; color: white; }
-        .soal-box { margin-bottom: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 20px; }
-        .soal-box p { font-size: 16px; line-height: 1.5; font-weight: bold; }
-        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 10px 0; border: 1px solid #ddd; display: block; }
-        .option-label { display: block; margin-bottom: 8px; padding: 8px 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; }
-        .option-label:hover { background: #f1f3f5; }
+        /* Tab Navigation */
+        .tab-menu, .admin-tab-menu { display: flex; margin-bottom: 15px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; }
+        .tab-btn, .admin-tab-btn { flex: 1; padding: 10px 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 12px; min-width: 95px; }
+        .tab-btn.active, .admin-tab-btn.active { background: #008080; color: white; }
+        
+        .soal-box { margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
+        .soal-box p { font-size: 15px; line-height: 1.4; font-weight: bold; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 6px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .option-label input { margin-right: 10px; }
-        .preview { margin-top: 10px; max-height: 150px; display: none; }
-        .row-flex { display: flex; gap: 10px; }
-        .row-flex > div { flex: 1; }
-        .error-msg { color: red; font-size: 14px; margin-top: 8px; text-align: center; display: none; }
-        .section-view { display: none; }
-        .section-view.active { display: block; }
-        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        
+        .preview { margin-top: 8px; max-height: 120px; display: none; }
+        .row-flex { display: flex; gap: 10px; flex-wrap: wrap; }
+        .row-flex > div { flex: 1; min-width: 220px; }
+        
+        .error-msg { color: red; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
+        .section-view, .admin-view { display: none; }
+        .section-view.active, .admin-view.active { display: block; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        
+        /* Table Responsive */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 500px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+        th { background-color: #008080; color: white; }
+        
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+        .checkbox-grid label { font-weight: normal; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        /* LOADING OVERLAY KUNCI LAYAR TOTAL */
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: all;
+        }
+        .spinner {
+            width: 55px; height: 55px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #008080;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
+    <p style="font-size: 13px; color: #ddd; margin-top: 5px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
+</div>
 <div class="container">
     <div class="header-box">
         <h2>SMANTAS-CBT</h2>
-        <h3>Portal Ujian Online Terenkripsi</h3>
+        <h3>Portal Ujian Online Terintegrasi</h3>
     </div>
-
-    <!-- TAB PILIHAN LOGIN -->
+    <!-- TAB LOGIN UTAMA -->
     <div class="tab-menu" id="tabMenu">
         <button class="tab-btn active" onclick="switchTab('siswa')">Login Siswa</button>
         <button class="tab-btn" onclick="switchTab('admin')">Login Admin</button>
     </div>
 
-    <!-- 1. VIEW LOGIN SISWA -->
+    <!-- 1. VIEW LOGIN SISWA (Hanya Username & Password) -->
     <div id="viewLoginSiswa" class="section-view active">
         <div class="form-group">
-            <label>Nomor Induk Siswa (NIS):</label>
-            <input type="text" id="nis" placeholder="Masukkan NIS Anda...">
+            <label>Username / NIS:</label>
+            <input type="text" id="nis" placeholder="Masukkan Username / NIS...">
         </div>
         <div class="form-group">
-            <label>Nama Lengkap:</label>
-            <input type="text" id="nama" placeholder="Masukkan Nama Lengkap...">
+            <label>Password Siswa:</label>
+            <input type="password" id="passSiswa" placeholder="Masukkan password...">
         </div>
-        <button onclick="mulaiUjian()">MASUK UJIAN</button>
+        <button onclick="autentikasiSiswa()">MASUK PORTAL</button>
+    </div>
+
+    <!-- 1B. VIEW PILIH UJIAN SISWA (Setelah Berhasil Login) -->
+    <div id="viewPilihUjianSiswa" class="section-view">
+        <div style="background: #e9ecef; padding: 12px; border-radius: 4px; margin-bottom: 15px; text-align: center;">
+            <b id="salamSiswa" style="color: #008080; font-size: 15px;">Selamat Datang, Siswa</b><br>
+            <span id="infoKelasSiswa" style="font-size: 13px; color: #555;">Kelas: -</span>
+        </div>
+        <div class="form-group">
+            <label>Pilih Mata Pelajaran Ujian yang Tersedia:</label>
+            <select id="pilihMapelAktif">
+                <option value="">-- Pilih Mata Pelajaran --</option>
+            </select>
+        </div>
+        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN</button>
+        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 10px;">Keluar / Ganti Akun</button>
     </div>
 
     <!-- 2. VIEW LOGIN ADMIN -->
@@ -76,83 +137,190 @@
 
     <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
     <div id="viewUjianSiswa" class="section-view">
-        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; font-weight: bold;" id="infoUjianText">
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px;" id="infoUjianText">
             Mata Pelajaran: Memuat...
         </div>
         <div id="soalContainer"></div>
         <button onclick="selesaiUjian()" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
     </div>
 
-    <!-- 4. VIEW PANEL ADMIN INPUT SOAL -->
+    <!-- 4. VIEW PANEL ADMIN MASTER -->
     <div id="viewPanelAdmin" class="section-view">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <b>Panel Input Soal Terenkripsi</b>
-            <button onclick="logoutAdmin()" style="width: auto; padding: 5px 10px; background: #dc3545; font-size: 12px;">Logout Admin</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <b style="font-size: 15px; color: #008080;">Dashboard Admin CBT</b>
+            <button onclick="logoutAdmin()" style="width: auto; padding: 6px 12px; background: #dc3545; font-size: 12px;">Logout</button>
         </div>
 
-        <!-- FITUR UBAH PASSWORD ADMIN TERENKRIPSI -->
-        <div class="admin-card">
-            <h4 style="margin: 0 0 10px 0; color: #008080;">Ubah Password Admin</h4>
-            <div class="form-group" style="margin-bottom: 10px;">
-                <input type="password" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+        <!-- TAB MENU ADMIN -->
+        <div class="admin-tab-menu">
+            <button class="admin-tab-btn active" onclick="switchAdminTab('monitoring')">Monitoring Akun</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('ujian')">Daftar Ujian</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('master')">Kelas & Mapel</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('siswa')">Data Siswa</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
+        </div>
+
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN -->
+        <div id="adminTabMonitoring" class="admin-view active">
+            <div class="admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #008080;">Monitoring Siswa Login Ujian (Spreadsheet)</h4>
+                    <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelSiswaLogin">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Kelas</th>
+                                <th>Mata Pelajaran</th>
+                                <th>Status</th>
+                                <th>Nilai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySiswaLogin">
+                            <tr><td colspan="5" style="text-align:center;">Memuat data log dari Spreadsheet...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 8px;">Simpan Password Baru</button>
         </div>
 
-        <fieldset style="border: 1px solid #ccc; padding: 15px; border-radius: 5px; margin-bottom: 20px; background: #fafafa;">
-            <legend style="font-weight: bold; color: #333;">Pengaturan Identitas Ujian</legend>
+        <!-- TAB 2: DAFTAR UJIAN -->
+        <div id="adminTabUjian" class="admin-view">
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Buat Jadwal & Upload Soal Ujian (Multi-Kelas)</h4>
+                <div class="form-group">
+                    <label>Pilih Mata Pelajaran:</label>
+                    <select id="jadwalMapel">
+                        <option value="">-- Pilih Mapel --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Pilih Kelas (Bisa pilih lebih dari 1):</label>
+                    <div class="checkbox-grid" id="checkboxKelasContainer"></div>
+                </div>
+                <div class="row-flex">
+                    <div class="form-group">
+                        <label>Waktu Mulai Ujian:</label>
+                        <input type="datetime-local" id="waktuMulai">
+                    </div>
+                    <div class="form-group">
+                        <label>Waktu Selesai Ujian:</label>
+                        <input type="datetime-local" id="waktuSelesai">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
+                    <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
+                    <textarea id="soalBatchText" rows="5" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
+                </div>
+                <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
+            </div>
+
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Ujian Aktif</h4>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mata Pelajaran</th>
+                                <th>Kelas</th>
+                                <th>Mulai</th>
+                                <th>Selesai</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyJadwal"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: KELOLA KELAS & MAPEL -->
+        <div id="adminTabMaster" class="admin-view">
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Kelola Kelas & Mata Pelajaran</h4>
+                <div class="row-flex">
+                    <div class="form-group">
+                        <label>Tambah Kelas Baru:</label>
+                        <input type="text" id="inputKelasBaru" placeholder="Contoh: XI-IPA-2">
+                        <button onclick="tambahKelas()" style="margin-top:6px; background:#008080; padding:10px;">Tambah Kelas</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Tambah Mapel Baru:</label>
+                        <input type="text" id="inputMapelBaru" placeholder="Contoh: Sejarah Indonesia">
+                        <button onclick="tambahMapel()" style="margin-top:6px; background:#008080; padding:10px;">Tambah Mapel</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="row-flex">
-                <div class="form-group">
-                    <label>Nama Mata Pelajaran:</label>
-                    <input type="text" id="mapel" placeholder="Contoh: Matematika" oninput="updateFormatUjian()">
+                <div class="admin-card" style="flex:1;">
+                    <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Kelas</h4>
+                    <ul id="listKelas" style="padding-left: 20px; font-size: 14px;"></ul>
                 </div>
-                <div class="form-group">
-                    <label>Kelas / Rombel:</label>
-                    <input type="text" id="kelas" placeholder="Contoh: X-IPA-1" oninput="updateFormatUjian()">
+                <div class="admin-card" style="flex:1;">
+                    <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Mata Pelajaran</h4>
+                    <ul id="listMapel" style="padding-left: 20px; font-size: 14px;"></ul>
                 </div>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Format Nama Ujian (Otomatis):</label>
-                <input type="text" id="folderName" readonly style="background: #e9ecef; font-weight: bold; color: #0056b3;">
+        </div>
+
+        <!-- TAB 4: DATA SISWA & UPLOAD -->
+        <div id="adminTabSiswa" class="admin-view">
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa (Excel Template) ke Gist</h4>
+                <div class="form-group" style="margin-bottom: 5px;">
+                    <label>Pilih File Excel (.xlsx / .xls):</label>
+                    <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
+                </div>
+                <small style="color: #666;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
             </div>
-        </fieldset>
 
-        <div class="form-group">
-            <label>Pertanyaan Soal:</label>
-            <textarea id="soalText" rows="3" placeholder="Tuliskan teks soal..."></textarea>
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Seluruh Siswa (dari Gist)</h4>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Kelas</th>
+                                <th>Username</th>
+                                <th>Password</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDaftarSiswa">
+                            <tr><td colspan="4" style="text-align:center;">Memuat data dari Gist...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Gambar Soal (Opsional, kompres otomatis < 50KB):</label>
-            <input type="file" id="gambarSoal" accept="image/*" onchange="previewAndCompressImage(event)">
-            <img id="imgPreview" class="preview">
+        <!-- TAB 5: PENGATURAN -->
+        <div id="adminTabSettings" class="admin-view">
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Ubah Password Admin</h4>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <input type="password" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+                </div>
+                <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 10px;">Simpan Password Baru</button>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Pilihan A:</label> <input type="text" id="optA">
-            <label>Pilihan B:</label> <input type="text" id="optB">
-            <label>Pilihan C:</label> <input type="text" id="optC">
-            <label>Pilihan D:</label> <input type="text" id="optD">
-            <label>Pilihan E:</label> <input type="text" id="optE">
-        </div>
-
-        <div class="form-group">
-            <label>Kunci Jawaban:</label>
-            <select id="kunci">
-                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option>
-            </select>
-        </div>
-
-        <button onclick="tambahDanSimpanSoal()">Simpan Soal Terenkripsi ke Gist & Drive</button>
     </div>
 
 </div>
-
 <script>
 // ================= KONFIGURASI SISTEM =================
-const SECRET_ENCRYPTION_KEY = "SmantasCBTKey2026_SecureKey"; // Kunci enkripsi isi Gist
+const SECRET_ENCRYPTION_KEY = "SmantasCBTKey2026_SecureKey";
 const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/f8eadb333b77b0e74b7a73c699a32be72356ef68/soal.json"; 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxWrAu-9A7HjncOWOc9GQ54ZGifBEz7jcF6s3dr9LXpUlLSkTSR5O4sqrTdTrp11LiP/exec";
+
+const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/678851a3d89bb6dd1564239b97f6146c04d05fa9/db_cbt.json";
+const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
+
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwZ6hmPbTj9i_fgHhzLja0_CqdxwDwVzb2pTRF5t8b7lb82Jm9748C8kkB6Z-l0DPUe/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
@@ -160,196 +328,570 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
+let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
+let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
+let databaseSiswa = [];
+let daftarJadwalUjian = []; 
+let logSiswaLogin = []; 
+
 let listSoal = [];
 let jawabanSiswa = {};
 let namaUjianAktif = "Ujian_CBT_Umum";
-let compressedBase64 = "";
+let kelasSiswaLogin = "";
+let mapelSiswaLogin = "";
+let namaSiswaLogin = "";
+let currentSiswaObj = null;
 
-// Mengambil Hash Password Admin (Default: "admin123" yang sudah di-hash SHA-256)
 function getAdminPasswordHash() {
-    // Hash default untuk "admin123" adalah 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
     return localStorage.getItem("adminPasswordHash") || "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
 }
 
 function ubahPasswordAdmin() {
     const newPass = document.getElementById('newAdminPassword').value.trim();
-    if(!newPass) {
-        alert("Password baru tidak boleh kosong!");
-        return;
-    }
-    // Enkripsi password baru menggunakan SHA-256
-    const hashedNewPass = CryptoJS.SHA256(newPass).toString();
-    localStorage.setItem("adminPasswordHash", hashedNewPass);
-    alert("Password admin berhasil diubah dan dienkripsi! Gunakan password baru ini pada login berikutnya.");
+    if(!newPass) { alert("Password baru kosong!"); return; }
+    localStorage.setItem("adminPasswordHash", CryptoJS.SHA256(newPass).toString());
+    alert("Password admin berhasil diubah!");
     document.getElementById('newAdminPassword').value = "";
 }
 
-function switchTab(role) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
-
-    if(role === 'siswa') {
-        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-        document.getElementById('viewLoginSiswa').classList.add('active');
-    } else {
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-        if(localStorage.getItem("isAdminLoggedIn") === "true") {
-            document.getElementById('viewPanelAdmin').classList.add('active');
-            document.getElementById('tabMenu').style.display = 'none';
-        } else {
-            document.getElementById('viewLoginAdmin').classList.add('active');
+async function fetchCbtDatabase() {
+    try {
+        let res = await axios.get(CBT_GIST_RAW_URL + "?t=" + new Date().getTime());
+        let data = res.data;
+        if(data && typeof data === 'object') {
+            if(Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
+            if(Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
+            if(Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
+            if(Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
         }
+    } catch(e) {
+        console.error("Gagal mengambil db_cbt.json dari Gist:", e);
     }
+    initDropdowns();
+    renderTabelDaftarSiswa();
+    renderTabelJadwal();
 }
 
-function prosesLoginAdmin() {
-    const inputPass = document.getElementById('adminPassword').value;
-    // Hash input password pengguna untuk dicocokkan dengan hash yang tersimpan
-    const hashedInputPass = CryptoJS.SHA256(inputPass).toString();
-
-    if(hashedInputPass === getAdminPasswordHash()) {
-        localStorage.setItem("isAdminLoggedIn", "true");
-        document.getElementById('tabMenu').style.display = 'none';
-        document.getElementById('viewLoginAdmin').classList.remove('active');
-        document.getElementById('viewPanelAdmin').classList.add('active');
-        updateFormatUjian();
-    } else {
-        document.getElementById('errorAdmin').style.display = 'block';
-    }
-}
-
-function logoutAdmin() {
-    localStorage.removeItem("isAdminLoggedIn");
-    location.reload();
-}
-
-function updateFormatUjian() {
-    let mapel = document.getElementById('mapel').value.trim().replace(/\s+/g, '_');
-    let kelas = document.getElementById('kelas').value.trim().replace(/\s+/g, '_');
-    if(!mapel) mapel = "Mapel";
-    if(!kelas) kelas = "Kelas";
-    document.getElementById('folderName').value = `${mapel}_${kelas}`;
-}
-
-function previewAndCompressImage(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let width = img.width, height = img.height, maxDim = 800;
-            if (width > height && width > maxDim) { height *= maxDim / width; width = maxDim; }
-            else if (height > maxDim) { width *= maxDim / height; height = maxDim; }
-            canvas.width = width; canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            let quality = 0.7, dataUrl = canvas.toDataURL('image/jpeg', quality);
-            while (dataUrl.length > 70000 && quality > 0.1) {
-                quality -= 0.1;
-                dataUrl = canvas.toDataURL('image/jpeg', quality);
-            }
-            compressedBase64 = dataUrl;
-            document.getElementById('imgPreview').src = dataUrl;
-            document.getElementById('imgPreview').style.display = 'block';
+async function fetchLogLoginFromGAS() {
+    try {
+        let res = await axios.post(GAS_URL, JSON.stringify({ action: "getLogLogin" }));
+        if(res.data && res.data.status === "success") {
+            logSiswaLogin = res.data.data;
         }
-        img.src = e.target.result;
+    } catch(e) {
+        console.error("Gagal mengambil log login dari GAS:", e);
     }
-    reader.readAsDataURL(file);
+    renderTabelSiswaLogin();
 }
 
-async function tambahDanSimpanSoal() {
-    let imageUrl = "";
-    const folderName = document.getElementById('folderName').value;
-    const soalText = document.getElementById('soalText').value;
-    if (!soalText) { alert("Soal tidak boleh kosong!"); return; }
-
-    if (compressedBase64) {
-        alert("Mengunggah gambar ke Google Drive...");
-        try {
-            const response = await axios.post(GAS_URL, {
-                action: "uploadImage", folderName: folderName, fileData: compressedBase64, fileName: "soal_" + Date.now() + ".jpg"
-            });
-            if (response.data.status === "success") imageUrl = response.data.fileUrl;
-            else { alert("Gagal upload gambar: " + response.data.message); return; }
-        } catch (err) { alert("Koneksi gagal saat upload gambar."); return; }
-    }
-
-    const soalBaru = {
-        id: Date.now(), soal: soalText, namaUjian: folderName, gambar: imageUrl,
-        options: {
-            A: document.getElementById('optA').value, B: document.getElementById('optB').value,
-            C: document.getElementById('optC').value, D: document.getElementById('optD').value, E: document.getElementById('optE').value
-        },
-        kunci: document.getElementById('kunci').value
+async function saveCbtDatabaseToGist() {
+    let payloadData = {
+        db_kelas: daftarKelas,
+        db_mapel: daftarMapel,
+        db_siswa: databaseSiswa,
+        db_jadwal: daftarJadwalUjian
     };
 
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
     try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}`, githubHeaders);
+        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}`, githubHeaders);
         let filename = Object.keys(gistRes.data.files)[0];
-        let rawContent = gistRes.data.files[filename].content;
         
-        let contentSoal = [];
-        if(rawContent) {
-            try {
-                let decryptedBytes = CryptoJS.AES.decrypt(rawContent, SECRET_ENCRYPTION_KEY);
-                let decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-                contentSoal = decryptedText ? JSON.parse(decryptedText) : JSON.parse(rawContent);
-            } catch(e) {
-                contentSoal = JSON.parse(rawContent);
-            }
-        }
-
-        contentSoal.push(soalBaru);
-
-        let encryptedData = CryptoJS.AES.encrypt(JSON.stringify(contentSoal), SECRET_ENCRYPTION_KEY).toString();
-
-        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-            files: { [filename]: { content: encryptedData } }
+        await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
+            files: { [filename]: { content: JSON.stringify(payloadData, null, 2) } }
         }, githubHeaders);
-
-        alert("Soal berhasil dienkripsi dan disimpan ke Gist & Drive!");
-        document.getElementById('soalText').value = "";
-        document.getElementById('gambarSoal').value = "";
-        document.getElementById('imgPreview').style.display = 'none';
-        compressedBase64 = "";
-        ['optA', 'optB', 'optC', 'optD', 'optE'].forEach(id => document.getElementById(id).value = "");
-    } catch (e) { alert("Gagal memperbarui Gist: " + e.message); }
+    } catch(err) {
+        console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
+    }
 }
 
-async function mulaiUjian() {
-    const nis = document.getElementById('nis').value.trim();
-    const nama = document.getElementById('nama').value.trim();
-    if(!nis || !nama) { alert("Mohon isi NIS dan Nama Lengkap!"); return; }
+function initDropdowns() {
+    let jdMp = document.getElementById('jadwalMapel');
+    let checkboxContainer = document.getElementById('checkboxKelasContainer');
 
-    document.getElementById('viewLoginSiswa').innerHTML = "<h3 style='text-align:center;'>Memuat dan mendekripsi soal, mohon tunggu...</h3>";
+    [jdMp].forEach(el => {
+        if(!el) return;
+        el.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        daftarMapel.forEach(m => el.innerHTML += `<option value="${m}">${m}</option>`);
+    });
+
+    if(checkboxContainer) {
+        checkboxContainer.innerHTML = "";
+        daftarKelas.forEach(k => {
+            checkboxContainer.innerHTML += `<label><input type="checkbox" name="kelasCheck" value="${k}"> ${k}</label>`;
+        });
+    }
+
+    renderListMaster();
+}
+
+function renderListMaster() {
+    let ulKelas = document.getElementById('listKelas');
+    let ulMapel = document.getElementById('listMapel');
+    if(ulKelas) {
+        ulKelas.innerHTML = "";
+        daftarKelas.forEach((k, i) => {
+            ulKelas.innerHTML += `<li>${k} <button onclick="hapusKelas(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">Hapus</button></li>`;
+        });
+    }
+    if(ulMapel) {
+        ulMapel.innerHTML = "";
+        daftarMapel.forEach((m, i) => {
+            ulMapel.innerHTML += `<li>${m} <button onclick="hapusMapel(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">Hapus</button></li>`;
+        });
+    }
+}
+
+async function tambahKelas() {
+    let k = document.getElementById('inputKelasBaru').value.trim();
+    if(!k) return;
+    if(daftarKelas.includes(k)) { alert("Kelas sudah ada!"); return; }
+    daftarKelas.push(k);
+    document.getElementById('inputKelasBaru').value = "";
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    alert("Kelas berhasil ditambahkan ke Gist!");
+}
+
+async function hapusKelas(index) {
+    if(!confirm("Yakin ingin menghapus kelas ini?")) return;
+    daftarKelas.splice(index, 1);
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+}
+
+async function tambahMapel() {
+    let m = document.getElementById('inputMapelBaru').value.trim();
+    if(!m) return;
+    if(daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
+    daftarMapel.push(m);
+    document.getElementById('inputMapelBaru').value = "";
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    alert("Mapel berhasil ditambahkan ke Gist!");
+}
+
+async function hapusMapel(index) {
+    if(!confirm("Yakin ingin menghapus mapel ini?")) return;
+    daftarMapel.splice(index, 1);
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+}
+
+// BACA FILE WORD (.docx) ATAU TEXT (.txt) OTOMATIS
+async function bacaFileSoalOtomatis(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    let ekstensi = file.name.split('.').pop().toLowerCase();
+    
+    if(ekstensi === 'txt') {
+        const reader = new FileReader();
+        reader.onload = function(e) { 
+            document.getElementById('soalBatchText').value = e.target.result; 
+        };
+        reader.readAsText(file);
+    } else if(ekstensi === 'docx') {
+        showLoading("Membaca file Word & mengunggah gambar ke Google Drive...");
+        
+        let imagesList = [];
+        let imageCounter = 0;
+
+        try {
+            let result = await mammoth.convertToHtml({arrayBuffer: await file.arrayBuffer()}, {
+                convertImage: mammoth.images.imgElement(function(image) {
+                    return image.read("base64").then(function(imageBuffer) {
+                        let base64Str = "data:" + image.contentType + ";base64," + imageBuffer;
+                        imageCounter++;
+                        let placeholderId = `IMG_DRIVE_${Date.now()}_${imageCounter}`;
+                        imagesList.push({ id: placeholderId, data: base64Str });
+                        return { src: placeholderId };
+                    });
+                })
+            });
+
+            let tempDiv = document.createElement("div");
+            tempDiv.innerHTML = result.value;
+            
+            let totalImg = imagesList.length;
+            for(let i = 0; i < totalImg; i++) {
+                let imgData = imagesList[i];
+                showLoading(`Mengunggah gambar ${i + 1} dari ${totalImg} ke Drive...`);
+                
+                try {
+                    let uploadRes = await axios.post(GAS_URL, JSON.stringify({
+                        action: "uploadImage",
+                        folderName: "Soal_CBT_Drive",
+                        fileData: imgData.data,
+                        fileName: `soal_img_${Date.now()}_${i + 1}.png`
+                    }));
+
+                    if(uploadRes.data && uploadRes.data.status === "success") {
+                        let driveUrl = uploadRes.data.fileUrl;
+                        let targetImg = tempDiv.querySelector(`[src="${imgData.id}"]`);
+                        if(targetImg) {
+                            targetImg.setAttribute("src", driveUrl);
+                        }
+                    }
+                } catch(err) {
+                    console.error("Gagal mengunggah gambar ke Google Drive:", err);
+                }
+            }
+
+            let formattedText = konversiHtmlKeFormatCbtDenganLink(tempDiv);
+            document.getElementById('soalBatchText').value = formattedText;
+            hideLoading();
+            alert("File Word berhasil diproses! Gambar tersimpan di Google Drive dan link disematkan otomatis.");
+        } catch(err) {
+            hideLoading();
+            console.error(err);
+            alert("Gagal memproses file Word: " + err.message);
+            document.getElementById('soalBatchText').value = "";
+        }
+    }
+}
+
+function konversiHtmlKeFormatCbtDenganLink(element) {
+    let textOut = "";
+    let nodes = element.querySelectorAll('p, li, h1, h2, h3, h4');
+    
+    nodes.forEach(node => {
+        let text = node.innerText.trim();
+        let imgEl = node.querySelector('img');
+        
+        if(imgEl && imgEl.getAttribute('src')) {
+            let linkDrive = imgEl.getAttribute('src');
+            text += `<br><img src="${linkDrive}" class="img-soal">`;
+        }
+        
+        if(text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
+            textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
+        } else if(text.toLowerCase().startsWith("jawaban") || text === "0" || text === "1") {
+            textOut += text + "\n";
+        } else if(text.length > 0) {
+            textOut += text + "\n";
+        }
+    });
+    return textOut;
+}
+
+async function simpanJadwalDanSoal() {
+    let mapel = document.getElementById('jadwalMapel').value;
+    let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
+    let mulai = document.getElementById('waktuMulai').value;
+    let selesai = document.getElementById('waktuSelesai').value;
+    let rawText = document.getElementById('soalBatchText').value.trim();
+
+    if(!mapel) { alert("Pilih Mata Pelajaran!"); return; }
+    if(checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
+    if(!mulai || !selesai) { alert("Tentukan waktu mulai dan selesai ujian!"); return; }
+    if(mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
+
+    showLoading("Menyiapkan jadwal & menyimpan soal...");
+
+    checkedKelas.forEach(kelas => {
+        daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
+        daftarJadwalUjian.push({ mapel, kelas, mulai, selesai });
+    });
+    
+    await saveCbtDatabaseToGist();
+
+    if(rawText) {
+        showLoading("Menyimpan & mengenkripsi soal ke GitHub Gist...");
+        let allParsedSoal = [];
+        checkedKelas.forEach(kelas => {
+            let folderName = `${mapel.replace(/\s+/g, '_')}_${kelas.replace(/\s+/g, '_')}`;
+            let parsed = parseSoalDariTeks(rawText, folderName);
+            allParsedSoal = allParsedSoal.concat(parsed);
+        });
+
+        const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+        try {
+            let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}`, githubHeaders);
+            let filename = Object.keys(gistRes.data.files)[0];
+            let rawContent = gistRes.data.files[filename].content;
+            
+            let contentSoal = [];
+            if(rawContent) {
+                try {
+                    let decryptedBytes = CryptoJS.AES.decrypt(rawContent, SECRET_ENCRYPTION_KEY);
+                    let decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                    contentSoal = decryptedText ? JSON.parse(decryptedText) : JSON.parse(rawContent);
+                } catch(e) { contentSoal = JSON.parse(rawContent); }
+            }
+
+            contentSoal = contentSoal.concat(allParsedSoal);
+            let encryptedData = CryptoJS.AES.encrypt(JSON.stringify(contentSoal), SECRET_ENCRYPTION_KEY).toString();
+
+            await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+                files: { [filename]: { content: encryptedData } }
+            }, githubHeaders);
+        } catch(e) { 
+            hideLoading();
+            alert("Gagal upload soal ke Gist: " + e.message); 
+            return; 
+        }
+    }
+
+    hideLoading();
+    renderTabelJadwal();
+    alert("Jadwal ujian dan soal berhasil disimpan dengan sempurna!");
+    document.getElementById('soalBatchText').value = "";
+}
+
+function parseSoalDariTeks(text, folderName) {
+    let lines = text.split('\n');
+    let soalList = [];
+    let currentSoal = null;
+    let optionsMap = {};
+    let optionKeys = ['A', 'B', 'C', 'D', 'E'];
+    let optIdx = 0;
+
+    lines.forEach(line => {
+        let l = line.trim();
+        if(l.startsWith("SOAL")) {
+            if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+            currentSoal = { id: Date.now() + Math.random(), soal: "", namaUjian: folderName, gambar: "", options: {}, kunci: "A" };
+            optionsMap = {}; optIdx = 0;
+        } else if(l.startsWith("JAWABAN")) {
+            // skip
+        } else if(currentSoal && !currentSoal.soal) {
+            currentSoal.soal = l;
+        } else if(currentSoal) {
+            if(l === "0" || l === "1") {
+                if(l === "1" && optionKeys[optIdx - 1]) currentSoal.kunci = optionKeys[optIdx - 1];
+            } else if(l.length > 0 && optIdx < 5) {
+                optionsMap[optionKeys[optIdx]] = l;
+                optIdx++;
+            }
+        }
+    });
+    if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+    return soalList;
+}
+
+function renderTabelJadwal() {
+    let tbody = document.getElementById('tbodyJadwal');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    if(daftarJadwalUjian.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
+        return;
+    }
+    daftarJadwalUjian.forEach((j, idx) => {
+        tbody.innerHTML += `<tr>
+            <td>${j.mapel}</td>
+            <td>${j.kelas}</td>
+            <td>${j.mulai.replace('T', ' ')}</td>
+            <td>${j.selesai.replace('T', ' ')}</td>
+            <td>
+                <button onclick="hapusJadwal(${idx})" style="padding:4px 8px; font-size:11px; background:#dc3545; color:white; width:auto;">Hapus</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function hapusJadwal(idx) {
+    daftarJadwalUjian.splice(idx, 1);
+    await saveCbtDatabaseToGist();
+    renderTabelJadwal();
+}
+
+async function importDataSiswaToGist(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        databaseSiswa = json.map(row => ({
+            nama: row.Nama || row.nama || "",
+            kelas: row.Kelas || row.kelas || "",
+            username: String(row.Username || row.username || ""),
+            password: String(row.Password || row.password || "")
+        }));
+        
+        await saveCbtDatabaseToGist();
+        renderTabelDaftarSiswa();
+        alert(`Berhasil mengunggah dan menyimpan ${databaseSiswa.length} data siswa ke Gist!`);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function renderTabelDaftarSiswa() {
+    let tbody = document.getElementById('tbodyDaftarSiswa');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    if(databaseSiswa.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Belum ada data siswa.</td></tr>`;
+        return;
+    }
+    databaseSiswa.forEach(s => {
+        tbody.innerHTML += `<tr>
+            <td>${s.nama}</td>
+            <td>${s.kelas}</td>
+            <td>${s.username}</td>
+            <td>${s.password}</td>
+        </tr>`;
+    });
+}
+
+function renderTabelSiswaLogin() {
+    let tbody = document.getElementById('tbodySiswaLogin');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    if(logSiswaLogin.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
+        return;
+    }
+    logSiswaLogin.forEach(l => {
+        let badgeStatus = l.status === "Selesai" ? `<span style="color:green; font-weight:bold;">Selesai</span>` : `<span style="color:orange; font-weight:bold;">Sedang Mengerjakan</span>`;
+        tbody.innerHTML += `<tr>
+            <td>${l.nama}</td>
+            <td>${l.kelas}</td>
+            <td>${l.mapel}</td>
+            <td>${badgeStatus}</td>
+            <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+        </tr>`;
+    });
+}
+
+// 1. AUTENTIKASI SISWA HANYA DENGAN USERNAME & PASSWORD
+async function autentikasiSiswa() {
+    let username = document.getElementById('nis').value.trim();
+    let pass = document.getElementById('passSiswa').value.trim();
+
+    if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
+
+    showLoading("Memeriksa akun siswa...");
+    if(databaseSiswa.length === 0) {
+        await fetchCbtDatabase();
+    }
+    hideLoading();
+
+    let siswa = databaseSiswa.find(s => s.username === username);
+    if(!siswa) { alert("Username tidak ditemukan dalam database!"); return; }
+
+    if(siswa.password !== pass) {
+        alert("Password salah!");
+        return;
+    }
+
+    currentSiswaObj = siswa;
+    namaSiswaLogin = siswa.nama;
+    kelasSiswaLogin = siswa.kelas;
+
+    // Tampilkan panel pilihan ujian aktif untuk kelas siswa tersebut
+    document.getElementById('salamSiswa').innerText = `Selamat Datang, ${siswa.nama}`;
+    document.getElementById('infoKelasSiswa').innerText = `Kelas: ${siswa.kelas}`;
+    
+    let selectMapel = document.getElementById('pilihMapelAktif');
+    selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
+
+    let now = new Date().toISOString().slice(0, 16);
+    let jadwalKelas = daftarJadwalUjian.filter(j => j.kelas === siswa.kelas);
+
+    if(jadwalKelas.length === 0) {
+        alert("Belum ada jadwal ujian yang aktif untuk kelas Anda.");
+    }
+
+    jadwalKelas.forEach(j => {
+        selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Mulai: ${j.mulai.replace('T', ' ')})</option>`;
+    });
+
+    document.getElementById('viewLoginSiswa').classList.remove('active');
+    document.getElementById('viewPilihUjianSiswa').classList.add('active');
+}
+
+function logoutSiswa() {
+    currentSiswaObj = null;
+    document.getElementById('nis').value = "";
+    document.getElementById('passSiswa').value = "";
+    document.getElementById('viewPilihUjianSiswa').classList.remove('active');
+    document.getElementById('viewLoginSiswa').classList.add('active');
+}
+
+// 2. MULAI UJIAN SETELAH MEMILIH MAPEL
+async function mulaiUjianPilihan() {
+    let mapel = document.getElementById('pilihMapelAktif').value;
+    if(!mapel) { alert("Pilih mata pelajaran ujian terlebih dahulu!"); return; }
+
+    let now = new Date().toISOString().slice(0, 16); 
+    let jadwalMatch = daftarJadwalUjian.find(j => j.mapel === mapel && j.kelas === kelasSiswaLogin);
+
+    if(!jadwalMatch) {
+        alert("Jadwal ujian tidak ditemukan!");
+        return;
+    }
+
+    if(now < jadwalMatch.mulai) {
+        alert(`Ujian belum dimulai!\nJadwal mulai: ${jadwalMatch.mulai.replace('T', ' ')}`);
+        return;
+    }
+
+    if(now > jadwalMatch.selesai) {
+        alert(`Ujian sudah berakhir!\nJadwal selesai: ${jadwalMatch.selesai.replace('T', ' ')}`);
+        return;
+    }
+
+    mapelSiswaLogin = mapel;
+
+    // Kirim log status login ke Spreadsheet via GAS
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapel,
+            status: "Sedang Mengerjakan",
+            nilai: null
+        }));
+    } catch(e) {
+        console.error("Gagal mengirim log login ke server:", e);
+    }
+
+    namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
+    loadSoalUjian();
+}
+
+async function loadSoalUjian() {
+    showLoading("Memuat dan mendekripsi soal ujian...");
     try {
         let res = await axios.get(GIST_RAW_URL + "?t=" + new Date().getTime());
         let rawResponse = res.data;
 
         if(typeof rawResponse === "string") {
             let bytes = CryptoJS.AES.decrypt(rawResponse, SECRET_ENCRYPTION_KEY);
-            let decryptedString = bytes.toString(CryptoJS.enc.Utf8);
-            listSoal = JSON.parse(decryptedString);
+            listSoal = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
         } else {
             listSoal = rawResponse;
         }
 
-        if(!Array.isArray(listSoal) || listSoal.length === 0) { alert("Belum ada soal tersedia."); location.reload(); return; }
+        listSoal = listSoal.filter(s => s.namaUjian === namaUjianAktif);
 
-        if(listSoal[0].namaUjian) namaUjianAktif = listSoal[0].namaUjian;
-        document.getElementById('infoUjianText').innerText = "Mata Pelajaran / Ujian: " + namaUjianAktif.replace(/_/g, ' ');
-        
+        hideLoading();
+        if(!Array.isArray(listSoal) || listSoal.length === 0) { 
+            alert("Belum ada soal untuk ujian/kelas ini."); 
+            location.reload(); 
+            return; 
+        }
+
+        document.getElementById('infoUjianText').innerText = "Mata Pelajaran: " + namaUjianAktif.replace(/_/g, ' ');
         document.getElementById('tabMenu').style.display = 'none';
-        document.getElementById('viewLoginSiswa').classList.remove('active');
+        document.getElementById('viewPilihUjianSiswa').classList.remove('active');
         document.getElementById('viewUjianSiswa').classList.add('active');
-        renderSoal();
-    } catch(err) { alert("Gagal memuat atau mendekripsi soal."); location.reload(); }
+        renderSoalSiswa();
+    } catch(err) { 
+        hideLoading();
+        alert("Gagal memuat soal."); 
+        location.reload(); 
+    }
 }
 
-function renderSoal() {
+function renderSoalSiswa() {
     let html = "";
     listSoal.forEach((item, index) => {
         html += `<div class="soal-box"><p>Soal ${index + 1}. ${item.soal}</p>`;
@@ -367,39 +909,132 @@ function renderSoal() {
 
 async function selesaiUjian() {
     if(!confirm("Kumpulkan jawaban sekarang?")) return;
-    document.getElementById('viewUjianSiswa').innerHTML = "<h3 style='text-align:center;'>Mengirim jawaban ke server... Jangan tutup halaman!</h3>";
+    showLoading("Mengirim jawaban ke server... Jangan tutup halaman!");
 
     let benar = 0;
     listSoal.forEach((item, index) => { if(jawabanSiswa[index] === item.kunci) benar++; });
     let nilaiAkhir = Number(((benar / listSoal.length) * 100).toFixed(2));
 
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapelSiswaLogin,
+            status: "Selesai",
+            nilai: nilaiAkhir
+        }));
+    } catch(e) {
+        console.error("Gagal memperbarui log selesai:", e);
+    }
+
     let payload = {
         action: "submitResult", namaUjian: namaUjianAktif,
-        nis: document.getElementById('nis').value, nama: document.getElementById('nama').value,
+        nis: currentSiswaObj ? currentSiswaObj.username : "Siswa", nama: namaSiswaLogin,
         nilai: nilaiAkhir, jawaban: jawabanSiswa
     };
 
     setTimeout(async () => {
         try {
             let res = await axios.post(GAS_URL, JSON.stringify(payload));
+            hideLoading();
             if(res.data.status === "success") {
                 alert(`Ujian Selesai!\nNilai Anda: ${nilaiAkhir}`);
                 location.reload();
             } else { alert("Gagal menyimpan: " + res.data.message); location.reload(); }
-        } catch(err) { alert("Koneksi gagal saat submit."); location.reload(); }
-    }, Math.floor(Math.random() * 3000) + 1000);
+        } catch(err) { 
+            hideLoading();
+            alert("Koneksi gagal saat submit."); 
+            location.reload(); 
+        }
+    }, Math.floor(Math.random() * 2000) + 1000);
+}
+
+function switchTab(role) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+
+    if(role === 'siswa') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+        if(currentSiswaObj) {
+            document.getElementById('viewPilihUjianSiswa').classList.add('active');
+        } else {
+            document.getElementById('viewLoginSiswa').classList.add('active');
+        }
+    } else {
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        if(localStorage.getItem("isAdminLoggedIn") === "true") {
+            document.getElementById('viewPanelAdmin').classList.add('active');
+            document.getElementById('tabMenu').style.display = 'none';
+            switchAdminTab('monitoring');
+        } else {
+            document.getElementById('viewLoginAdmin').classList.add('active');
+        }
+    }
+}
+
+function switchAdminTab(tabName) {
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
+
+    if(tabName === 'monitoring') {
+        document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('adminTabMonitoring').classList.add('active');
+        fetchLogLoginFromGAS();
+    } else if(tabName === 'ujian') {
+        document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('adminTabUjian').classList.add('active');
+        renderTabelJadwal();
+    } else if(tabName === 'master') {
+        document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
+        document.getElementById('adminTabMaster').classList.add('active');
+        renderListMaster();
+    } else if(tabName === 'siswa') {
+        document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
+        document.getElementById('adminTabSiswa').classList.add('active');
+        fetchCbtDatabase();
+    } else if(tabName === 'settings') {
+        document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
+        document.getElementById('adminTabSettings').classList.add('active');
+    }
+}
+
+function prosesLoginAdmin() {
+    let pass = document.getElementById('adminPassword').value;
+    if(CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
+        localStorage.setItem("isAdminLoggedIn", "true");
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        switchAdminTab('monitoring');
+    } else {
+        document.getElementById('errorAdmin').style.display = 'block';
+    }
+}
+
+function logoutAdmin() {
+    localStorage.removeItem("isAdminLoggedIn");
+    location.reload();
+}
+
+function showLoading(text) {
+    document.getElementById('loadingText').innerText = text;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
 }
 
 window.onload = function() {
+    fetchCbtDatabase();
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewLoginSiswa').classList.remove('active');
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
-        updateFormatUjian();
+        switchAdminTab('monitoring');
     }
 }
-</script>
-
 </body>
 </html>
