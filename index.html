@@ -12,19 +12,72 @@
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f4f7f6; color: #333; }
-        .container { background: white; padding: 15px; border-radius: 8px; max-width: 950px; margin: 10px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        /* Container default (lebar untuk ujian & admin dashboard) */
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            max-width: 950px; 
+            margin: 20px auto; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            transition: max-width 0.25s ease;
+        }
+        /* Mode diperkecil khusus halaman login */
+        .container.login-compact {
+            max-width: 420px;
+            margin-top: 40px;
+        }
+
         h2, h3 { text-align: center; color: #0056b3; }
         .header-box { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #008080; padding-bottom: 10px; }
-        .header-box h3 { color: #008080; margin: 5px 0; }
+        .header-box h2 { margin: 0 0 4px 0; font-size: 22px; }
+        .header-box h3 { color: #008080; margin: 0; font-size: 15px; }
         .form-group { margin-bottom: 12px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 14px; }
-        input[type="text"], input[type="password"], input[type="datetime-local"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        button { background: #008080; color: white; padding: 12px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 13px; }
+        input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select { 
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; 
+        }
+        
+        /* Style kolom input terkunci (readonly) */
+        input.locked-input {
+            background-color: #e9ecef;
+            color: #495057;
+            pointer-events: none;
+            cursor: not-allowed;
+            user-select: none;
+        }
+
+        button { background: #008080; color: white; padding: 11px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #006666; }
-        /* Tab Navigation */
-        .tab-menu, .admin-tab-menu { display: flex; margin-bottom: 15px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; }
-        .tab-btn, .admin-tab-btn { flex: 1; padding: 10px 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 12px; min-width: 95px; }
-        .tab-btn.active, .admin-tab-btn.active { background: #008080; color: white; }
+        
+        /* Tombol Toggle Tunggal Login Siswa / Login Admin */
+        .single-role-bar { margin-bottom: 15px; }
+        .btn-role-toggle {
+            background: #008080;
+            color: #ffffff;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            width: 100%;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-role-toggle:hover { background: #006666; }
+        .btn-role-toggle.admin-mode {
+            background: #6c757d;
+            color: #ffffff;
+        }
+        .btn-role-toggle.admin-mode:hover {
+            background: #5a6268;
+        }
+
+        /* Tab Navigation Admin */
+        .admin-tab-menu { display: flex; margin-bottom: 15px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; }
+        .admin-tab-btn { flex: 1; padding: 10px 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 12px; min-width: 95px; }
+        .admin-tab-btn.active { background: #008080; color: white; }
         
         .soal-box { margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
         .soal-box p { font-size: 15px; line-height: 1.4; font-weight: bold; }
@@ -32,23 +85,37 @@
         .option-label { display: block; margin-bottom: 6px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .option-label input { margin-right: 10px; }
         
-        .preview { margin-top: 8px; max-height: 120px; display: none; }
         .row-flex { display: flex; gap: 10px; flex-wrap: wrap; }
-        .row-flex > div { flex: 1; min-width: 220px; }
+        .row-flex > div { flex: 1; min-width: 180px; }
+        .row-flex > div.jp-col { flex: 0 0 130px; min-width: 120px; max-width: 135px; }
         
         .error-msg { color: red; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
         .section-view, .admin-view { display: none; }
         .section-view.active, .admin-view.active { display: block; }
-        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; border-radius: 6px; margin-bottom: 15px; }
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 500px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 520px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #008080; color: white; }
         
+        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; border-radius: 3px; margin-right: 4px; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+
         .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
         .checkbox-grid label { font-weight: normal; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        .pass-display-box {
+            display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px;
+            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;
+        }
+        .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
 
         /* LOADING OVERLAY KUNCI LAYAR TOTAL */
         #loadingOverlay {
@@ -85,18 +152,19 @@
     <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
     <p style="font-size: 13px; color: #ddd; margin-top: 5px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
 </div>
-<div class="container">
+
+<div class="container login-compact" id="mainContainer">
     <div class="header-box">
         <h2>SMANTAS-CBT</h2>
         <h3>Portal Ujian Online Terintegrasi</h3>
     </div>
-    <!-- TAB LOGIN UTAMA -->
-    <div class="tab-menu" id="tabMenu">
-        <button class="tab-btn active" onclick="switchTab('siswa')">Login Siswa</button>
-        <button class="tab-btn" onclick="switchTab('admin')">Login Admin</button>
+
+    <!-- 1 TOMBOL TOGGLE ROLE DI ATAS -->
+    <div class="single-role-bar" id="tabMenu">
+        <button type="button" id="btnRoleToggle" class="btn-role-toggle" onclick="toggleRoleLogin()">Login Siswa</button>
     </div>
 
-    <!-- 1. VIEW LOGIN SISWA (Hanya Username & Password) -->
+    <!-- 1. VIEW LOGIN SISWA -->
     <div id="viewLoginSiswa" class="section-view active">
         <div class="form-group">
             <label>Username / NIS:</label>
@@ -131,7 +199,7 @@
             <label>Password Admin:</label>
             <input type="password" id="adminPassword" placeholder="Masukkan password admin...">
         </div>
-        <button onclick="prosesLoginAdmin()">MASUK PANEL ADMIN</button>
+        <button onclick="prosesLoginAdmin()" style="background: #6c757d;">MASUK PANEL ADMIN</button>
         <div id="errorAdmin" class="error-msg">Password admin salah!</div>
     </div>
 
@@ -203,11 +271,15 @@
                 <div class="row-flex">
                     <div class="form-group">
                         <label>Waktu Mulai Ujian:</label>
-                        <input type="datetime-local" id="waktuMulai">
+                        <input type="datetime-local" id="waktuMulai" onchange="hitungWaktuSelesaiOtomatis()">
+                    </div>
+                    <div class="form-group jp-col">
+                        <label id="labelJumlahJp">JP (40 mnt/JP):</label>
+                        <input type="number" id="jumlahJp" min="1" max="20" value="2" oninput="hitungWaktuSelesaiOtomatis()" onchange="hitungWaktuSelesaiOtomatis()">
                     </div>
                     <div class="form-group">
-                        <label>Waktu Selesai Ujian:</label>
-                        <input type="datetime-local" id="waktuSelesai">
+                        <label>Waktu Selesai Ujian (Terkunci):</label>
+                        <input type="datetime-local" id="waktuSelesai" class="locked-input" readonly tabindex="-1">
                     </div>
                 </div>
                 <div class="form-group">
@@ -226,6 +298,7 @@
                             <tr>
                                 <th>Mata Pelajaran</th>
                                 <th>Kelas</th>
+                                <th>JP</th>
                                 <th>Mulai</th>
                                 <th>Selesai</th>
                                 <th>Aksi</th>
@@ -269,8 +342,41 @@
 
         <!-- TAB 4: DATA SISWA & UPLOAD -->
         <div id="adminTabSiswa" class="admin-view">
+            <!-- FORM TAMBAH / EDIT SISWA SATUAN -->
             <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa (Excel Template) ke Gist</h4>
+                <h4 id="judulFormSiswaSatuan" style="margin: 0 0 10px 0; color: #008080;">Tambah Siswa Satuan</h4>
+                <input type="hidden" id="editSiswaIndex" value="-1">
+                <div class="row-flex">
+                    <div class="form-group">
+                        <label>Nama Lengkap Siswa:</label>
+                        <input type="text" id="inputNamaSiswa" placeholder="Contoh: Ahmad Fauzi">
+                    </div>
+                    <div class="form-group">
+                        <label>Kelas:</label>
+                        <select id="selectKelasSiswaSatuan">
+                            <option value="">-- Pilih Kelas --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row-flex">
+                    <div class="form-group">
+                        <label>Username / NIS:</label>
+                        <input type="text" id="inputUsernameSiswa" placeholder="Contoh: 262710001">
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="text" id="inputPasswordSiswa" placeholder="Masukkan password siswa...">
+                    </div>
+                </div>
+                <div class="row-flex">
+                    <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa Satuan</button>
+                    <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
+                </div>
+            </div>
+
+            <!-- UPLOAD MASSAL EXCEL -->
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa Massal (Excel Template) ke Gist</h4>
                 <div class="form-group" style="margin-bottom: 5px;">
                     <label>Pilih File Excel (.xlsx / .xls):</label>
                     <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
@@ -278,6 +384,7 @@
                 <small style="color: #666;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
             </div>
 
+            <!-- TABEL DAFTAR SISWA -->
             <div class="admin-card">
                 <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Seluruh Siswa (dari Gist)</h4>
                 <div class="table-responsive">
@@ -288,10 +395,11 @@
                                 <th>Kelas</th>
                                 <th>Username</th>
                                 <th>Password</th>
+                                <th style="width: 120px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyDaftarSiswa">
-                            <tr><td colspan="4" style="text-align:center;">Memuat data dari Gist...</td></tr>
+                            <tr><td colspan="5" style="text-align:center;">Memuat data dari Gist...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -300,12 +408,52 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
+            <!-- PENGATURAN JP -->
             <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Ubah Password Admin</h4>
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
+                <div class="form-group">
+                    <label>Durasi 1 JP (dalam Menit):</label>
+                    <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
+                    <small style="color: #666; display: block; margin-top: 4px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                </div>
+                <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 10px;">Simpan Pengaturan JP</button>
+            </div>
+
+            <!-- PASSWORD ADMIN -->
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Manajemen Password Admin</h4>
+                <label>Password Admin Saat Ini:</label>
+                <div class="pass-display-box">
+                    <span id="currentAdminPassDisplay">••••••••</span>
+                    <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
+                </div>
                 <div class="form-group" style="margin-bottom: 10px;">
-                    <input type="password" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+                    <label>Ubah Password Admin Baru:</label>
+                    <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
                 </div>
                 <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 10px;">Simpan Password Baru</button>
+            </div>
+
+            <!-- BACKUP & RESTORE DB -->
+            <div class="admin-card">
+                <h4 style="margin: 0 0 10px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                <div class="row-flex">
+                    <div class="form-group">
+                        <label>Backup Seluruh Database ke File JSON:</label>
+                        <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 10px;">Download Backup DB (.json)</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Restore Database dari File Backup (.json):</label>
+                        <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- HAPUS / RESET DB -->
+            <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                <h4 style="margin: 0 0 8px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                <p style="font-size: 13px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
+                <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 10px;">Hapus Seluruh Database (Reset DB)</button>
             </div>
         </div>
 
@@ -314,10 +462,9 @@
 </div>
 <script>
 // ================= KONFIGURASI SISTEM =================
-const SECRET_ENCRYPTION_KEY = "SmantasCBTKey2026_SecureKey";
 const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/f8eadb333b77b0e74b7a73c699a32be72356ef68/soal.json"; 
 
-const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/678851a3d89bb6dd1564239b97f6146c04d05fa9/db_cbt.json";
+const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/d02fc880fb96bd2f2abe021aa556fd1b80370d05/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwZ6hmPbTj9i_fgHhzLja0_CqdxwDwVzb2pTRF5t8b7lb82Jm9748C8kkB6Z-l0DPUe/exec";
@@ -328,11 +475,18 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
+let currentLoginRole = 'siswa';
+
 let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
 let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
 let databaseSiswa = [];
 let daftarJadwalUjian = []; 
+let pengaturanCbt = {
+    menitPerJp: 40,
+    adminPasswordPlain: "admin123"
+};
 let logSiswaLogin = []; 
+let isAdminPassVisible = false;
 
 let listSoal = [];
 let jawabanSiswa = {};
@@ -342,27 +496,156 @@ let mapelSiswaLogin = "";
 let namaSiswaLogin = "";
 let currentSiswaObj = null;
 
-function getAdminPasswordHash() {
-    return localStorage.getItem("adminPasswordHash") || "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+function setCompactMode(isCompact) {
+    const container = document.getElementById('mainContainer');
+    if (isCompact) {
+        container.classList.add('login-compact');
+    } else {
+        container.classList.remove('login-compact');
+    }
 }
 
-function ubahPasswordAdmin() {
+function toggleRoleLogin() {
+    const btn = document.getElementById('btnRoleToggle');
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('errorAdmin').style.display = 'none';
+
+    if (currentLoginRole === 'siswa') {
+        currentLoginRole = 'admin';
+        btn.innerText = "Login Admin";
+        btn.classList.add('admin-mode');
+        
+        if (localStorage.getItem("isAdminLoggedIn") === "true") {
+            setCompactMode(false);
+            document.getElementById('viewPanelAdmin').classList.add('active');
+            document.getElementById('tabMenu').style.display = 'none';
+            switchAdminTab('monitoring');
+        } else {
+            setCompactMode(true);
+            document.getElementById('viewLoginAdmin').classList.add('active');
+        }
+    } else {
+        currentLoginRole = 'siswa';
+        btn.innerText = "Login Siswa";
+        btn.classList.remove('admin-mode');
+        setCompactMode(true);
+
+        if (currentSiswaObj) {
+            document.getElementById('viewPilihUjianSiswa').classList.add('active');
+        } else {
+            document.getElementById('viewLoginSiswa').classList.add('active');
+        }
+    }
+}
+
+function getAdminPasswordPlain() {
+    return localStorage.getItem("adminPasswordPlain") || pengaturanCbt.adminPasswordPlain || "admin123";
+}
+
+function getAdminPasswordHash() {
+    const plain = getAdminPasswordPlain();
+    return CryptoJS.SHA256(plain).toString();
+}
+
+function renderAdminPasswordDisplay() {
+    const span = document.getElementById('currentAdminPassDisplay');
+    const btn = document.getElementById('btnTogglePassAdmin');
+    if(!span || !btn) return;
+    const plain = getAdminPasswordPlain();
+    if(isAdminPassVisible) {
+        span.innerText = plain;
+        btn.innerText = "Sembunyikan";
+    } else {
+        span.innerText = "•".repeat(plain.length);
+        btn.innerText = "Lihat";
+    }
+}
+
+function toggleLihatPasswordAdmin() {
+    isAdminPassVisible = !isAdminPassVisible;
+    renderAdminPasswordDisplay();
+}
+
+async function ubahPasswordAdmin() {
     const newPass = document.getElementById('newAdminPassword').value.trim();
     if(!newPass) { alert("Password baru kosong!"); return; }
+    showLoading("Menyimpan password admin baru...");
+    localStorage.setItem("adminPasswordPlain", newPass);
     localStorage.setItem("adminPasswordHash", CryptoJS.SHA256(newPass).toString());
+    pengaturanCbt.adminPasswordPlain = newPass;
+    await saveCbtDatabaseToGist();
+    hideLoading();
+    renderAdminPasswordDisplay();
     alert("Password admin berhasil diubah!");
     document.getElementById('newAdminPassword').value = "";
 }
 
+async function simpanPengaturanJp() {
+    const val = parseInt(document.getElementById('settingMenitPerJp').value, 10);
+    if(isNaN(val) || val < 1) {
+        alert("Masukkan durasi menit per JP yang valid (minimal 1 menit)!");
+        return;
+    }
+    showLoading("Menyimpan pengaturan JP ke Gist...");
+    pengaturanCbt.menitPerJp = val;
+    await saveCbtDatabaseToGist();
+    updateLabelJp();
+    hitungWaktuSelesaiOtomatis();
+    hideLoading();
+    alert(`Pengaturan berhasil disimpan! 1 JP = ${val} Menit.`);
+}
+
+function updateLabelJp() {
+    const m = pengaturanCbt.menitPerJp || 40;
+    const lbl = document.getElementById('labelJumlahJp');
+    if(lbl) lbl.innerText = `JP (${m} mnt/JP):`;
+    const inp = document.getElementById('settingMenitPerJp');
+    if(inp) inp.value = m;
+}
+
+function hitungWaktuSelesaiOtomatis() {
+    const mulaiStr = document.getElementById('waktuMulai').value;
+    const jp = parseInt(document.getElementById('jumlahJp').value, 10);
+    const menitPerJp = parseInt(pengaturanCbt.menitPerJp, 10) || 40;
+
+    if(!mulaiStr || isNaN(jp) || jp < 1) return;
+
+    const startDate = new Date(mulaiStr);
+    if(isNaN(startDate.getTime())) return;
+
+    const totalMenit = jp * menitPerJp;
+    const endDate = new Date(startDate.getTime() + totalMenit * 60000);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const formattedEnd = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    document.getElementById('waktuSelesai').value = formattedEnd;
+}
+
 async function fetchCbtDatabase() {
     try {
-        let res = await axios.get(CBT_GIST_RAW_URL + "?t=" + new Date().getTime());
-        let data = res.data;
+        let data = null;
+        try {
+            let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
+                headers: { "Authorization": `token ${GIST_TOKEN}` }
+            });
+            let fname = Object.keys(apiRes.data.files)[0];
+            data = JSON.parse(apiRes.data.files[fname].content);
+        } catch(apiErr) {
+            let res = await axios.get(CBT_GIST_RAW_URL + "?t=" + new Date().getTime());
+            data = res.data;
+        }
+
         if(data && typeof data === 'object') {
             if(Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
             if(Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
             if(Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
             if(Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
+            if(data.db_pengaturan && typeof data.db_pengaturan === 'object') {
+                pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
+                if(data.db_pengaturan.adminPasswordPlain) {
+                    localStorage.setItem("adminPasswordPlain", data.db_pengaturan.adminPasswordPlain);
+                }
+            }
         }
     } catch(e) {
         console.error("Gagal mengambil db_cbt.json dari Gist:", e);
@@ -370,6 +653,8 @@ async function fetchCbtDatabase() {
     initDropdowns();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
+    updateLabelJp();
+    renderAdminPasswordDisplay();
 }
 
 async function fetchLogLoginFromGAS() {
@@ -389,7 +674,8 @@ async function saveCbtDatabaseToGist() {
         db_kelas: daftarKelas,
         db_mapel: daftarMapel,
         db_siswa: databaseSiswa,
-        db_jadwal: daftarJadwalUjian
+        db_jadwal: daftarJadwalUjian,
+        db_pengaturan: pengaturanCbt
     };
 
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
@@ -402,18 +688,104 @@ async function saveCbtDatabaseToGist() {
         }, githubHeaders);
     } catch(err) {
         console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
+        alert("Gagal menyimpan ke Gist: " + err.message);
     }
+}
+
+function backupDatabaseJson() {
+    const backupObj = {
+        exportedAt: new Date().toISOString(),
+        db_kelas: daftarKelas,
+        db_mapel: daftarMapel,
+        db_siswa: databaseSiswa,
+        db_jadwal: daftarJadwalUjian,
+        db_pengaturan: pengaturanCbt
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+    const a = document.createElement('a');
+    const tgl = new Date().toISOString().slice(0, 10);
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", `backup_smantas_cbt_${tgl}.json`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function restoreDatabaseJson(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    if(!confirm("Apakah Anda yakin ingin me-restore database dari file ini? Data saat ini di Gist akan ditimpa.")) {
+        event.target.value = "";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if(!parsed || typeof parsed !== 'object') {
+                throw new Error("Format JSON tidak valid.");
+            }
+            showLoading("Merestore database ke GitHub Gist...");
+            if(Array.isArray(parsed.db_kelas)) daftarKelas = parsed.db_kelas;
+            if(Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
+            if(Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
+            if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
+            if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
+                pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
+                if(parsed.db_pengaturan.adminPasswordPlain) {
+                    localStorage.setItem("adminPasswordPlain", parsed.db_pengaturan.adminPasswordPlain);
+                }
+            }
+
+            await saveCbtDatabaseToGist();
+            initDropdowns();
+            renderTabelDaftarSiswa();
+            renderTabelJadwal();
+            updateLabelJp();
+            renderAdminPasswordDisplay();
+            hideLoading();
+            alert("Database berhasil direstore dan disinkronkan ke Gist!");
+        } catch(err) {
+            hideLoading();
+            alert("Gagal restore database: " + err.message);
+        }
+        event.target.value = "";
+    };
+    reader.readAsText(file);
+}
+
+async function hapusDatabaseGist() {
+    if(!confirm("PERINGATAN! Semua data Siswa dan Jadwal Ujian di Gist akan dihapus permanen. Lanjutkan?")) return;
+    if(!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database?")) return;
+
+    showLoading("Menghapus dan mereset database di Gist...");
+    databaseSiswa = [];
+    daftarJadwalUjian = [];
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    renderTabelJadwal();
+    hideLoading();
+    alert("Database siswa dan jadwal ujian berhasil dihapus/direset!");
 }
 
 function initDropdowns() {
     let jdMp = document.getElementById('jadwalMapel');
     let checkboxContainer = document.getElementById('checkboxKelasContainer');
+    let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
 
-    [jdMp].forEach(el => {
-        if(!el) return;
-        el.innerHTML = '<option value="">-- Pilih Mapel --</option>';
-        daftarMapel.forEach(m => el.innerHTML += `<option value="${m}">${m}</option>`);
-    });
+    if(jdMp) {
+        jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${m}">${m}</option>`);
+    }
+
+    if(selKelasSatuan) {
+        const prevVal = selKelasSatuan.value;
+        selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+        daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
+        if(prevVal) selKelasSatuan.value = prevVal;
+    }
 
     if(checkboxContainer) {
         checkboxContainer.innerHTML = "";
@@ -446,38 +818,187 @@ async function tambahKelas() {
     let k = document.getElementById('inputKelasBaru').value.trim();
     if(!k) return;
     if(daftarKelas.includes(k)) { alert("Kelas sudah ada!"); return; }
+    showLoading("Menyimpan kelas...");
     daftarKelas.push(k);
     document.getElementById('inputKelasBaru').value = "";
     await saveCbtDatabaseToGist();
     initDropdowns();
+    hideLoading();
     alert("Kelas berhasil ditambahkan ke Gist!");
 }
 
 async function hapusKelas(index) {
     if(!confirm("Yakin ingin menghapus kelas ini?")) return;
+    showLoading("Menghapus kelas...");
     daftarKelas.splice(index, 1);
     await saveCbtDatabaseToGist();
     initDropdowns();
+    hideLoading();
 }
 
 async function tambahMapel() {
     let m = document.getElementById('inputMapelBaru').value.trim();
     if(!m) return;
     if(daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
+    showLoading("Menyimpan mata pelajaran...");
     daftarMapel.push(m);
     document.getElementById('inputMapelBaru').value = "";
     await saveCbtDatabaseToGist();
     initDropdowns();
+    hideLoading();
     alert("Mapel berhasil ditambahkan ke Gist!");
 }
 
 async function hapusMapel(index) {
     if(!confirm("Yakin ingin menghapus mapel ini?")) return;
+    showLoading("Menghapus mata pelajaran...");
     daftarMapel.splice(index, 1);
     await saveCbtDatabaseToGist();
     initDropdowns();
+    hideLoading();
 }
 
+// ================= KELOLA SISWA SATUAN (TAMBAH / EDIT / HAPUS) =================
+async function simpanSiswaSatuan() {
+    const nama = document.getElementById('inputNamaSiswa').value.trim();
+    const kelas = document.getElementById('selectKelasSiswaSatuan').value.trim();
+    const username = document.getElementById('inputUsernameSiswa').value.trim();
+    const password = document.getElementById('inputPasswordSiswa').value.trim();
+    const editIdx = parseInt(document.getElementById('editSiswaIndex').value, 10);
+
+    if(!nama || !kelas || !username || !password) {
+        alert("Semua kolom (Nama, Kelas, Username, Password) wajib diisi!");
+        return;
+    }
+
+    const duplikatIdx = databaseSiswa.findIndex((s, i) => s.username === username && i !== editIdx);
+    if(duplikatIdx !== -1) {
+        alert(`Username "${username}" sudah digunakan oleh siswa lain (${databaseSiswa[duplikatIdx].nama})!`);
+        return;
+    }
+
+    showLoading(editIdx >= 0 ? "Memperbarui data siswa..." : "Menambahkan siswa ke Gist...");
+
+    if(editIdx >= 0 && editIdx < databaseSiswa.length) {
+        databaseSiswa[editIdx] = { nama, kelas, username, password };
+    } else {
+        databaseSiswa.push({ nama, kelas, username, password });
+    }
+
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    batalEditSiswa();
+    hideLoading();
+    alert(editIdx >= 0 ? "Data siswa berhasil diperbarui!" : "Siswa berhasil ditambahkan ke Gist!");
+}
+
+function editSiswa(idx) {
+    const s = databaseSiswa[idx];
+    if(!s) return;
+
+    document.getElementById('editSiswaIndex').value = idx;
+    document.getElementById('inputNamaSiswa').value = s.nama;
+    
+    const selKelas = document.getElementById('selectKelasSiswaSatuan');
+    if(!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
+        selKelas.innerHTML += `<option value="${s.kelas}">${s.kelas}</option>`;
+    }
+    selKelas.value = s.kelas;
+    
+    document.getElementById('inputUsernameSiswa').value = s.username;
+    document.getElementById('inputPasswordSiswa').value = s.password;
+
+    document.getElementById('judulFormSiswaSatuan').innerText = `Edit Data Siswa: ${s.nama}`;
+    document.getElementById('btnSimpanSiswaSatuan').innerText = "Update Data Siswa";
+    document.getElementById('btnSimpanSiswaSatuan').style.background = "#28a745";
+    document.getElementById('btnBatalEditSiswa').style.display = "block";
+    
+    document.getElementById('adminTabSiswa').scrollIntoView({ behavior: 'smooth' });
+}
+
+function batalEditSiswa() {
+    document.getElementById('editSiswaIndex').value = "-1";
+    document.getElementById('inputNamaSiswa').value = "";
+    document.getElementById('selectKelasSiswaSatuan').value = "";
+    document.getElementById('inputUsernameSiswa').value = "";
+    document.getElementById('inputPasswordSiswa').value = "";
+
+    document.getElementById('judulFormSiswaSatuan').innerText = "Tambah Siswa Satuan";
+    document.getElementById('btnSimpanSiswaSatuan').innerText = "Simpan Siswa Satuan";
+    document.getElementById('btnSimpanSiswaSatuan').style.background = "#008080";
+    document.getElementById('btnBatalEditSiswa').style.display = "none";
+}
+
+async function hapusSiswa(idx) {
+    const s = databaseSiswa[idx];
+    if(!s) return;
+    if(!confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
+
+    showLoading("Menghapus data siswa dari Gist...");
+    databaseSiswa.splice(idx, 1);
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    if(parseInt(document.getElementById('editSiswaIndex').value, 10) === idx) {
+        batalEditSiswa();
+    }
+    hideLoading();
+}
+
+async function importDataSiswaToGist(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    showLoading("Membaca Excel & mengunggah data siswa ke Gist...");
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            
+            databaseSiswa = json.map(row => ({
+                nama: row.Nama || row.nama || "",
+                kelas: row.Kelas || row.kelas || "",
+                username: String(row.Username || row.username || ""),
+                password: String(row.Password || row.password || "")
+            }));
+            
+            await saveCbtDatabaseToGist();
+            renderTabelDaftarSiswa();
+            hideLoading();
+            alert(`Berhasil mengunggah dan menyimpan ${databaseSiswa.length} data siswa ke Gist!`);
+        } catch(err) {
+            hideLoading();
+            alert("Gagal membaca file Excel: " + err.message);
+        }
+        event.target.value = "";
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function renderTabelDaftarSiswa() {
+    let tbody = document.getElementById('tbodyDaftarSiswa');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    if(databaseSiswa.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
+        return;
+    }
+    databaseSiswa.forEach((s, idx) => {
+        tbody.innerHTML += `<tr>
+            <td>${s.nama}</td>
+            <td>${s.kelas}</td>
+            <td>${s.username}</td>
+            <td>${s.password}</td>
+            <td>
+                <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
+                <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
+            </td>
+        </tr>`;
+    });
+}
+
+// ================= UPLOAD & PARSE SOAL =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -578,25 +1099,26 @@ async function simpanJadwalDanSoal() {
     let mapel = document.getElementById('jadwalMapel').value;
     let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
     let mulai = document.getElementById('waktuMulai').value;
+    let jp = parseInt(document.getElementById('jumlahJp').value, 10) || 1;
     let selesai = document.getElementById('waktuSelesai').value;
     let rawText = document.getElementById('soalBatchText').value.trim();
 
     if(!mapel) { alert("Pilih Mata Pelajaran!"); return; }
     if(checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
-    if(!mulai || !selesai) { alert("Tentukan waktu mulai dan selesai ujian!"); return; }
+    if(!mulai || !selesai) { alert("Tentukan waktu mulai dan jumlah JP!"); return; }
     if(mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
 
     showLoading("Menyiapkan jadwal & menyimpan soal...");
 
     checkedKelas.forEach(kelas => {
         daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
-        daftarJadwalUjian.push({ mapel, kelas, mulai, selesai });
+        daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai });
     });
     
     await saveCbtDatabaseToGist();
 
     if(rawText) {
-        showLoading("Menyimpan & mengenkripsi soal ke GitHub Gist...");
+        showLoading("Menyimpan soal ke GitHub Gist...");
         let allParsedSoal = [];
         checkedKelas.forEach(kelas => {
             let folderName = `${mapel.replace(/\s+/g, '_')}_${kelas.replace(/\s+/g, '_')}`;
@@ -613,17 +1135,14 @@ async function simpanJadwalDanSoal() {
             let contentSoal = [];
             if(rawContent) {
                 try {
-                    let decryptedBytes = CryptoJS.AES.decrypt(rawContent, SECRET_ENCRYPTION_KEY);
-                    let decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-                    contentSoal = decryptedText ? JSON.parse(decryptedText) : JSON.parse(rawContent);
-                } catch(e) { contentSoal = JSON.parse(rawContent); }
+                    contentSoal = JSON.parse(rawContent);
+                } catch(e) { contentSoal = []; }
             }
 
             contentSoal = contentSoal.concat(allParsedSoal);
-            let encryptedData = CryptoJS.AES.encrypt(JSON.stringify(contentSoal), SECRET_ENCRYPTION_KEY).toString();
 
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-                files: { [filename]: { content: encryptedData } }
+                files: { [filename]: { content: JSON.stringify(contentSoal, null, 2) } }
             }, githubHeaders);
         } catch(e) { 
             hideLoading();
@@ -634,7 +1153,7 @@ async function simpanJadwalDanSoal() {
 
     hideLoading();
     renderTabelJadwal();
-    alert("Jadwal ujian dan soal berhasil disimpan dengan sempurna!");
+    alert("Jadwal ujian dan soal berhasil disimpan!");
     document.getElementById('soalBatchText').value = "";
 }
 
@@ -674,68 +1193,30 @@ function renderTabelJadwal() {
     if(!tbody) return;
     tbody.innerHTML = "";
     if(daftarJadwalUjian.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
         return;
     }
     daftarJadwalUjian.forEach((j, idx) => {
         tbody.innerHTML += `<tr>
             <td>${j.mapel}</td>
             <td>${j.kelas}</td>
+            <td>${j.jp ? j.jp + ' JP' : '-'}</td>
             <td>${j.mulai.replace('T', ' ')}</td>
             <td>${j.selesai.replace('T', ' ')}</td>
             <td>
-                <button onclick="hapusJadwal(${idx})" style="padding:4px 8px; font-size:11px; background:#dc3545; color:white; width:auto;">Hapus</button>
+                <button onclick="hapusJadwal(${idx})" class="btn-sm btn-danger">Hapus</button>
             </td>
         </tr>`;
     });
 }
 
 async function hapusJadwal(idx) {
+    if(!confirm("Hapus jadwal ujian ini?")) return;
+    showLoading("Menghapus jadwal...");
     daftarJadwalUjian.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelJadwal();
-}
-
-async function importDataSiswaToGist(event) {
-    const file = event.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(worksheet);
-        
-        databaseSiswa = json.map(row => ({
-            nama: row.Nama || row.nama || "",
-            kelas: row.Kelas || row.kelas || "",
-            username: String(row.Username || row.username || ""),
-            password: String(row.Password || row.password || "")
-        }));
-        
-        await saveCbtDatabaseToGist();
-        renderTabelDaftarSiswa();
-        alert(`Berhasil mengunggah dan menyimpan ${databaseSiswa.length} data siswa ke Gist!`);
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function renderTabelDaftarSiswa() {
-    let tbody = document.getElementById('tbodyDaftarSiswa');
-    if(!tbody) return;
-    tbody.innerHTML = "";
-    if(databaseSiswa.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Belum ada data siswa.</td></tr>`;
-        return;
-    }
-    databaseSiswa.forEach(s => {
-        tbody.innerHTML += `<tr>
-            <td>${s.nama}</td>
-            <td>${s.kelas}</td>
-            <td>${s.username}</td>
-            <td>${s.password}</td>
-        </tr>`;
-    });
+    hideLoading();
 }
 
 function renderTabelSiswaLogin() {
@@ -758,6 +1239,7 @@ function renderTabelSiswaLogin() {
     });
 }
 
+// ================= AUTENTIKASI & UJIAN SISWA =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
@@ -788,7 +1270,6 @@ async function autentikasiSiswa() {
     let selectMapel = document.getElementById('pilihMapelAktif');
     selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
 
-    let now = new Date().toISOString().slice(0, 16);
     let jadwalKelas = daftarJadwalUjian.filter(j => j.kelas === siswa.kelas);
 
     if(jadwalKelas.length === 0) {
@@ -799,6 +1280,7 @@ async function autentikasiSiswa() {
         selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Mulai: ${j.mulai.replace('T', ' ')})</option>`;
     });
 
+    document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewLoginSiswa').classList.remove('active');
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
 }
@@ -807,15 +1289,23 @@ function logoutSiswa() {
     currentSiswaObj = null;
     document.getElementById('nis').value = "";
     document.getElementById('passSiswa').value = "";
+    document.getElementById('tabMenu').style.display = 'block';
     document.getElementById('viewPilihUjianSiswa').classList.remove('active');
     document.getElementById('viewLoginSiswa').classList.add('active');
+    setCompactMode(true);
+}
+
+function getLocalIsoNow() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
     if(!mapel) { alert("Pilih mata pelajaran ujian terlebih dahulu!"); return; }
 
-    let now = new Date().toISOString().slice(0, 16); 
+    let now = getLocalIsoNow();
     let jadwalMatch = daftarJadwalUjian.find(j => j.mapel === mapel && j.kelas === kelasSiswaLogin);
 
     if(!jadwalMatch) {
@@ -853,14 +1343,13 @@ async function mulaiUjianPilihan() {
 }
 
 async function loadSoalUjian() {
-    showLoading("Memuat dan mendekripsi soal ujian...");
+    showLoading("Memuat soal ujian...");
     try {
         let res = await axios.get(GIST_RAW_URL + "?t=" + new Date().getTime());
         let rawResponse = res.data;
 
         if(typeof rawResponse === "string") {
-            let bytes = CryptoJS.AES.decrypt(rawResponse, SECRET_ENCRYPTION_KEY);
-            listSoal = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+            listSoal = JSON.parse(rawResponse);
         } else {
             listSoal = rawResponse;
         }
@@ -874,6 +1363,7 @@ async function loadSoalUjian() {
             return; 
         }
 
+        setCompactMode(false);
         document.getElementById('infoUjianText').innerText = "Mata Pelajaran: " + namaUjianAktif.replace(/_/g, ' ');
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewPilihUjianSiswa').classList.remove('active');
@@ -945,29 +1435,7 @@ async function selesaiUjian() {
     }, Math.floor(Math.random() * 2000) + 1000);
 }
 
-function switchTab(role) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
-
-    if(role === 'siswa') {
-        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-        if(currentSiswaObj) {
-            document.getElementById('viewPilihUjianSiswa').classList.add('active');
-        } else {
-            document.getElementById('viewLoginSiswa').classList.add('active');
-        }
-    } else {
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-        if(localStorage.getItem("isAdminLoggedIn") === "true") {
-            document.getElementById('viewPanelAdmin').classList.add('active');
-            document.getElementById('tabMenu').style.display = 'none';
-            switchAdminTab('monitoring');
-        } else {
-            document.getElementById('viewLoginAdmin').classList.add('active');
-        }
-    }
-}
-
+// ================= NAVIGASI PANEL ADMIN =================
 function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
@@ -979,6 +1447,7 @@ function switchAdminTab(tabName) {
     } else if(tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('adminTabUjian').classList.add('active');
+        updateLabelJp();
         renderTabelJadwal();
     } else if(tabName === 'master') {
         document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
@@ -987,10 +1456,13 @@ function switchAdminTab(tabName) {
     } else if(tabName === 'siswa') {
         document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
         document.getElementById('adminTabSiswa').classList.add('active');
-        fetchCbtDatabase();
+        initDropdowns();
+        renderTabelDaftarSiswa();
     } else if(tabName === 'settings') {
         document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
         document.getElementById('adminTabSettings').classList.add('active');
+        updateLabelJp();
+        renderAdminPasswordDisplay();
     }
 }
 
@@ -998,6 +1470,7 @@ function prosesLoginAdmin() {
     let pass = document.getElementById('adminPassword').value;
     if(CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
         localStorage.setItem("isAdminLoggedIn", "true");
+        setCompactMode(false);
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
@@ -1021,14 +1494,17 @@ function hideLoading() {
     document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-window.onload = function() {
-    fetchCbtDatabase();
+window.onload = async function() {
+    await fetchCbtDatabase();
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
+        setCompactMode(false);
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewLoginSiswa').classList.remove('active');
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
         switchAdminTab('monitoring');
+    } else {
+        setCompactMode(true);
     }
 }
 </script>
