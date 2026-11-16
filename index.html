@@ -216,7 +216,10 @@
     <div id="viewPanelAdmin" class="section-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <b style="font-size: 15px; color: #008080;">Dashboard Admin CBT</b>
-            <button onclick="logoutAdmin()" style="width: auto; padding: 6px 12px; background: #dc3545; font-size: 12px;">Logout</button>
+            <div>
+                <button onclick="fetchCbtDatabase(true)" style="width: auto; padding: 6px 12px; background: #17a2b8; font-size: 12px; margin-right: 5px;">Refresh Data</button>
+                <button onclick="logoutAdmin()" style="width: auto; padding: 6px 12px; background: #dc3545; font-size: 12px;">Logout</button>
+            </div>
         </div>
 
         <!-- TAB MENU ADMIN -->
@@ -487,6 +490,7 @@ let pengaturanCbt = {
 };
 let logSiswaLogin = []; 
 let isAdminPassVisible = false;
+let isDataLoadedOnce = false; // Flag untuk mencegah download berulang ke Gist
 
 let listSoal = [];
 let jawabanSiswa = {};
@@ -621,7 +625,13 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-async function fetchCbtDatabase() {
+// Fungsi Fetch Utama dengan Cache Memory (Mencegah Request Berulang saat Pindah Tab)
+async function fetchCbtDatabase(forceRefresh = false) {
+    if (isDataLoadedOnce && !forceRefresh) {
+        // Jika data sudah pernah dimuat dan tidak dipaksa refresh, langsung gunakan memori lokal (Tanpa Gist API Call!)
+        return;
+    }
+
     try {
         let data = null;
         try {
@@ -647,6 +657,7 @@ async function fetchCbtDatabase() {
                 }
             }
         }
+        isDataLoadedOnce = true;
     } catch(e) {
         console.error("Gagal mengambil db_cbt.json dari Gist:", e);
     }
@@ -686,6 +697,7 @@ async function saveCbtDatabaseToGist() {
         await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
             files: { [filename]: { content: JSON.stringify(payloadData, null, 2) } }
         }, githubHeaders);
+        isDataLoadedOnce = true; // Tandai data lokal sudah sinkron
     } catch(err) {
         console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
         alert("Gagal menyimpan ke Gist: " + err.message);
@@ -858,7 +870,7 @@ async function hapusMapel(index) {
     hideLoading();
 }
 
-// ================= KELOLA SISWA SATUAN (TAMBAH / EDIT / HAPUS) =================
+// ================= KELOLA SISWA SATUAN =================
 async function simpanSiswaSatuan() {
     const nama = document.getElementById('inputNamaSiswa').value.trim();
     const kelas = document.getElementById('selectKelasSiswaSatuan').value.trim();
@@ -1435,7 +1447,7 @@ async function selesaiUjian() {
     }, Math.floor(Math.random() * 2000) + 1000);
 }
 
-// ================= NAVIGASI PANEL ADMIN =================
+// ================= NAVIGASI PANEL ADMIN (INSTANT & HEMAT API) =================
 function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
@@ -1443,7 +1455,7 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
-        fetchLogLoginFromGAS();
+        fetchLogLoginFromGAS(); // Monitoring mengambil log dari GAS, bukan Gist db_cbt
     } else if(tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('adminTabUjian').classList.add('active');
@@ -1495,7 +1507,10 @@ function hideLoading() {
 }
 
 window.onload = async function() {
-    await fetchCbtDatabase();
+    showLoading("Memuat data sistem...");
+    await fetchCbtDatabase(); // Data dimuat sekali di awal
+    hideLoading();
+
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
         setCompactMode(false);
         document.getElementById('tabMenu').style.display = 'none';
