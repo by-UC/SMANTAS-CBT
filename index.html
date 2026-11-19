@@ -50,6 +50,7 @@
 
         button { background: #008080; color: white; padding: 11px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #006666; }
+        button:disabled { background: #b0bec5; cursor: not-allowed; opacity: 0.75; }
         
         /* Tombol Toggle Tunggal Login Siswa / Login Admin */
         .single-role-bar { margin-bottom: 15px; }
@@ -79,11 +80,55 @@
         .admin-tab-btn { flex: 1; padding: 10px 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 12px; min-width: 95px; }
         .admin-tab-btn.active { background: #008080; color: white; }
         
-        .soal-box { margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
-        .soal-box p { font-size: 15px; line-height: 1.4; font-weight: bold; }
+        .soal-box { margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; user-select: none; }
+        .soal-box p { font-size: 15px; line-height: 1.5; font-weight: bold; margin-top: 0; }
         img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; border: 1px solid #ddd; display: block; }
-        .option-label { display: block; margin-bottom: 6px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .option-label { display: block; margin-bottom: 8px; padding: 11px 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.15s, border-color 0.15s; }
+        .option-label:hover { background: #f0f8f8; border-color: #008080; }
+        .option-label.selected-opt { background: #e6f4f4; border-color: #008080; }
         .option-label input { margin-right: 10px; }
+
+        /* NAVIGASI BEFORE / NEXT DI BAWAH MATA PELAJARAN */
+        .soal-nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .btn-nav-soal {
+            width: auto;
+            min-width: 105px;
+            padding: 8px 14px;
+            font-size: 13px;
+            background: #008080;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .btn-nav-soal.btn-before {
+            background: #6c757d;
+        }
+        .btn-nav-soal.btn-before:hover:not(:disabled) {
+            background: #5a6268;
+        }
+        .soal-progress-info {
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #0056b3;
+            flex: 1;
+        }
+        .soal-progress-sub {
+            display: block;
+            font-size: 11px;
+            font-weight: normal;
+            color: #555;
+            margin-top: 2px;
+        }
         
         .row-flex { display: flex; gap: 10px; flex-wrap: wrap; }
         .row-flex > div { flex: 1; min-width: 180px; }
@@ -96,7 +141,7 @@
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 520px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 580px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #008080; color: white; }
         
@@ -116,6 +161,19 @@
             border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
+
+        /* BANNER PERINGATAN FULLSCREEN */
+        .exam-security-bar {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
 
         /* MODAL PREVIEW SOAL ADMIN */
         .modal-overlay {
@@ -234,13 +292,16 @@
             <span id="infoKelasSiswa" style="font-size: 13px; color: #555;">Kelas: -</span>
         </div>
         <div class="form-group">
-            <label>Pilih Mata Pelajaran Ujian yang Tersedia:</label>
+            <label>Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
             <select id="pilihMapelAktif">
                 <option value="">-- Pilih Mata Pelajaran --</option>
             </select>
         </div>
-        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN</button>
-        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 10px;">Keluar / Ganti Akun</button>
+        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:10px; border-radius:4px; font-size:12px; margin-bottom:12px;">
+            <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan ujian langsung dikumpulkan!
+        </div>
+        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN (FULL SCREEN)</button>
+        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 10px;">Logout / Ganti Perangkat</button>
     </div>
 
     <!-- 2. VIEW LOGIN ADMIN -->
@@ -253,13 +314,29 @@
         <div id="errorAdmin" class="error-msg">Password admin salah!</div>
     </div>
 
-    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA (TAMPILAN PER SOAL + BEFORE / NEXT) -->
     <div id="viewUjianSiswa" class="section-view">
-        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 14px;" id="infoUjianText">
+        <div class="exam-security-bar">
+            MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!
+        </div>
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 14px;" id="infoUjianText">
             Mata Pelajaran: Memuat...
         </div>
+
+        <!-- TOMBOL BEFORE & NEXT DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
+        <div class="soal-nav-bar">
+            <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
+            <div class="soal-progress-info">
+                <span id="labelNomorSoal">Soal 1 dari 1</span>
+                <span class="soal-progress-sub" id="labelStatusTerjawab">Terjawab: 0 / 1</span>
+            </div>
+            <button type="button" id="btnNextSoal" class="btn-nav-soal" onclick="navigasiSoal(1)">Next →</button>
+        </div>
+
+        <!-- KONTAINER 1 SOAL AKTIF -->
         <div id="soalContainer"></div>
-        <button onclick="selesaiUjian()" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
+
+        <button id="btnSelesaiUjian" onclick="selesaiUjian(false)" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
     </div>
 
     <!-- 4. VIEW PANEL ADMIN MASTER -->
@@ -267,7 +344,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <b style="font-size: 15px; color: #008080;">Dashboard Admin CBT</b>
             <div>
-                <button onclick="fetchCbtDatabase(true)" style="width: auto; padding: 6px 12px; background: #17a2b8; font-size: 12px; margin-right: 5px;">Refresh Data</button>
+                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 6px 12px; background: #17a2b8; font-size: 12px; margin-right: 5px;">Refresh Data</button>
                 <button onclick="logoutAdmin()" style="width: auto; padding: 6px 12px; background: #dc3545; font-size: 12px;">Logout</button>
             </div>
         </div>
@@ -281,11 +358,38 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT -->
         <div id="adminTabMonitoring" class="admin-view active">
+            <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GIST) -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="margin: 0; color: #008080;">Monitoring Siswa Login Ujian (Spreadsheet)</h4>
+                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa</h4>
+                    <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+                </div>
+                <p style="font-size: 12px; color: #555; margin-top: 0;">Siswa yang sedang login/terkunci perangkatnya atau terhenti karena keluar layar penuh/curang dapat di-reset di sini.</p>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NIS / Username</th>
+                                <th>Nama Siswa</th>
+                                <th>Kelas</th>
+                                <th>Status Sesi</th>
+                                <th>Perangkat</th>
+                                <th style="width: 150px;">Aksi Reset</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySesiAktif">
+                            <tr><td colspan="6" style="text-align:center;">Memuat data sesi...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TABEL LOG SPREADSHEET -->
+            <div class="admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
                     <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
                 </div>
                 <div class="table-responsive">
@@ -552,6 +656,7 @@ let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
 let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
 let databaseSiswa = [];
 let daftarJadwalUjian = []; 
+let sesiLoginSiswa = {};
 let pengaturanCbt = {
     menitPerJp: 40,
     adminPasswordPlain: "admin123"
@@ -561,12 +666,27 @@ let isAdminPassVisible = false;
 let isDataLoadedOnce = false;
 
 let listSoal = [];
+let currentSoalIndex = 0; // Index soal yang sedang tampil (1 soal per halaman)
 let jawabanSiswa = {};
 let namaUjianAktif = "Ujian_CBT_Umum";
 let kelasSiswaLogin = "";
 let mapelSiswaLogin = "";
 let namaSiswaLogin = "";
 let currentSiswaObj = null;
+
+// Status keamanan ujian aktif
+let isExamInProgress = false;
+let isSubmittingExam = false;
+
+// ID Perangkat Unik per Browser
+function getOrCreateDeviceId() {
+    let devId = localStorage.getItem("smantas_cbt_device_id");
+    if (!devId) {
+        devId = "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase() + "-" + Date.now().toString(36).toUpperCase();
+        localStorage.setItem("smantas_cbt_device_id", devId);
+    }
+    return devId;
+}
 
 function setCompactMode(isCompact) {
     const container = document.getElementById('mainContainer');
@@ -693,7 +813,6 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-// Fungsi Fetch Utama dengan Cache Memory
 async function fetchCbtDatabase(forceRefresh = false) {
     if (isDataLoadedOnce && !forceRefresh) {
         return;
@@ -717,6 +836,11 @@ async function fetchCbtDatabase(forceRefresh = false) {
             if(Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
             if(Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
             if(Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
+            if(data.db_sesi && typeof data.db_sesi === 'object') {
+                sesiLoginSiswa = data.db_sesi;
+            } else {
+                sesiLoginSiswa = {};
+            }
             if(data.db_pengaturan && typeof data.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
                 if(data.db_pengaturan.adminPasswordPlain) {
@@ -731,11 +855,12 @@ async function fetchCbtDatabase(forceRefresh = false) {
     initDropdowns();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
+    renderTabelSesiAktif();
     updateLabelJp();
     renderAdminPasswordDisplay();
 }
 
-// Helper mengambil semua soal dari Gist API (Selalu Fresh / Real-time tanpa cache commit hash lama)
+// Helper mengambil semua soal dari Gist API
 async function fetchAllSoalFromGist() {
     try {
         let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
@@ -771,6 +896,7 @@ async function saveCbtDatabaseToGist() {
         db_mapel: daftarMapel,
         db_siswa: databaseSiswa,
         db_jadwal: daftarJadwalUjian,
+        db_sesi: sesiLoginSiswa,
         db_pengaturan: pengaturanCbt
     };
 
@@ -779,14 +905,70 @@ async function saveCbtDatabaseToGist() {
         let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
         let filename = Object.keys(gistRes.data.files)[0];
         
+        // JSON.stringify tanpa spasi berlebih untuk hemat kuota Gist
         await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
-            files: { [filename]: { content: JSON.stringify(payloadData, null, 2) } }
+            files: { [filename]: { content: JSON.stringify(payloadData) } }
         }, githubHeaders);
         isDataLoadedOnce = true;
     } catch(err) {
         console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
         alert("Gagal menyimpan ke Gist: " + err.message);
     }
+}
+
+// ================= KONTROL SESI & RESET LOGIN ADMIN =================
+function renderTabelSesiAktif() {
+    const tbody = document.getElementById('tbodySesiAktif');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    const keys = Object.keys(sesiLoginSiswa);
+    if(keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif.</td></tr>`;
+        return;
+    }
+
+    keys.forEach(username => {
+        const s = sesiLoginSiswa[username];
+        if(!s) return;
+        let statusBadge = `<span style="color:#008080; font-weight:bold;">${s.status || 'Login Aktif'}</span>`;
+        if(s.status && s.status.includes("Curang")) {
+            statusBadge = `<span style="color:#dc3545; font-weight:bold;">${s.status}</span>`;
+        } else if(s.status === "Selesai") {
+            statusBadge = `<span style="color:#28a745; font-weight:bold;">${s.status}</span>`;
+        } else if(s.status === "Sedang Ujian") {
+            statusBadge = `<span style="color:#d97706; font-weight:bold;">Sedang Ujian</span>`;
+        }
+
+        tbody.innerHTML += `<tr>
+            <td><b>${username}</b></td>
+            <td>${s.nama || '-'}</td>
+            <td>${s.kelas || '-'}</td>
+            <td>${statusBadge}</td>
+            <td style="font-family:monospace; font-size:11px;">${s.deviceId || '-'}</td>
+            <td>
+                <button onclick="resetLoginSiswaAdmin('${username}')" class="btn-sm btn-warning">Reset Login / Ujian</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function resetLoginSiswaAdmin(username) {
+    if(!confirm(`Reset kunci perangkat & status ujian untuk akun "${username}"?\nSiswa akan dapat login kembali di perangkat baru dan mengulang ujian.`)) return;
+    showLoading("Mereset sesi login siswa...");
+    await fetchCbtDatabase(true);
+    delete sesiLoginSiswa[username];
+    await saveCbtDatabaseToGist();
+    renderTabelSesiAktif();
+    hideLoading();
+    alert(`Sesi login & kunci ujian untuk "${username}" berhasil di-reset!`);
+}
+
+async function refreshSemuaDataAdmin() {
+    showLoading("Menyegarkan data dari Gist & Spreadsheet...");
+    await fetchCbtDatabase(true);
+    await fetchLogLoginFromGAS();
+    hideLoading();
 }
 
 function backupDatabaseJson() {
@@ -796,6 +978,7 @@ function backupDatabaseJson() {
         db_mapel: daftarMapel,
         db_siswa: databaseSiswa,
         db_jadwal: daftarJadwalUjian,
+        db_sesi: sesiLoginSiswa,
         db_pengaturan: pengaturanCbt
     };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
@@ -829,6 +1012,7 @@ function restoreDatabaseJson(event) {
             if(Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
             if(Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
             if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
+            if(parsed.db_sesi && typeof parsed.db_sesi === 'object') sesiLoginSiswa = parsed.db_sesi;
             if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
                 if(parsed.db_pengaturan.adminPasswordPlain) {
@@ -840,6 +1024,7 @@ function restoreDatabaseJson(event) {
             initDropdowns();
             renderTabelDaftarSiswa();
             renderTabelJadwal();
+            renderTabelSesiAktif();
             updateLabelJp();
             renderAdminPasswordDisplay();
             hideLoading();
@@ -860,11 +1045,13 @@ async function hapusDatabaseGist() {
     showLoading("Menghapus dan mereset database di Gist...");
     databaseSiswa = [];
     daftarJadwalUjian = [];
+    sesiLoginSiswa = {};
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
+    renderTabelSesiAktif();
     hideLoading();
-    alert("Database siswa dan jadwal ujian berhasil dihapus/direset!");
+    alert("Database siswa, sesi, dan jadwal ujian berhasil dihapus/direset!");
 }
 
 function initDropdowns() {
@@ -1032,9 +1219,11 @@ async function hapusSiswa(idx) {
     if(!confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
 
     showLoading("Menghapus data siswa dari Gist...");
+    delete sesiLoginSiswa[s.username];
     databaseSiswa.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
+    renderTabelSesiAktif();
     if(parseInt(document.getElementById('editSiswaIndex').value, 10) === idx) {
         batalEditSiswa();
     }
@@ -1095,7 +1284,7 @@ function renderTabelDaftarSiswa() {
     });
 }
 
-// ================= UPLOAD & PARSE SOAL =================
+// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS) =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -1207,7 +1396,6 @@ async function simpanJadwalDanSoal() {
 
     showLoading("Menyiapkan jadwal & menyimpan soal...");
 
-    // Simpan jadwal per kelas di db_cbt.json (tampilan tabel admin otomatis menggabungkan yang sama)
     checkedKelas.forEach(kelas => {
         daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
         daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai });
@@ -1216,10 +1404,9 @@ async function simpanJadwalDanSoal() {
     await saveCbtDatabaseToGist();
 
     if(rawText) {
-        showLoading("Menyimpan soal gabungan ke GitHub Gist...");
-        // Satu paket soal untuk seluruh kelas yang dipilih (tidak duplikat)
-        let paketId = `${mapel.replace(/\s+/g, '_')}_${Date.now()}`;
-        let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas, paketId);
+        showLoading("Menyimpan soal (1 paket untuk semua kelas terpilih) ke Gist...");
+        // Satu paket soal untuk seluruh kelas yang dipilih (tidak duplikat per kelas)
+        let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
 
         if(parsedSoal.length === 0) {
             hideLoading();
@@ -1241,13 +1428,12 @@ async function simpanJadwalDanSoal() {
                 } catch(e) { contentSoal = []; }
             }
 
-            // Bersihkan kelas yang dipilih dari paket soal lama untuk mapel yang sama agar tidak bentrok
+            // 1. Lepaskan kelas yang dipilih dari soal lama pada mapel yang sama
             contentSoal.forEach(item => {
                 if(item.mapel === mapel && Array.isArray(item.kelas)) {
                     item.kelas = item.kelas.filter(k => !checkedKelas.includes(k));
                 }
             });
-            // Hapus soal lama yang sudah tidak memiliki kelas (atau namaUjian lama yang menimpa kelas ini)
             const oldFolderNames = checkedKelas.map(k => `${mapel.replace(/\s+/g, '_')}_${k.replace(/\s+/g, '_')}`);
             contentSoal = contentSoal.filter(item => {
                 if(Array.isArray(item.kelas) && item.mapel === mapel) {
@@ -1259,10 +1445,29 @@ async function simpanJadwalDanSoal() {
                 return true;
             });
 
-            contentSoal = contentSoal.concat(parsedSoal);
+            // 2. Deduplikasi cerdas: jika soal identik sudah ada di Gist untuk mapel ini, cukup gabungkan array kelasnya (tulis 1x saja)
+            parsedSoal.forEach(newItem => {
+                const existingIdentical = contentSoal.find(oldItem =>
+                    oldItem.mapel === newItem.mapel &&
+                    oldItem.soal === newItem.soal &&
+                    oldItem.kunci === newItem.kunci &&
+                    JSON.stringify(oldItem.options) === JSON.stringify(newItem.options)
+                );
 
+                if (existingIdentical && Array.isArray(existingIdentical.kelas)) {
+                    newItem.kelas.forEach(k => {
+                        if (!existingIdentical.kelas.includes(k)) {
+                            existingIdentical.kelas.push(k);
+                        }
+                    });
+                } else {
+                    contentSoal.push(newItem);
+                }
+            });
+
+            // Simpan JSON compact (tanpa indentasi spasi) agar hemat ukuran Gist maksimal
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-                files: { [filename]: { content: JSON.stringify(contentSoal, null, 2) } }
+                files: { [filename]: { content: JSON.stringify(contentSoal) } }
             }, githubHeaders);
         } catch(e) { 
             hideLoading();
@@ -1273,12 +1478,12 @@ async function simpanJadwalDanSoal() {
 
     hideLoading();
     renderTabelJadwal();
-    alert("Jadwal ujian dan soal berhasil disimpan!");
+    alert("Jadwal ujian dan soal berhasil disimpan (1 paket hemat Gist)!");
     document.getElementById('soalBatchText').value = "";
     document.getElementById('fileSoalAny').value = "";
 }
 
-function parseSoalDariTeks(text, mapelName, kelasArray, paketId) {
+function parseSoalDariTeks(text, mapelName, kelasArray) {
     let lines = text.split('\n');
     let soalList = [];
     let currentSoal = null;
@@ -1293,16 +1498,14 @@ function parseSoalDariTeks(text, mapelName, kelasArray, paketId) {
                 currentSoal.options = optionsMap;
                 soalList.push(currentSoal);
             }
+            // Struktur ringkas hemat Gist: cukup 1 entri untuk semua kelas terpilih
             currentSoal = {
-                id: Date.now() + Math.random(),
-                paketId: paketId,
+                id: Math.floor(Date.now() + Math.random() * 100000),
                 mapel: mapelName,
-                kelas: [...kelasArray],
-                namaUjian: `${mapelName.replace(/\s+/g, '_')}_${kelasArray.join('_').replace(/\s+/g, '_')}`,
+                kelas: [...new Set(kelasArray)],
                 soal: "",
-                gambar: "",
                 options: {},
-                kunci: "K" // Default K = A
+                kunci: "K"
             };
             optionsMap = {};
             optIdx = 0;
@@ -1313,7 +1516,6 @@ function parseSoalDariTeks(text, mapelName, kelasArray, paketId) {
         } else if(currentSoal) {
             if(l === "0" || l === "1") {
                 if(l === "1" && optionKeys[optIdx - 1]) {
-                    // Simpan sandi kunci: K=A, L=B, M=C, N=D, O=E
                     currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
                 }
             } else if(l.length > 0 && optIdx < 5) {
@@ -1329,7 +1531,6 @@ function parseSoalDariTeks(text, mapelName, kelasArray, paketId) {
     return soalList;
 }
 
-// Mengelompokkan jadwal ujian yang mapel & waktunya sama agar kolom kelas menjadi "X-1, X-2"
 function getGroupedJadwalList() {
     const groups = [];
     daftarJadwalUjian.forEach((j, originalIdx) => {
@@ -1388,11 +1589,9 @@ function renderTabelJadwal() {
 
 // ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
 function cekSoalCocokKelas(item, mapel, kelasTarget) {
-    // Format baru (gabungan multi-kelas)
     if(item.mapel === mapel && Array.isArray(item.kelas)) {
         return item.kelas.includes(kelasTarget);
     }
-    // Format lama (kompatibilitas mundur)
     const legacyName = `${mapel.replace(/\s+/g, '_')}_${kelasTarget.replace(/\s+/g, '_')}`;
     return item.namaUjian === legacyName;
 }
@@ -1405,7 +1604,6 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
     const allSoal = await fetchAllSoalFromGist();
     hideLoading();
 
-    // Ambil soal yang cocok dengan salah satu kelas dalam grup (deduplikasi by id)
     const seenIds = new Set();
     const matchedSoal = [];
     allSoal.forEach(item => {
@@ -1502,7 +1700,7 @@ async function hapusSoalUntukKelas(mapel, kelasList) {
         });
 
         await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-            files: { [filename]: { content: JSON.stringify(contentSoal, null, 2) } }
+            files: { [filename]: { content: JSON.stringify(contentSoal) } }
         }, githubHeaders);
 
         hideLoading();
@@ -1522,7 +1720,6 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')}?`)) return;
     showLoading("Menghapus jadwal...");
 
-    // Hapus dari index terbesar ke terkecil
     indices.sort((a, b) => b - a).forEach(idx => {
         daftarJadwalUjian.splice(idx, 1);
     });
@@ -1541,7 +1738,12 @@ function renderTabelSiswaLogin() {
         return;
     }
     logSiswaLogin.forEach(l => {
-        let badgeStatus = l.status === "Selesai" ? `<span style="color:green; font-weight:bold;">Selesai</span>` : `<span style="color:orange; font-weight:bold;">Sedang Mengerjakan</span>`;
+        let badgeStatus = `<span style="color:orange; font-weight:bold;">${l.status}</span>`;
+        if (l.status && l.status.includes("Curang")) {
+            badgeStatus = `<span style="color:red; font-weight:bold;">${l.status}</span>`;
+        } else if (l.status === "Selesai") {
+            badgeStatus = `<span style="color:green; font-weight:bold;">Selesai</span>`;
+        }
         tbody.innerHTML += `<tr>
             <td>${l.nama}</td>
             <td>${l.kelas}</td>
@@ -1552,26 +1754,54 @@ function renderTabelSiswaLogin() {
     });
 }
 
-// ================= AUTENTIKASI & UJIAN SISWA =================
+// ================= AUTENTIKASI & UJIAN SISWA (1 PERANGKAT + FILTER KELAS/WAKTU) =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
 
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
-    showLoading("Memeriksa akun siswa...");
-    if(databaseSiswa.length === 0) {
-        await fetchCbtDatabase(true);
-    }
-    hideLoading();
+    showLoading("Memverifikasi akun & sesi perangkat...");
+    await fetchCbtDatabase(true);
 
     let siswa = databaseSiswa.find(s => s.username === username);
-    if(!siswa) { alert("Username tidak ditemukan dalam database!"); return; }
+    if(!siswa) { 
+        hideLoading();
+        alert("Username tidak ditemukan dalam database!"); 
+        return; 
+    }
 
     if(siswa.password !== pass) {
+        hideLoading();
         alert("Password salah!");
         return;
     }
+
+    const myDeviceId = getOrCreateDeviceId();
+    const existingSession = sesiLoginSiswa[username];
+
+    if(existingSession && (existingSession.status === "Selesai" || (existingSession.status && existingSession.status.includes("Curang")))) {
+        hideLoading();
+        alert(`Akun Anda terkunci dengan status: "${existingSession.status}".\nSilakan hubungi Admin untuk mereset akun jika ingin ujian kembali.`);
+        return;
+    }
+
+    if(existingSession && existingSession.deviceId && existingSession.deviceId !== myDeviceId) {
+        hideLoading();
+        alert("AKSES DITOLAK!\nAkun Anda sedang aktif login di perangkat lain.\nUntuk pindah perangkat, silakan logout dari perangkat sebelumnya atau minta Admin melakukan Reset Login.");
+        return;
+    }
+
+    sesiLoginSiswa[username] = {
+        deviceId: myDeviceId,
+        status: existingSession && existingSession.status === "Sedang Ujian" ? "Sedang Ujian" : "Login Aktif",
+        nama: siswa.nama,
+        kelas: siswa.kelas,
+        mapel: existingSession ? existingSession.mapel : "-",
+        updatedAt: getLocalIsoNow()
+    };
+    await saveCbtDatabaseToGist();
+    hideLoading();
 
     currentSiswaObj = siswa;
     namaSiswaLogin = siswa.nama;
@@ -1583,22 +1813,39 @@ async function autentikasiSiswa() {
     let selectMapel = document.getElementById('pilihMapelAktif');
     selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
 
-    let jadwalKelas = daftarJadwalUjian.filter(j => j.kelas.trim() === siswa.kelas.trim());
+    const now = getLocalIsoNow();
+    const kelasTrim = siswa.kelas.trim().toLowerCase();
 
-    if(jadwalKelas.length === 0) {
-        alert("Belum ada jadwal ujian yang aktif untuk kelas Anda.");
-    }
-
-    jadwalKelas.forEach(j => {
-        selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Mulai: ${j.mulai.replace('T', ' ')})</option>`;
+    let jadwalAktifKelas = daftarJadwalUjian.filter(j => {
+        const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
+        const waktuMatch = (now >= j.mulai && now <= j.selesai);
+        return kelasMatch && waktuMatch;
     });
+
+    if(jadwalAktifKelas.length === 0) {
+        selectMapel.innerHTML = '<option value="">-- Tidak ada jadwal ujian aktif untuk kelas & waktu saat ini --</option>';
+    } else {
+        jadwalAktifKelas.forEach(j => {
+            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Selesai: ${j.selesai.replace('T', ' ')})</option>`;
+        });
+    }
 
     document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewLoginSiswa').classList.remove('active');
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
 }
 
-function logoutSiswa() {
+async function logoutSiswa() {
+    if(currentSiswaObj) {
+        showLoading("Melepaskan sesi perangkat...");
+        await fetchCbtDatabase(true);
+        const sess = sesiLoginSiswa[currentSiswaObj.username];
+        if(sess && sess.deviceId === getOrCreateDeviceId() && sess.status !== "Selesai" && !(sess.status && sess.status.includes("Curang"))) {
+            delete sesiLoginSiswa[currentSiswaObj.username];
+            await saveCbtDatabaseToGist();
+        }
+        hideLoading();
+    }
     currentSiswaObj = null;
     document.getElementById('nis').value = "";
     document.getElementById('passSiswa').value = "";
@@ -1614,15 +1861,39 @@ function getLocalIsoNow() {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
+async function masukFullscreenWajib() {
+    const elem = document.documentElement;
+    try {
+        if (elem.requestFullscreen) {
+            await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            await elem.msRequestFullscreen();
+        }
+    } catch (e) {
+        console.warn("Fullscreen request warning:", e);
+    }
+}
+
+function isCurrentlyFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
+
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
-    if(!mapel) { alert("Pilih mata pelajaran ujian terlebih dahulu!"); return; }
+    if(!mapel) { alert("Pilih mata pelajaran ujian yang tersedia terlebih dahulu!"); return; }
+
+    await masukFullscreenWajib();
 
     let now = getLocalIsoNow();
-    let jadwalMatch = daftarJadwalUjian.find(j => j.mapel === mapel && j.kelas.trim() === kelasSiswaLogin.trim());
+    const kelasTrim = kelasSiswaLogin.trim().toLowerCase();
+    let jadwalMatch = daftarJadwalUjian.find(j => 
+        j.mapel === mapel && String(j.kelas || "").trim().toLowerCase() === kelasTrim
+    );
 
     if(!jadwalMatch) {
-        alert("Jadwal ujian tidak ditemukan!");
+        alert("Jadwal ujian tidak ditemukan untuk kelas Anda!");
         return;
     }
 
@@ -1638,8 +1909,20 @@ async function mulaiUjianPilihan() {
 
     mapelSiswaLogin = mapel;
 
+    if(currentSiswaObj) {
+        sesiLoginSiswa[currentSiswaObj.username] = {
+            deviceId: getOrCreateDeviceId(),
+            status: "Sedang Ujian",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapel,
+            updatedAt: getLocalIsoNow()
+        };
+        saveCbtDatabaseToGist();
+    }
+
     try {
-        await axios.post(GAS_URL, JSON.stringify({
+        axios.post(GAS_URL, JSON.stringify({
             action: "logLogin",
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
@@ -1652,7 +1935,7 @@ async function mulaiUjianPilihan() {
     }
 
     namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
-    loadSoalUjian();
+    await loadSoalUjian();
 }
 
 async function loadSoalUjian() {
@@ -1661,14 +1944,16 @@ async function loadSoalUjian() {
         const allSoal = await fetchAllSoalFromGist();
         const kelasTrim = kelasSiswaLogin.trim();
 
-        // Filter soal berdasarkan format multi-kelas maupun format namaUjian lama
         listSoal = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
 
         hideLoading();
         if(!Array.isArray(listSoal) || listSoal.length === 0) { 
-            alert("Belum ada soal untuk ujian/kelas ini."); 
+            alert("Belum ada soal yang tersedia untuk mata pelajaran dan kelas Anda."); 
             return; 
         }
+
+        currentSoalIndex = 0;
+        jawabanSiswa = {};
 
         setCompactMode(false);
         document.getElementById('infoUjianText').innerText = `Mata Pelajaran: ${mapelSiswaLogin} (${kelasTrim})`;
@@ -1676,38 +1961,170 @@ async function loadSoalUjian() {
         document.getElementById('viewPilihUjianSiswa').classList.remove('active');
         document.getElementById('viewUjianSiswa').classList.add('active');
         renderSoalSiswa();
+
+        isExamInProgress = true;
+        isSubmittingExam = false;
+        pasangPengawasAntiCurang();
+
+        if (!isCurrentlyFullscreen()) {
+            await masukFullscreenWajib();
+        }
     } catch(err) { 
         hideLoading();
         alert("Gagal memuat soal: " + err.message); 
     }
 }
 
+// ================= TAMPILAN PER SOAL + BEFORE / NEXT =================
+function pilihJawabanSiswa(index, opt) {
+    jawabanSiswa[index] = opt;
+    renderSoalSiswa();
+}
+
+function navigasiSoal(step) {
+    const nextIdx = currentSoalIndex + step;
+    if (nextIdx >= 0 && nextIdx < listSoal.length) {
+        currentSoalIndex = nextIdx;
+        renderSoalSiswa();
+    }
+}
+
 function renderSoalSiswa() {
-    let html = "";
-    listSoal.forEach((item, index) => {
-        html += `<div class="soal-box"><p>Soal ${index + 1}. ${item.soal}</p>`;
-        if(item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
-        html += `<div style="margin-top: 10px;">`;
-        ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
-            if(item.options && item.options[opt]) {
-                html += `<label class="option-label"><input type="radio" name="soal_${index}" value="${opt}" onclick="jawabanSiswa[${index}]='${opt}'"> <b>${opt}.</b> ${item.options[opt]}</label>`;
-            }
-        });
-        html += `</div></div>`;
+    if (!Array.isArray(listSoal) || listSoal.length === 0) return;
+
+    const totalSoal = listSoal.length;
+    const item = listSoal[currentSoalIndex];
+    const jawabanTersimpan = jawabanSiswa[currentSoalIndex] || null;
+    const jumlahTerjawab = Object.keys(jawabanSiswa).length;
+
+    // Update bar navigasi Before / Next di bawah Mata Pelajaran
+    document.getElementById('labelNomorSoal').innerText = `Soal ${currentSoalIndex + 1} dari ${totalSoal}`;
+    document.getElementById('labelStatusTerjawab').innerText = `Terjawab: ${jumlahTerjawab} / ${totalSoal} soal`;
+    document.getElementById('btnPrevSoal').disabled = (currentSoalIndex === 0);
+    document.getElementById('btnNextSoal').disabled = (currentSoalIndex === totalSoal - 1);
+
+    // Render hanya 1 soal yang sedang aktif
+    let html = `<div class="soal-box"><p>Soal ${currentSoalIndex + 1}. ${item.soal}</p>`;
+    if (item.gambar) {
+        html += `<img src="${item.gambar}" class="img-soal">`;
+    }
+    html += `<div style="margin-top: 12px;">`;
+    ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+        if (item.options && item.options[opt]) {
+            const isChecked = (jawabanTersimpan === opt);
+            html += `<label class="option-label ${isChecked ? 'selected-opt' : ''}">
+                <input type="radio" name="soal_aktif" value="${opt}" ${isChecked ? 'checked' : ''} onclick="pilihJawabanSiswa(${currentSoalIndex}, '${opt}')"> 
+                <b>${opt}.</b> ${item.options[opt]}
+            </label>`;
+        }
     });
+    html += `</div></div>`;
+
     document.getElementById('soalContainer').innerHTML = html;
 }
 
-async function selesaiUjian() {
-    if(!confirm("Kumpulkan jawaban sekarang?")) return;
-    showLoading("Mengirim jawaban ke server... Jangan tutup halaman!");
+// ================= PENGAWAS FULLSCREEN & PINDAH TAB (ANTI-CURANG) =================
+function pasangPengawasAntiCurang() {
+    document.addEventListener('fullscreenchange', handleFullscreenViolation);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenViolation);
+    document.addEventListener('msfullscreenchange', handleFullscreenViolation);
+    document.addEventListener('visibilitychange', handleVisibilityViolation);
+    window.addEventListener('blur', handleWindowBlurViolation);
+    document.addEventListener('contextmenu', preventCheatAction);
+    document.addEventListener('keydown', preventCheatKeys);
+}
+
+function lepasPengawasAntiCurang() {
+    document.removeEventListener('fullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('msfullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('visibilitychange', handleVisibilityViolation);
+    window.removeEventListener('blur', handleWindowBlurViolation);
+    document.removeEventListener('contextmenu', preventCheatAction);
+    document.removeEventListener('keydown', preventCheatKeys);
+}
+
+function preventCheatAction(e) {
+    if (isExamInProgress) e.preventDefault();
+}
+
+function preventCheatKeys(e) {
+    if (!isExamInProgress) return;
+    if (e.key === "Escape" || e.key === "F11" || (e.ctrlKey && ['t', 'n', 'w', 'Tab'].includes(e.key))) {
+        e.preventDefault();
+    }
+}
+
+function handleFullscreenViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    if (!isCurrentlyFullscreen()) {
+        picuPelanggaranUjian("Keluar dari mode Full Screen");
+    }
+}
+
+function handleVisibilityViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    if (document.hidden) {
+        picuPelanggaranUjian("Membuka tab lain / menyembunyikan layar ujian");
+    }
+}
+
+function handleWindowBlurViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    picuPelanggaranUjian("Berpindah jendela / aplikasi lain");
+}
+
+function picuPelanggaranUjian(alasan) {
+    if (!isExamInProgress || isSubmittingExam) return;
+    isExamInProgress = false;
+    lepasPengawasAntiCurang();
+    selesaiUjian(true, alasan);
+}
+
+async function selesaiUjian(isCurang = false, alasanCurang = "") {
+    if (isSubmittingExam) return;
+
+    if (!isCurang) {
+        const belumDijawab = listSoal.length - Object.keys(jawabanSiswa).length;
+        const pesanKonfirmasi = belumDijawab > 0 
+            ? `Masih ada ${belumDijawab} soal yang belum dijawab.\nTetap kumpulkan jawaban sekarang?`
+            : "Kumpulkan jawaban sekarang?";
+        if(!confirm(pesanKonfirmasi)) return;
+    }
+
+    isSubmittingExam = true;
+    isExamInProgress = false;
+    lepasPengawasAntiCurang();
+
+    showLoading(isCurang 
+        ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci & mengirim jawaban...` 
+        : "Mengirim jawaban ke server... Jangan tutup halaman!"
+    );
 
     let benar = 0;
     listSoal.forEach((item, index) => {
         const kunciAsli = decodeKunciGist(item.kunci);
         if(jawabanSiswa[index] === kunciAsli) benar++;
     });
-    let nilaiAkhir = Number(((benar / listSoal.length) * 100).toFixed(2));
+    let nilaiAkhir = listSoal.length > 0 ? Number(((benar / listSoal.length) * 100).toFixed(2)) : 0;
+    const statusFinal = isCurang ? `Selesai (Curang: ${alasanCurang})` : "Selesai";
+
+    if(currentSiswaObj) {
+        try {
+            await fetchCbtDatabase(true);
+            sesiLoginSiswa[currentSiswaObj.username] = {
+                deviceId: getOrCreateDeviceId(),
+                status: statusFinal,
+                nama: namaSiswaLogin,
+                kelas: kelasSiswaLogin,
+                mapel: mapelSiswaLogin,
+                updatedAt: getLocalIsoNow()
+            };
+            await saveCbtDatabaseToGist();
+        } catch(e) {
+            console.error("Gagal mengunci status sesi di Gist:", e);
+        }
+    }
 
     try {
         await axios.post(GAS_URL, JSON.stringify({
@@ -1715,7 +2132,7 @@ async function selesaiUjian() {
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapelSiswaLogin,
-            status: "Selesai",
+            status: statusFinal,
             nilai: nilaiAkhir
         }));
     } catch(e) {
@@ -1725,23 +2142,30 @@ async function selesaiUjian() {
     let payload = {
         action: "submitResult", namaUjian: namaUjianAktif,
         nis: currentSiswaObj ? currentSiswaObj.username : "Siswa", nama: namaSiswaLogin,
-        nilai: nilaiAkhir, jawaban: jawabanSiswa
+        nilai: nilaiAkhir, jawaban: jawabanSiswa, status: statusFinal
     };
 
-    setTimeout(async () => {
-        try {
-            let res = await axios.post(GAS_URL, JSON.stringify(payload));
-            hideLoading();
-            if(res.data.status === "success") {
-                alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
-                location.reload();
-            } else { alert("Gagal menyimpan: " + res.data.message); location.reload(); }
-        } catch(err) { 
-            hideLoading();
-            alert("Koneksi gagal saat submit."); 
-            location.reload(); 
+    try {
+        let res = await axios.post(GAS_URL, JSON.stringify(payload));
+        hideLoading();
+        if (isCurrentlyFullscreen() && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
         }
-    }, Math.floor(Math.random() * 2000) + 1000);
+        if (isCurang) {
+            alert(`UJIAN DIHENTIKAN OTOMATIS!\nAlasan: ${alasanCurang}.\nStatus: Dianggap Curang / Selesai.\nNilai Anda: ${nilaiAkhir}\n\nAkun Anda terkunci. Hubungi Admin jika perlu reset login.`);
+        } else if(res.data && res.data.status === "success") {
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
+        } else {
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
+        }
+        location.reload();
+    } catch(err) { 
+        hideLoading();
+        alert(isCurang 
+            ? `UJIAN DIHENTIKAN (${alasanCurang})! Nilai: ${nilaiAkhir}. Akun terkunci, hubungi Admin untuk reset.` 
+            : "Koneksi gagal saat submit, silakan hubungi pengawas."); 
+        location.reload(); 
+    }
 }
 
 // ================= NAVIGASI PANEL ADMIN =================
@@ -1752,6 +2176,7 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
+        renderTabelSesiAktif();
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
@@ -1805,7 +2230,7 @@ function hideLoading() {
 
 window.onload = async function() {
     showLoading("Memuat data sistem...");
-    await fetchCbtDatabase();
+    await fetchCbtDatabase(true);
     hideLoading();
 
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
