@@ -1272,21 +1272,97 @@ async function deleteSesiFromGAS(username) {
     }
 }
 
-// Helper mengambil semua soal dari Gist API
-async function fetchAllSoalFromGist() {
+// ================= CACHE SOAL UJIAN & PRIORITAS GIST_RAW_URL =================
+const SOAL_CACHE_TTL_MS = 15 * 60 * 1000; // Cache soal 15 menit per sesi browser agar hemat request saat 1.000+ siswa ujian
+
+function getSoalCacheKey(scope = "all") {
+    return `smantas_cbt_soal_cache_${GIST_ID}_${scope}`;
+}
+
+function bacaCacheSoal(scope = "all") {
     try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+        const raw = sessionStorage.getItem(getSoalCacheKey(scope));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data) || !parsed.savedAt) return null;
+        if (Date.now() - parsed.savedAt > SOAL_CACHE_TTL_MS) {
+            sessionStorage.removeItem(getSoalCacheKey(scope));
+            return null;
+        }
+        return parsed.data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function simpanCacheSoal(scope = "all", data = []) {
+    try {
+        sessionStorage.setItem(getSoalCacheKey(scope), JSON.stringify({
+            savedAt: Date.now(),
+            data: Array.isArray(data) ? data : []
+        }));
+    } catch (e) {
+        console.warn("Gagal menyimpan cache soal ke sessionStorage:", e);
+    }
+}
+
+function bersihkanCacheSoal() {
+    try {
+        Object.keys(sessionStorage).forEach(k => {
+            if (k.startsWith(`smantas_cbt_soal_cache_${GIST_ID}_`)) {
+                sessionStorage.removeItem(k);
+            }
+        });
+    } catch (e) {}
+}
+
+// Helper mengambil soal: untuk ujian siswa memprioritaskan GIST_RAW_URL + cache lokal,
+// sedangkan untuk manajemen/preview Admin memakai Gist API agar selalu real-time.
+async function fetchAllSoalFromGist(options = {}) {
+    const preferRaw = options.preferRaw !== false;
+    const forceRefresh = options.forceRefresh === true;
+    const cacheScope = options.cacheScope || (preferRaw ? "raw_exam" : "admin_api");
+
+    if (!forceRefresh) {
+        const cached = bacaCacheSoal(cacheScope);
+        if (cached) return cached;
+    }
+
+    if (preferRaw) {
+        try {
+            const res = await axios.get(`${GIST_RAW_URL}?t=${Math.floor(Date.now() / 30000)}`);
+            const raw = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+            const list = Array.isArray(raw) ? raw : [];
+            simpanCacheSoal(cacheScope, list);
+            return list;
+        } catch (rawErr) {
+            console.warn("Gagal baca GIST_RAW_URL, fallback ke Gist API:", rawErr);
+        }
+    }
+
+    try {
+        const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
             headers: { "Authorization": `token ${GIST_TOKEN}` }
         });
-        let filename = Object.keys(gistRes.data.files)[0];
-        let rawContent = gistRes.data.files[filename].content;
-        let parsed = JSON.parse(rawContent);
-        return Array.isArray(parsed) ? parsed : [];
+        const filename = Object.keys(gistRes.data.files)[0];
+        const rawContent = gistRes.data.files[filename].content;
+        const parsed = JSON.parse(rawContent);
+        const list = Array.isArray(parsed) ? parsed : [];
+        simpanCacheSoal(cacheScope, list);
+        return list;
     } catch (apiErr) {
-        console.warn("Fallback ke GIST_RAW_URL:", apiErr);
-        let res = await axios.get(GIST_RAW_URL + "?t=" + Date.now());
-        let raw = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
-        return Array.isArray(raw) ? raw : [];
+        if (!preferRaw) {
+            try {
+                const res = await axios.get(`${GIST_RAW_URL}?t=${Date.now()}`);
+                const raw = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+                const list = Array.isArray(raw) ? raw : [];
+                simpanCacheSoal(cacheScope, list);
+                return list;
+            } catch (e2) {
+                console.error("Gagal mengambil soal dari Gist:", e2);
+            }
+        }
+        return [];
     }
 }
 
@@ -2039,6 +2115,7 @@ async function simpanJadwalDanSoal() {
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                 files: { [filename]: { content: JSON.stringify(contentSoal) } }
             }, githubHeaders);
+            bersihkanCacheSoal();
         } catch(e) { 
             hideLoading();
             alert("Gagal upload soal ke Gist: " + e.message); 
@@ -2321,7 +2398,7 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
 
     showLoading("Mengambil daftar soal dari Gist...");
-    const allSoal = await fetchAllSoalFromGist();
+    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
     hideLoading();
 
     const seenIds = new Set();
@@ -2339,7 +2416,7 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
 
 async function lihatSemuaSoalGist() {
     showLoading("Mengambil seluruh bank soal dari Gist...");
-    const allSoal = await fetchAllSoalFromGist();
+    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
     hideLoading();
     tampilkanModalPreviewSoal(`Seluruh Bank Soal di Gist (${allSoal.length} Butir)`, allSoal, null, null);
 }
@@ -2556,6 +2633,7 @@ async function autentikasiSiswa() {
 }
 
 async function logoutSiswa() {
+    bersihkanCacheSoal();
     if(currentSiswaObj) {
         showLoading("Melepaskan sesi perangkat di GAS...");
         await fetchSesiFromGAS(true);
@@ -2671,10 +2749,19 @@ async function mulaiUjianPilihan() {
 async function loadSoalUjian() {
     showLoading("Memuat soal ujian...");
     try {
-        const allSoal = await fetchAllSoalFromGist();
         const kelasTrim = kelasSiswaLogin.trim();
+        const paketScope = `paket_${encodeURIComponent(mapelSiswaLogin)}_${encodeURIComponent(kelasTrim)}`;
+        let soalTerfilter = bacaCacheSoal(paketScope);
 
-        const soalTerfilter = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
+        if (!soalTerfilter) {
+            const allSoal = await fetchAllSoalFromGist({
+                preferRaw: true,
+                forceRefresh: false,
+                cacheScope: "raw_exam"
+            });
+            soalTerfilter = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
+            simpanCacheSoal(paketScope, soalTerfilter);
+        }
         listSoal = siapkanSoalDanOpsiAcak(soalTerfilter);
 
         hideLoading();
@@ -2928,6 +3015,7 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
     try {
         let res = await axios.post(GAS_URL, JSON.stringify(payload));
         hideLoading();
+        bersihkanCacheSoal();
         if (isCurrentlyFullscreen() && document.exitFullscreen) {
             document.exitFullscreen().catch(() => {});
         }
@@ -2940,6 +3028,7 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         }
         location.reload();
     } catch(err) { 
+        bersihkanCacheSoal();
         hideLoading();
         alert(isCurang 
             ? `UJIAN DIHENTIKAN (${alasanCurang})! Nilai: ${nilaiAkhir}. Akun terkunci, hubungi Admin untuk reset.` 
