@@ -100,7 +100,7 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #008080; color: white; }
         
-        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; border-radius: 3px; margin-right: 4px; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; border-radius: 3px; margin-right: 4px; margin-bottom: 2px; }
         .btn-warning { background: #ffc107; color: #212529; }
         .btn-warning:hover { background: #e0a800; }
         .btn-danger { background: #dc3545; color: white; }
@@ -116,6 +116,39 @@
             border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
+
+        /* MODAL PREVIEW SOAL ADMIN */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.65); z-index: 9998;
+            display: none; justify-content: center; align-items: center; padding: 15px;
+        }
+        .modal-box {
+            background: #fff; width: 100%; max-width: 780px; max-height: 88vh;
+            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        .modal-header {
+            background: #008080; color: #fff; padding: 12px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body {
+            padding: 16px; overflow-y: auto; flex: 1; background: #f9fbfb;
+        }
+        .modal-footer {
+            padding: 10px 16px; background: #eee; border-top: 1px solid #ddd;
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .preview-item {
+            background: #fff; border: 1px solid #dce4e4; border-radius: 6px;
+            padding: 12px; margin-bottom: 12px;
+        }
+        .preview-opt {
+            padding: 5px 8px; margin: 3px 0; border-radius: 4px; font-size: 13px; background: #f8f9fa;
+        }
+        .preview-opt.is-kunci {
+            background: #d4edda; border: 1px solid #28a745; font-weight: bold; color: #155724;
+        }
 
         /* LOADING OVERLAY KUNCI LAYAR TOTAL */
         #loadingOverlay {
@@ -151,6 +184,23 @@
     <div class="spinner"></div>
     <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
     <p style="font-size: 13px; color: #ddd; margin-top: 5px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
+</div>
+
+<!-- MODAL LIHAT SOAL UPLOAD -->
+<div id="modalLihatSoal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <b id="modalSoalTitle" style="font-size: 15px;">Daftar Soal Terupload</b>
+            <button onclick="tutupModalSoal()" style="width:auto; padding:4px 10px; background:#dc3545; font-size:12px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalSoalBody">
+            Memuat soal...
+        </div>
+        <div class="modal-footer">
+            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:8px 14px; font-size:12px;">Hapus Paket Soal Ini dari Gist</button>
+            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:8px 14px; font-size:12px;">Tutup</button>
+        </div>
+    </div>
 </div>
 
 <div class="container login-compact" id="mainContainer">
@@ -294,7 +344,10 @@
             </div>
 
             <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Ujian Aktif</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
+                    <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0;">Lihat Semua Bank Soal (Gist)</button>
+                </div>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -465,9 +518,9 @@
 </div>
 <script>
 // ================= KONFIGURASI SISTEM =================
-const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/f8eadb333b77b0e74b7a73c699a32be72356ef68/soal.json"; 
+const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
 
-const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/d02fc880fb96bd2f2abe021aa556fd1b80370d05/db_cbt.json";
+const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwZ6hmPbTj9i_fgHhzLja0_CqdxwDwVzb2pTRF5t8b7lb82Jm9748C8kkB6Z-l0DPUe/exec";
@@ -477,6 +530,21 @@ const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
+
+// ================= SANDI KUNCI JAWABAN (K=A, L=B, M=C, N=D, O=E) =================
+const MAP_OPT_TO_CIPHER = { 'A': 'K', 'B': 'L', 'C': 'M', 'D': 'N', 'E': 'O' };
+const MAP_CIPHER_TO_OPT = { 'K': 'A', 'L': 'B', 'M': 'C', 'N': 'D', 'O': 'E', 'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E' };
+
+function encodeKunciGist(opt) {
+    const up = String(opt || 'A').trim().toUpperCase();
+    return MAP_OPT_TO_CIPHER[up] || 'K';
+}
+
+function decodeKunciGist(cipher) {
+    const up = String(cipher || 'K').trim().toUpperCase();
+    return MAP_CIPHER_TO_OPT[up] || 'A';
+}
+// =================================================================================
 
 let currentLoginRole = 'siswa';
 
@@ -490,7 +558,7 @@ let pengaturanCbt = {
 };
 let logSiswaLogin = []; 
 let isAdminPassVisible = false;
-let isDataLoadedOnce = false; // Flag untuk mencegah download berulang ke Gist
+let isDataLoadedOnce = false;
 
 let listSoal = [];
 let jawabanSiswa = {};
@@ -625,10 +693,9 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-// Fungsi Fetch Utama dengan Cache Memory (Mencegah Request Berulang saat Pindah Tab)
+// Fungsi Fetch Utama dengan Cache Memory
 async function fetchCbtDatabase(forceRefresh = false) {
     if (isDataLoadedOnce && !forceRefresh) {
-        // Jika data sudah pernah dimuat dan tidak dipaksa refresh, langsung gunakan memori lokal (Tanpa Gist API Call!)
         return;
     }
 
@@ -668,6 +735,24 @@ async function fetchCbtDatabase(forceRefresh = false) {
     renderAdminPasswordDisplay();
 }
 
+// Helper mengambil semua soal dari Gist API (Selalu Fresh / Real-time tanpa cache commit hash lama)
+async function fetchAllSoalFromGist() {
+    try {
+        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+            headers: { "Authorization": `token ${GIST_TOKEN}` }
+        });
+        let filename = Object.keys(gistRes.data.files)[0];
+        let rawContent = gistRes.data.files[filename].content;
+        let parsed = JSON.parse(rawContent);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (apiErr) {
+        console.warn("Fallback ke GIST_RAW_URL:", apiErr);
+        let res = await axios.get(GIST_RAW_URL + "?t=" + Date.now());
+        let raw = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+        return Array.isArray(raw) ? raw : [];
+    }
+}
+
 async function fetchLogLoginFromGAS() {
     try {
         let res = await axios.post(GAS_URL, JSON.stringify({ action: "getLogLogin" }));
@@ -691,13 +776,13 @@ async function saveCbtDatabaseToGist() {
 
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
     try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}`, githubHeaders);
+        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
         let filename = Object.keys(gistRes.data.files)[0];
         
         await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
             files: { [filename]: { content: JSON.stringify(payloadData, null, 2) } }
         }, githubHeaders);
-        isDataLoadedOnce = true; // Tandai data lokal sudah sinkron
+        isDataLoadedOnce = true;
     } catch(err) {
         console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
         alert("Gagal menyimpan ke Gist: " + err.message);
@@ -1122,6 +1207,7 @@ async function simpanJadwalDanSoal() {
 
     showLoading("Menyiapkan jadwal & menyimpan soal...");
 
+    // Simpan jadwal per kelas di db_cbt.json (tampilan tabel admin otomatis menggabungkan yang sama)
     checkedKelas.forEach(kelas => {
         daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
         daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai });
@@ -1130,17 +1216,20 @@ async function simpanJadwalDanSoal() {
     await saveCbtDatabaseToGist();
 
     if(rawText) {
-        showLoading("Menyimpan soal ke GitHub Gist...");
-        let allParsedSoal = [];
-        checkedKelas.forEach(kelas => {
-            let folderName = `${mapel.replace(/\s+/g, '_')}_${kelas.replace(/\s+/g, '_')}`;
-            let parsed = parseSoalDariTeks(rawText, folderName);
-            allParsedSoal = allParsedSoal.concat(parsed);
-        });
+        showLoading("Menyimpan soal gabungan ke GitHub Gist...");
+        // Satu paket soal untuk seluruh kelas yang dipilih (tidak duplikat)
+        let paketId = `${mapel.replace(/\s+/g, '_')}_${Date.now()}`;
+        let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas, paketId);
+
+        if(parsedSoal.length === 0) {
+            hideLoading();
+            alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... JAWABAN ... 0/1).");
+            return;
+        }
 
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
         try {
-            let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}`, githubHeaders);
+            let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
             let filename = Object.keys(gistRes.data.files)[0];
             let rawContent = gistRes.data.files[filename].content;
             
@@ -1148,10 +1237,29 @@ async function simpanJadwalDanSoal() {
             if(rawContent) {
                 try {
                     contentSoal = JSON.parse(rawContent);
+                    if(!Array.isArray(contentSoal)) contentSoal = [];
                 } catch(e) { contentSoal = []; }
             }
 
-            contentSoal = contentSoal.concat(allParsedSoal);
+            // Bersihkan kelas yang dipilih dari paket soal lama untuk mapel yang sama agar tidak bentrok
+            contentSoal.forEach(item => {
+                if(item.mapel === mapel && Array.isArray(item.kelas)) {
+                    item.kelas = item.kelas.filter(k => !checkedKelas.includes(k));
+                }
+            });
+            // Hapus soal lama yang sudah tidak memiliki kelas (atau namaUjian lama yang menimpa kelas ini)
+            const oldFolderNames = checkedKelas.map(k => `${mapel.replace(/\s+/g, '_')}_${k.replace(/\s+/g, '_')}`);
+            contentSoal = contentSoal.filter(item => {
+                if(Array.isArray(item.kelas) && item.mapel === mapel) {
+                    return item.kelas.length > 0;
+                }
+                if(item.namaUjian && oldFolderNames.includes(item.namaUjian)) {
+                    return false;
+                }
+                return true;
+            });
+
+            contentSoal = contentSoal.concat(parsedSoal);
 
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                 files: { [filename]: { content: JSON.stringify(contentSoal, null, 2) } }
@@ -1167,9 +1275,10 @@ async function simpanJadwalDanSoal() {
     renderTabelJadwal();
     alert("Jadwal ujian dan soal berhasil disimpan!");
     document.getElementById('soalBatchText').value = "";
+    document.getElementById('fileSoalAny').value = "";
 }
 
-function parseSoalDariTeks(text, folderName) {
+function parseSoalDariTeks(text, mapelName, kelasArray, paketId) {
     let lines = text.split('\n');
     let soalList = [];
     let currentSoal = null;
@@ -1180,52 +1289,244 @@ function parseSoalDariTeks(text, folderName) {
     lines.forEach(line => {
         let l = line.trim();
         if(l.startsWith("SOAL")) {
-            if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
-            currentSoal = { id: Date.now() + Math.random(), soal: "", namaUjian: folderName, gambar: "", options: {}, kunci: "A" };
-            optionsMap = {}; optIdx = 0;
+            if(currentSoal) {
+                currentSoal.options = optionsMap;
+                soalList.push(currentSoal);
+            }
+            currentSoal = {
+                id: Date.now() + Math.random(),
+                paketId: paketId,
+                mapel: mapelName,
+                kelas: [...kelasArray],
+                namaUjian: `${mapelName.replace(/\s+/g, '_')}_${kelasArray.join('_').replace(/\s+/g, '_')}`,
+                soal: "",
+                gambar: "",
+                options: {},
+                kunci: "K" // Default K = A
+            };
+            optionsMap = {};
+            optIdx = 0;
         } else if(l.startsWith("JAWABAN")) {
-            // skip
+            // skip header JAWABAN
         } else if(currentSoal && !currentSoal.soal) {
             currentSoal.soal = l;
         } else if(currentSoal) {
             if(l === "0" || l === "1") {
-                if(l === "1" && optionKeys[optIdx - 1]) currentSoal.kunci = optionKeys[optIdx - 1];
+                if(l === "1" && optionKeys[optIdx - 1]) {
+                    // Simpan sandi kunci: K=A, L=B, M=C, N=D, O=E
+                    currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
+                }
             } else if(l.length > 0 && optIdx < 5) {
                 optionsMap[optionKeys[optIdx]] = l;
                 optIdx++;
             }
         }
     });
-    if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+    if(currentSoal) {
+        currentSoal.options = optionsMap;
+        soalList.push(currentSoal);
+    }
     return soalList;
+}
+
+// Mengelompokkan jadwal ujian yang mapel & waktunya sama agar kolom kelas menjadi "X-1, X-2"
+function getGroupedJadwalList() {
+    const groups = [];
+    daftarJadwalUjian.forEach((j, originalIdx) => {
+        const key = `${j.mapel}||${j.jp}||${j.mulai}||${j.selesai}`;
+        let existing = groups.find(g => g.key === key);
+        if(existing) {
+            if(!existing.kelasList.includes(j.kelas)) {
+                existing.kelasList.push(j.kelas);
+            }
+            existing.indices.push(originalIdx);
+        } else {
+            groups.push({
+                key: key,
+                mapel: j.mapel,
+                jp: j.jp,
+                mulai: j.mulai,
+                selesai: j.selesai,
+                kelasList: [j.kelas],
+                indices: [originalIdx]
+            });
+        }
+    });
+    return groups;
 }
 
 function renderTabelJadwal() {
     let tbody = document.getElementById('tbodyJadwal');
     if(!tbody) return;
     tbody.innerHTML = "";
-    if(daftarJadwalUjian.length === 0) {
+    const groupedList = getGroupedJadwalList();
+
+    if(groupedList.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
         return;
     }
-    daftarJadwalUjian.forEach((j, idx) => {
+
+    groupedList.forEach((g) => {
+        const kelasStr = g.kelasList.join(', ');
+        const kelasJson = encodeURIComponent(JSON.stringify(g.kelasList));
+        const indicesJson = encodeURIComponent(JSON.stringify(g.indices));
+        const mapelEnc = encodeURIComponent(g.mapel);
+
         tbody.innerHTML += `<tr>
-            <td>${j.mapel}</td>
-            <td>${j.kelas}</td>
-            <td>${j.jp ? j.jp + ' JP' : '-'}</td>
-            <td>${j.mulai.replace('T', ' ')}</td>
-            <td>${j.selesai.replace('T', ' ')}</td>
+            <td><b>${g.mapel}</b></td>
+            <td>${kelasStr}</td>
+            <td>${g.jp ? g.jp + ' JP' : '-'}</td>
+            <td>${g.mulai.replace('T', ' ')}</td>
+            <td>${g.selesai.replace('T', ' ')}</td>
             <td>
-                <button onclick="hapusJadwal(${idx})" class="btn-sm btn-danger">Hapus</button>
+                <button onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-info">Lihat Soal</button>
+                <button onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-sm btn-danger">Hapus</button>
             </td>
         </tr>`;
     });
 }
 
-async function hapusJadwal(idx) {
-    if(!confirm("Hapus jadwal ujian ini?")) return;
+// ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
+function cekSoalCocokKelas(item, mapel, kelasTarget) {
+    // Format baru (gabungan multi-kelas)
+    if(item.mapel === mapel && Array.isArray(item.kelas)) {
+        return item.kelas.includes(kelasTarget);
+    }
+    // Format lama (kompatibilitas mundur)
+    const legacyName = `${mapel.replace(/\s+/g, '_')}_${kelasTarget.replace(/\s+/g, '_')}`;
+    return item.namaUjian === legacyName;
+}
+
+async function lihatSoalJadwal(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    showLoading("Mengambil daftar soal dari Gist...");
+    const allSoal = await fetchAllSoalFromGist();
+    hideLoading();
+
+    // Ambil soal yang cocok dengan salah satu kelas dalam grup (deduplikasi by id)
+    const seenIds = new Set();
+    const matchedSoal = [];
+    allSoal.forEach(item => {
+        const cocok = kelasList.some(k => cekSoalCocokKelas(item, mapel, k));
+        if(cocok && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            matchedSoal.push(item);
+        }
+    });
+
+    tampilkanModalPreviewSoal(`Soal: ${mapel} (${kelasList.join(', ')})`, matchedSoal, mapel, kelasList);
+}
+
+async function lihatSemuaSoalGist() {
+    showLoading("Mengambil seluruh bank soal dari Gist...");
+    const allSoal = await fetchAllSoalFromGist();
+    hideLoading();
+    tampilkanModalPreviewSoal(`Seluruh Bank Soal di Gist (${allSoal.length} Butir)`, allSoal, null, null);
+}
+
+function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarget) {
+    document.getElementById('modalSoalTitle').innerText = `${judul} — Total: ${soalArray.length} Soal`;
+    const body = document.getElementById('modalSoalBody');
+    const btnHapus = document.getElementById('btnHapusSoalPaket');
+
+    if(mapelTarget && kelasListTarget && soalArray.length > 0) {
+        btnHapus.style.display = "inline-block";
+        btnHapus.onclick = () => hapusSoalUntukKelas(mapelTarget, kelasListTarget);
+    } else {
+        btnHapus.style.display = "none";
+    }
+
+    if(soalArray.length === 0) {
+        body.innerHTML = `<div style="text-align:center; padding:30px; color:#666;">Belum ada soal yang tersimpan di Gist untuk ujian/kelas ini.</div>`;
+    } else {
+        let html = "";
+        soalArray.forEach((item, idx) => {
+            const kunciPlain = decodeKunciGist(item.kunci);
+            const kunciCipher = encodeKunciGist(kunciPlain);
+            const infoKelas = Array.isArray(item.kelas) ? item.kelas.join(', ') : (item.namaUjian || '-');
+
+            html += `<div class="preview-item">
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:6px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
+                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${item.mapel || '-'}</b> | Kelas: <b>${infoKelas}</b></span>
+                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
+                </div>
+                <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">${item.soal}</div>`;
+
+            if(item.gambar) {
+                html += `<img src="${item.gambar}" class="img-soal">`;
+            }
+
+            ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                if(item.options && item.options[opt]) {
+                    const isBenar = (opt === kunciPlain);
+                    html += `<div class="preview-opt ${isBenar ? 'is-kunci' : ''}">
+                        <b>${opt}.</b> ${item.options[opt]} ${isBenar ? ' ✔' : ''}
+                    </div>`;
+                }
+            });
+
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('modalLihatSoal').style.display = 'flex';
+}
+
+function tutupModalSoal() {
+    document.getElementById('modalLihatSoal').style.display = 'none';
+}
+
+async function hapusSoalUntukKelas(mapel, kelasList) {
+    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari Gist?`)) return;
+    showLoading("Menghapus soal dari Gist...");
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    try {
+        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+        let filename = Object.keys(gistRes.data.files)[0];
+        let contentSoal = JSON.parse(gistRes.data.files[filename].content || "[]");
+
+        contentSoal.forEach(item => {
+            if(item.mapel === mapel && Array.isArray(item.kelas)) {
+                item.kelas = item.kelas.filter(k => !kelasList.includes(k));
+            }
+        });
+        const oldFolderNames = kelasList.map(k => `${mapel.replace(/\s+/g, '_')}_${k.replace(/\s+/g, '_')}`);
+        contentSoal = contentSoal.filter(item => {
+            if(Array.isArray(item.kelas) && item.mapel === mapel) return item.kelas.length > 0;
+            if(item.namaUjian && oldFolderNames.includes(item.namaUjian)) return false;
+            return true;
+        });
+
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: { [filename]: { content: JSON.stringify(contentSoal, null, 2) } }
+        }, githubHeaders);
+
+        hideLoading();
+        tutupModalSoal();
+        alert("Soal berhasil dihapus dari Gist!");
+    } catch(err) {
+        hideLoading();
+        alert("Gagal menghapus soal: " + err.message);
+    }
+}
+
+async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
+    const indices = JSON.parse(decodeURIComponent(indicesJson));
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')}?`)) return;
     showLoading("Menghapus jadwal...");
-    daftarJadwalUjian.splice(idx, 1);
+
+    // Hapus dari index terbesar ke terkecil
+    indices.sort((a, b) => b - a).forEach(idx => {
+        daftarJadwalUjian.splice(idx, 1);
+    });
+
     await saveCbtDatabaseToGist();
     renderTabelJadwal();
     hideLoading();
@@ -1260,7 +1561,7 @@ async function autentikasiSiswa() {
 
     showLoading("Memeriksa akun siswa...");
     if(databaseSiswa.length === 0) {
-        await fetchCbtDatabase();
+        await fetchCbtDatabase(true);
     }
     hideLoading();
 
@@ -1282,7 +1583,7 @@ async function autentikasiSiswa() {
     let selectMapel = document.getElementById('pilihMapelAktif');
     selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
 
-    let jadwalKelas = daftarJadwalUjian.filter(j => j.kelas === siswa.kelas);
+    let jadwalKelas = daftarJadwalUjian.filter(j => j.kelas.trim() === siswa.kelas.trim());
 
     if(jadwalKelas.length === 0) {
         alert("Belum ada jadwal ujian yang aktif untuk kelas Anda.");
@@ -1318,7 +1619,7 @@ async function mulaiUjianPilihan() {
     if(!mapel) { alert("Pilih mata pelajaran ujian terlebih dahulu!"); return; }
 
     let now = getLocalIsoNow();
-    let jadwalMatch = daftarJadwalUjian.find(j => j.mapel === mapel && j.kelas === kelasSiswaLogin);
+    let jadwalMatch = daftarJadwalUjian.find(j => j.mapel === mapel && j.kelas.trim() === kelasSiswaLogin.trim());
 
     if(!jadwalMatch) {
         alert("Jadwal ujian tidak ditemukan!");
@@ -1357,34 +1658,27 @@ async function mulaiUjianPilihan() {
 async function loadSoalUjian() {
     showLoading("Memuat soal ujian...");
     try {
-        let res = await axios.get(GIST_RAW_URL + "?t=" + new Date().getTime());
-        let rawResponse = res.data;
+        const allSoal = await fetchAllSoalFromGist();
+        const kelasTrim = kelasSiswaLogin.trim();
 
-        if(typeof rawResponse === "string") {
-            listSoal = JSON.parse(rawResponse);
-        } else {
-            listSoal = rawResponse;
-        }
-
-        listSoal = listSoal.filter(s => s.namaUjian === namaUjianAktif);
+        // Filter soal berdasarkan format multi-kelas maupun format namaUjian lama
+        listSoal = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
 
         hideLoading();
         if(!Array.isArray(listSoal) || listSoal.length === 0) { 
             alert("Belum ada soal untuk ujian/kelas ini."); 
-            location.reload(); 
             return; 
         }
 
         setCompactMode(false);
-        document.getElementById('infoUjianText').innerText = "Mata Pelajaran: " + namaUjianAktif.replace(/_/g, ' ');
+        document.getElementById('infoUjianText').innerText = `Mata Pelajaran: ${mapelSiswaLogin} (${kelasTrim})`;
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewPilihUjianSiswa').classList.remove('active');
         document.getElementById('viewUjianSiswa').classList.add('active');
         renderSoalSiswa();
     } catch(err) { 
         hideLoading();
-        alert("Gagal memuat soal."); 
-        location.reload(); 
+        alert("Gagal memuat soal: " + err.message); 
     }
 }
 
@@ -1409,7 +1703,10 @@ async function selesaiUjian() {
     showLoading("Mengirim jawaban ke server... Jangan tutup halaman!");
 
     let benar = 0;
-    listSoal.forEach((item, index) => { if(jawabanSiswa[index] === item.kunci) benar++; });
+    listSoal.forEach((item, index) => {
+        const kunciAsli = decodeKunciGist(item.kunci);
+        if(jawabanSiswa[index] === kunciAsli) benar++;
+    });
     let nilaiAkhir = Number(((benar / listSoal.length) * 100).toFixed(2));
 
     try {
@@ -1447,7 +1744,7 @@ async function selesaiUjian() {
     }, Math.floor(Math.random() * 2000) + 1000);
 }
 
-// ================= NAVIGASI PANEL ADMIN (INSTANT & HEMAT API) =================
+// ================= NAVIGASI PANEL ADMIN =================
 function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
@@ -1455,7 +1752,7 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
-        fetchLogLoginFromGAS(); // Monitoring mengambil log dari GAS, bukan Gist db_cbt
+        fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('adminTabUjian').classList.add('active');
@@ -1508,7 +1805,7 @@ function hideLoading() {
 
 window.onload = async function() {
     showLoading("Memuat data sistem...");
-    await fetchCbtDatabase(); // Data dimuat sekali di awal
+    await fetchCbtDatabase();
     hideLoading();
 
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
