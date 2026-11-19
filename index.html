@@ -263,7 +263,7 @@
         }
         .status-pill-selesai {
             background-color: #28a745;
-            color: #ffffff;
+            color: #000000;
         }
         .status-pill-reset {
             background-color: #ffc107;
@@ -1139,12 +1139,12 @@ function getStatusTerakhir(statusStr) {
 function formatPelanggaranRingkas(alasan) {
     const low = String(alasan || "").toLowerCase();
     if (low.includes("full screen") || low.includes("fullscreen")) {
-        return "Curang Fullscreen";
+        return "Curang: Keluar dari mode Full Screen";
     }
     if (low.includes("tab") || low.includes("jendela") || low.includes("aplikasi") || low.includes("menyembunyikan")) {
-        return "Curang Pindah Tab";
+        return "Curang: Pindah Tab / Aplikasi";
     }
-    return alasan ? `Curang (${alasan})` : "Curang";
+    return alasan ? `Curang: ${alasan}` : "Curang";
 }
 
 function renderStatusBadgesHtml(statusStr) {
@@ -1153,14 +1153,26 @@ function renderStatusBadgesHtml(statusStr) {
         return `<span class="status-pill status-pill-login">-</span>`;
     }
 
-    const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+    // Pecah berdasarkan koma, dan jika ada format lama "Selesai (Curang: ...)", pisahkan juga "Selesai" dan "(Curang: ...)"
+    const rawParts = raw.split(",").map(s => s.trim()).filter(Boolean);
+    const parts = [];
+    rawParts.forEach(part => {
+        const mGabung = part.match(/^Selesai\s*\((Curang[\s\S]*)\)$/i);
+        if (mGabung) {
+            parts.push("Selesai");
+            parts.push(mGabung[1].trim());
+        } else {
+            parts.push(part);
+        }
+    });
+
     const pills = parts.map(part => {
         const low = part.toLowerCase();
         let cls = "status-pill-login";
-        if (low.includes("curang")) {
-            cls = "status-pill-curang";
-        } else if (low.includes("selesai")) {
+        if (low.startsWith("selesai")) {
             cls = "status-pill-selesai";
+        } else if (low.includes("curang")) {
+            cls = "status-pill-curang";
         } else if (low.includes("reset")) {
             cls = "status-pill-reset";
         } else if (low.includes("sedang")) {
@@ -2971,11 +2983,17 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         if(jawabanSiswa[index] === kunciAsli) benar++;
     });
     let nilaiAkhir = listSoal.length > 0 ? Number(((benar / listSoal.length) * 100).toFixed(2)) : 0;
-    const statusBaru = isCurang ? formatPelanggaranRingkas(alasanCurang) : "Selesai";
     const statusSebelum = currentSiswaObj && sesiLoginSiswa[currentSiswaObj.username]
         ? sesiLoginSiswa[currentSiswaObj.username].status
         : "";
-    const statusFinal = gabungRiwayatStatus(statusSebelum, statusBaru);
+    let statusFinal = "";
+    if (isCurang) {
+        const tokenCurang = formatPelanggaranRingkas(alasanCurang);
+        const setelahCurang = gabungRiwayatStatus(statusSebelum, tokenCurang);
+        statusFinal = gabungRiwayatStatus(setelahCurang, "Selesai");
+    } else {
+        statusFinal = gabungRiwayatStatus(statusSebelum, "Selesai");
+    }
 
     if(currentSiswaObj) {
         try {
