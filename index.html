@@ -18,7 +18,7 @@
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
-            max-width: 950px; 
+            max-width: 980px; 
             margin: 20px auto; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
@@ -141,11 +141,13 @@
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 580px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 620px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #008080; color: white; }
         
         .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; border-radius: 3px; margin-right: 4px; margin-bottom: 2px; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
         .btn-warning { background: #ffc107; color: #212529; }
         .btn-warning:hover { background: #e0a800; }
         .btn-danger { background: #dc3545; color: white; }
@@ -175,7 +177,7 @@
             font-weight: bold;
         }
 
-        /* MODAL PREVIEW SOAL ADMIN */
+        /* MODAL PREVIEW SOAL ADMIN & MODAL EXPORT PER KELAS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.65); z-index: 9998;
@@ -185,6 +187,9 @@
             background: #fff; width: 100%; max-width: 780px; max-height: 88vh;
             border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        .modal-box.modal-sm {
+            max-width: 440px;
         }
         .modal-header {
             background: #008080; color: #fff; padding: 12px 16px;
@@ -206,6 +211,12 @@
         }
         .preview-opt.is-kunci {
             background: #d4edda; border: 1px solid #28a745; font-weight: bold; color: #155724;
+        }
+        .export-kelas-btn-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         /* LOADING OVERLAY KUNCI LAYAR TOTAL */
@@ -257,6 +268,22 @@
         <div class="modal-footer">
             <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:8px 14px; font-size:12px;">Hapus Paket Soal Ini dari Gist</button>
             <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:8px 14px; font-size:12px;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PILIH EXPORT HASIL PER KELAS (.XLSX) -->
+<div id="modalExportHasil" class="modal-overlay">
+    <div class="modal-box modal-sm">
+        <div class="modal-header">
+            <b id="modalExportTitle" style="font-size: 15px;">Export Hasil Ujian (.xlsx)</b>
+            <button onclick="tutupModalExport()" style="width:auto; padding:4px 10px; background:#dc3545; font-size:12px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalExportBody">
+            Pilih kelas untuk mengunduh rekap nilai Excel:
+        </div>
+        <div class="modal-footer">
+            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:8px 14px; font-size:12px;">Tutup</button>
         </div>
     </div>
 </div>
@@ -358,15 +385,15 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
-            <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GIST) -->
+            <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GAS) -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa</h4>
-                    <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
+                    <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
                 </div>
-                <p style="font-size: 12px; color: #555; margin-top: 0;">Siswa yang sedang login/terkunci perangkatnya atau terhenti karena keluar layar penuh/curang dapat di-reset di sini.</p>
+                <p style="font-size: 12px; color: #555; margin-top: 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -380,7 +407,7 @@
                             </tr>
                         </thead>
                         <tbody id="tbodySesiAktif">
-                            <tr><td colspan="6" style="text-align:center;">Memuat data sesi...</td></tr>
+                            <tr><td colspan="6" style="text-align:center;">Memuat data sesi dari GAS...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -388,9 +415,15 @@
 
             <!-- TABEL LOG SPREADSHEET -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
-                    <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <select id="filterKelasLogExport" style="width: auto; padding: 4px 8px; font-size: 11px;">
+                            <option value="ALL">Semua Kelas</option>
+                        </select>
+                        <button onclick="exportRekapLogXlsx()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #28a745;">Export .xlsx</button>
+                        <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table id="tabelSiswaLogin">
@@ -448,7 +481,7 @@
             </div>
 
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
                     <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0;">Lihat Semua Bank Soal (Gist)</button>
                 </div>
@@ -627,7 +660,7 @@ const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f93
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwZ6hmPbTj9i_fgHhzLja0_CqdxwDwVzb2pTRF5t8b7lb82Jm9748C8kkB6Z-l0DPUe/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbw07jmZ25dGW3lEtYIx98lpRpTTLmeQeeKQRsHEPLgf2WM8mNzNQamWspVuNBUnhAWZ/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
@@ -656,6 +689,7 @@ let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
 let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
 let databaseSiswa = [];
 let daftarJadwalUjian = []; 
+// sesiLoginSiswa kini dikelola & disinkronkan melalui Google Apps Script (GAS)
 let sesiLoginSiswa = {};
 let pengaturanCbt = {
     menitPerJp: 40,
@@ -666,7 +700,7 @@ let isAdminPassVisible = false;
 let isDataLoadedOnce = false;
 
 let listSoal = [];
-let currentSoalIndex = 0; // Index soal yang sedang tampil (1 soal per halaman)
+let currentSoalIndex = 0;
 let jawabanSiswa = {};
 let namaUjianAktif = "Ujian_CBT_Umum";
 let kelasSiswaLogin = "";
@@ -813,6 +847,7 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
+// ================= DATABASE MASTER GIST (HEMAT KUOTA GIST - TANPA db_sesi) =================
 async function fetchCbtDatabase(forceRefresh = false) {
     if (isDataLoadedOnce && !forceRefresh) {
         return;
@@ -836,11 +871,6 @@ async function fetchCbtDatabase(forceRefresh = false) {
             if(Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
             if(Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
             if(Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
-            if(data.db_sesi && typeof data.db_sesi === 'object') {
-                sesiLoginSiswa = data.db_sesi;
-            } else {
-                sesiLoginSiswa = {};
-            }
             if(data.db_pengaturan && typeof data.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
                 if(data.db_pengaturan.adminPasswordPlain) {
@@ -855,9 +885,134 @@ async function fetchCbtDatabase(forceRefresh = false) {
     initDropdowns();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
-    renderTabelSesiAktif();
     updateLabelJp();
     renderAdminPasswordDisplay();
+}
+
+async function saveCbtDatabaseToGist() {
+    // db_sesi tidak lagi ditulis ke Gist agar kuota Gist hemat dan bebas konflik saat ujian ramai
+    let payloadData = {
+        db_kelas: daftarKelas,
+        db_mapel: daftarMapel,
+        db_siswa: databaseSiswa,
+        db_jadwal: daftarJadwalUjian,
+        db_pengaturan: pengaturanCbt
+    };
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    try {
+        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
+        let filename = Object.keys(gistRes.data.files)[0];
+        
+        await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
+            files: { [filename]: { content: JSON.stringify(payloadData) } }
+        }, githubHeaders);
+        isDataLoadedOnce = true;
+    } catch(err) {
+        console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
+        alert("Gagal menyimpan ke Gist: " + err.message);
+    }
+}
+
+// ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GOOGLE APPS SCRIPT (GAS) =================
+function normalisasiSesiDariGAS(rawData) {
+    const map = {};
+    if (!rawData) return map;
+
+    if (Array.isArray(rawData)) {
+        rawData.forEach(item => {
+            if (!item) return;
+            const uname = String(item.username || item.nis || "").trim();
+            if (uname) {
+                map[uname] = {
+                    username: uname,
+                    deviceId: item.deviceId || item.perangkat || "",
+                    status: item.status || "Login Aktif",
+                    nama: item.nama || "",
+                    kelas: item.kelas || "",
+                    mapel: item.mapel || "-",
+                    updatedAt: item.updatedAt || ""
+                };
+            }
+        });
+    } else if (typeof rawData === 'object') {
+        Object.keys(rawData).forEach(key => {
+            const item = rawData[key];
+            if (item && typeof item === 'object') {
+                const uname = String(item.username || key || "").trim();
+                if (uname) {
+                    map[uname] = {
+                        username: uname,
+                        deviceId: item.deviceId || item.perangkat || "",
+                        status: item.status || "Login Aktif",
+                        nama: item.nama || "",
+                        kelas: item.kelas || "",
+                        mapel: item.mapel || "-",
+                        updatedAt: item.updatedAt || ""
+                    };
+                }
+            }
+        });
+    }
+    return map;
+}
+
+async function fetchSesiFromGAS(silent = false) {
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getSesi" }));
+        if (res.data && res.data.status === "success") {
+            sesiLoginSiswa = normalisasiSesiDariGAS(res.data.data);
+        }
+    } catch (e) {
+        if (!silent) console.error("Gagal mengambil data sesi dari GAS:", e);
+    }
+    renderTabelSesiAktif();
+    return sesiLoginSiswa;
+}
+
+async function setSesiToGAS(sesiObj) {
+    const uname = String(sesiObj.username || "").trim();
+    if (!uname) return null;
+
+    sesiLoginSiswa[uname] = {
+        username: uname,
+        deviceId: sesiObj.deviceId || "",
+        status: sesiObj.status || "Login Aktif",
+        nama: sesiObj.nama || "",
+        kelas: sesiObj.kelas || "",
+        mapel: sesiObj.mapel || "-",
+        updatedAt: sesiObj.updatedAt || getLocalIsoNow()
+    };
+
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "setSesi",
+            username: uname,
+            sesi: sesiLoginSiswa[uname]
+        }));
+        return res.data;
+    } catch (e) {
+        console.error("Gagal menyimpan sesi ke GAS:", e);
+        return null;
+    }
+}
+
+async function deleteSesiFromGAS(username) {
+    const uname = String(username || "").trim();
+    if (!uname) return null;
+
+    delete sesiLoginSiswa[uname];
+
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "resetSesi",
+            username: uname
+        }));
+        return res.data;
+    } catch (e) {
+        console.error("Gagal mereset sesi di GAS:", e);
+        return null;
+    }
 }
 
 // Helper mengambil semua soal dari Gist API
@@ -890,33 +1045,7 @@ async function fetchLogLoginFromGAS() {
     renderTabelSiswaLogin();
 }
 
-async function saveCbtDatabaseToGist() {
-    let payloadData = {
-        db_kelas: daftarKelas,
-        db_mapel: daftarMapel,
-        db_siswa: databaseSiswa,
-        db_jadwal: daftarJadwalUjian,
-        db_sesi: sesiLoginSiswa,
-        db_pengaturan: pengaturanCbt
-    };
-
-    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-    try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
-        let filename = Object.keys(gistRes.data.files)[0];
-        
-        // JSON.stringify tanpa spasi berlebih untuk hemat kuota Gist
-        await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
-            files: { [filename]: { content: JSON.stringify(payloadData) } }
-        }, githubHeaders);
-        isDataLoadedOnce = true;
-    } catch(err) {
-        console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
-        alert("Gagal menyimpan ke Gist: " + err.message);
-    }
-}
-
-// ================= KONTROL SESI & RESET LOGIN ADMIN =================
+// ================= KONTROL SESI & RESET LOGIN ADMIN (GAS) =================
 function renderTabelSesiAktif() {
     const tbody = document.getElementById('tbodySesiAktif');
     if(!tbody) return;
@@ -924,7 +1053,7 @@ function renderTabelSesiAktif() {
 
     const keys = Object.keys(sesiLoginSiswa);
     if(keys.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
         return;
     }
 
@@ -954,19 +1083,18 @@ function renderTabelSesiAktif() {
 }
 
 async function resetLoginSiswaAdmin(username) {
-    if(!confirm(`Reset kunci perangkat & status ujian untuk akun "${username}"?\nSiswa akan dapat login kembali di perangkat baru dan mengulang ujian.`)) return;
-    showLoading("Mereset sesi login siswa...");
-    await fetchCbtDatabase(true);
-    delete sesiLoginSiswa[username];
-    await saveCbtDatabaseToGist();
-    renderTabelSesiAktif();
+    if(!confirm(`Reset kunci perangkat & status ujian di GAS untuk akun "${username}"?\nSiswa akan dapat login kembali di perangkat baru dan mengulang ujian.`)) return;
+    showLoading("Mereset sesi login siswa di GAS...");
+    await deleteSesiFromGAS(username);
+    await fetchSesiFromGAS(true);
     hideLoading();
-    alert(`Sesi login & kunci ujian untuk "${username}" berhasil di-reset!`);
+    alert(`Sesi login & kunci ujian untuk "${username}" berhasil di-reset di GAS!`);
 }
 
 async function refreshSemuaDataAdmin() {
-    showLoading("Menyegarkan data dari Gist & Spreadsheet...");
+    showLoading("Menyegarkan data Master Gist, Sesi GAS & Log Spreadsheet...");
     await fetchCbtDatabase(true);
+    await fetchSesiFromGAS(true);
     await fetchLogLoginFromGAS();
     hideLoading();
 }
@@ -978,7 +1106,7 @@ function backupDatabaseJson() {
         db_mapel: daftarMapel,
         db_siswa: databaseSiswa,
         db_jadwal: daftarJadwalUjian,
-        db_sesi: sesiLoginSiswa,
+        db_sesi_gas: sesiLoginSiswa,
         db_pengaturan: pengaturanCbt
     };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
@@ -1012,7 +1140,6 @@ function restoreDatabaseJson(event) {
             if(Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
             if(Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
             if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
-            if(parsed.db_sesi && typeof parsed.db_sesi === 'object') sesiLoginSiswa = parsed.db_sesi;
             if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
                 if(parsed.db_pengaturan.adminPasswordPlain) {
@@ -1024,7 +1151,6 @@ function restoreDatabaseJson(event) {
             initDropdowns();
             renderTabelDaftarSiswa();
             renderTabelJadwal();
-            renderTabelSesiAktif();
             updateLabelJp();
             renderAdminPasswordDisplay();
             hideLoading();
@@ -1045,19 +1171,18 @@ async function hapusDatabaseGist() {
     showLoading("Menghapus dan mereset database di Gist...");
     databaseSiswa = [];
     daftarJadwalUjian = [];
-    sesiLoginSiswa = {};
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
-    renderTabelSesiAktif();
     hideLoading();
-    alert("Database siswa, sesi, dan jadwal ujian berhasil dihapus/direset!");
+    alert("Database siswa dan jadwal ujian berhasil dihapus/direset!");
 }
 
 function initDropdowns() {
     let jdMp = document.getElementById('jadwalMapel');
     let checkboxContainer = document.getElementById('checkboxKelasContainer');
     let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
+    let filterKelasLog = document.getElementById('filterKelasLogExport');
 
     if(jdMp) {
         jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
@@ -1069,6 +1194,13 @@ function initDropdowns() {
         selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
         daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
         if(prevVal) selKelasSatuan.value = prevVal;
+    }
+
+    if(filterKelasLog) {
+        const prevLogFilter = filterKelasLog.value;
+        filterKelasLog.innerHTML = '<option value="ALL">Semua Kelas</option>';
+        daftarKelas.forEach(k => filterKelasLog.innerHTML += `<option value="${k}">${k}</option>`);
+        if(prevLogFilter) filterKelasLog.value = prevLogFilter;
     }
 
     if(checkboxContainer) {
@@ -1218,8 +1350,8 @@ async function hapusSiswa(idx) {
     if(!s) return;
     if(!confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
 
-    showLoading("Menghapus data siswa dari Gist...");
-    delete sesiLoginSiswa[s.username];
+    showLoading("Menghapus data siswa & mereset sesi di GAS...");
+    await deleteSesiFromGAS(s.username);
     databaseSiswa.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
@@ -1405,7 +1537,6 @@ async function simpanJadwalDanSoal() {
 
     if(rawText) {
         showLoading("Menyimpan soal (1 paket untuk semua kelas terpilih) ke Gist...");
-        // Satu paket soal untuk seluruh kelas yang dipilih (tidak duplikat per kelas)
         let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
 
         if(parsedSoal.length === 0) {
@@ -1428,7 +1559,6 @@ async function simpanJadwalDanSoal() {
                 } catch(e) { contentSoal = []; }
             }
 
-            // 1. Lepaskan kelas yang dipilih dari soal lama pada mapel yang sama
             contentSoal.forEach(item => {
                 if(item.mapel === mapel && Array.isArray(item.kelas)) {
                     item.kelas = item.kelas.filter(k => !checkedKelas.includes(k));
@@ -1445,7 +1575,6 @@ async function simpanJadwalDanSoal() {
                 return true;
             });
 
-            // 2. Deduplikasi cerdas: jika soal identik sudah ada di Gist untuk mapel ini, cukup gabungkan array kelasnya (tulis 1x saja)
             parsedSoal.forEach(newItem => {
                 const existingIdentical = contentSoal.find(oldItem =>
                     oldItem.mapel === newItem.mapel &&
@@ -1465,7 +1594,6 @@ async function simpanJadwalDanSoal() {
                 }
             });
 
-            // Simpan JSON compact (tanpa indentasi spasi) agar hemat ukuran Gist maksimal
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                 files: { [filename]: { content: JSON.stringify(contentSoal) } }
             }, githubHeaders);
@@ -1498,7 +1626,6 @@ function parseSoalDariTeks(text, mapelName, kelasArray) {
                 currentSoal.options = optionsMap;
                 soalList.push(currentSoal);
             }
-            // Struktur ringkas hemat Gist: cukup 1 entri untuk semua kelas terpilih
             currentSoal = {
                 id: Math.floor(Date.now() + Math.random() * 100000),
                 mapel: mapelName,
@@ -1581,10 +1708,198 @@ function renderTabelJadwal() {
             <td>${g.selesai.replace('T', ' ')}</td>
             <td>
                 <button onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-info">Lihat Soal</button>
+                <button onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-success">Export Hasil (.xlsx)</button>
                 <button onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-sm btn-danger">Hapus</button>
             </td>
         </tr>`;
     });
+}
+
+// ================= FITUR EXPORT HASIL UJIAN PER KELAS (.XLSX) =================
+async function bukaModalExportHasil(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+        showLoading("Mengambil data nilai dari Spreadsheet...");
+        await fetchLogLoginFromGAS();
+        hideLoading();
+    }
+
+    document.getElementById('modalExportTitle').innerText = `Export Hasil: ${mapel}`;
+    const body = document.getElementById('modalExportBody');
+
+    let html = `<p style="font-size:13px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p>`;
+    html += `<div class="export-kelas-btn-list">`;
+
+    kelasList.forEach(kls => {
+        const klsEnc = encodeURIComponent(kls);
+        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:10px 14px;">
+            📥 Download Hasil Kelas <b>${kls}</b> (.xlsx)
+        </button>`;
+    });
+
+    if (kelasList.length > 1) {
+        html += `<hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:4px 0;">`;
+        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:10px 14px;">
+            📊 Download Gabungan Semua Kelas (${kelasList.join(', ')}) (.xlsx)
+        </button>`;
+    }
+
+    html += `</div>`;
+    html += `<p style="font-size:11px; color:#666; margin-bottom:0; margin-top:12px;">*File mencakup seluruh daftar siswa di kelas tersebut beserta status & nilai (otomatis mengisi "-" jika siswa belum mengerjakan).</p>`;
+
+    body.innerHTML = html;
+    document.getElementById('modalExportHasil').style.display = 'flex';
+}
+
+function tutupModalExport() {
+    document.getElementById('modalExportHasil').style.display = 'none';
+}
+
+function susunBarisRekapKelas(mapel, kelasTarget) {
+    const klsNorm = String(kelasTarget || "").trim().toLowerCase();
+    const mapelNorm = String(mapel || "").trim().toLowerCase();
+
+    const siswaDiKelas = databaseSiswa.filter(s => String(s.kelas || "").trim().toLowerCase() === klsNorm);
+
+    const logMatch = (Array.isArray(logSiswaLogin) ? logSiswaLogin : []).filter(l =>
+        String(l.kelas || "").trim().toLowerCase() === klsNorm &&
+        String(l.mapel || "").trim().toLowerCase() === mapelNorm
+    );
+
+    const rows = [];
+    const namaSudahMasuk = new Set();
+
+    siswaDiKelas.forEach((s, idx) => {
+        const namaNorm = String(s.nama || "").trim().toLowerCase();
+        namaSudahMasuk.add(namaNorm);
+
+        const entries = logMatch.filter(l => String(l.nama || "").trim().toLowerCase() === namaNorm);
+        const latest = entries.length > 0 ? entries[entries.length - 1] : null;
+
+        rows.push({
+            "No": idx + 1,
+            "NIS / Username": s.username || "-",
+            "Nama Siswa": s.nama || "-",
+            "Kelas": s.kelas || kelasTarget,
+            "Mata Pelajaran": mapel,
+            "Status": latest ? (latest.status || "-") : "Belum Mengerjakan",
+            "Nilai": (latest && latest.nilai !== null && latest.nilai !== undefined && latest.nilai !== "") ? Number(latest.nilai) : "-"
+        });
+    });
+
+    logMatch.forEach(l => {
+        const namaNorm = String(l.nama || "").trim().toLowerCase();
+        if (!namaSudahMasuk.has(namaNorm)) {
+            namaSudahMasuk.add(namaNorm);
+            rows.push({
+                "No": rows.length + 1,
+                "NIS / Username": "-",
+                "Nama Siswa": l.nama || "-",
+                "Kelas": l.kelas || kelasTarget,
+                "Mata Pelajaran": mapel,
+                "Status": l.status || "-",
+                "Nilai": (l.nilai !== null && l.nilai !== undefined && l.nilai !== "") ? Number(l.nilai) : "-"
+            });
+        }
+    });
+
+    return rows;
+}
+
+function prosesExportHasilXlsx(mapelEnc, kelasEnc) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasTarget = decodeURIComponent(kelasEnc);
+
+    const rows = susunBarisRekapKelas(mapel, kelasTarget);
+    if (rows.length === 0) {
+        alert(`Belum ada data siswa maupun hasil ujian untuk kelas ${kelasTarget}.`);
+        return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+        { wch: 5 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 10 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    const safeSheetName = kelasTarget.replace(/[\\/?*[\]:]/g, "_").slice(0, 31) || "Hasil";
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+
+    const safeMapel = mapel.replace(/\s+/g, '_');
+    const safeKelas = kelasTarget.replace(/\s+/g, '_');
+    const tgl = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Hasil_${safeMapel}_${safeKelas}_${tgl}.xlsx`);
+    tutupModalExport();
+}
+
+function prosesExportHasilMultiKelasXlsx(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    const workbook = XLSX.utils.book_new();
+    let totalAdaData = 0;
+
+    kelasList.forEach(kls => {
+        const rows = susunBarisRekapKelas(mapel, kls);
+        if (rows.length > 0) {
+            totalAdaData += rows.length;
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 10 }
+            ];
+            const safeSheetName = kls.replace(/[\\/?*[\]:]/g, "_").slice(0, 31);
+            XLSX.utils.book_append_sheet(workbook, ws, safeSheetName);
+        }
+    });
+
+    if (totalAdaData === 0) {
+        alert("Belum ada data siswa maupun hasil ujian pada kelas-kelas yang dipilih.");
+        return;
+    }
+
+    const safeMapel = mapel.replace(/\s+/g, '_');
+    const tgl = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Hasil_${safeMapel}_Semua_Kelas_${tgl}.xlsx`);
+    tutupModalExport();
+}
+
+function exportRekapLogXlsx() {
+    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+        alert("Belum ada data log/nilai untuk di-export. Klik 'Refresh Log' terlebih dahulu.");
+        return;
+    }
+
+    const filterKls = document.getElementById('filterKelasLogExport') ? document.getElementById('filterKelasLogExport').value : 'ALL';
+    const filtered = filterKls === 'ALL'
+        ? logSiswaLogin
+        : logSiswaLogin.filter(item => String(item.kelas || "").trim() === filterKls);
+
+    if (filtered.length === 0) {
+        alert(`Tidak ada data log ujian untuk kelas ${filterKls}.`);
+        return;
+    }
+
+    const rows = filtered.map((item, idx) => ({
+        "No": idx + 1,
+        "Nama": item.nama || "",
+        "Kelas": item.kelas || "",
+        "Mata Pelajaran": item.mapel || "",
+        "Status": item.status || "",
+        "Nilai": (item.nilai !== null && item.nilai !== undefined && item.nilai !== "") ? Number(item.nilai) : "-"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+        { wch: 5 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 32 }, { wch: 10 }
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, filterKls === 'ALL' ? "Semua Kelas" : filterKls.slice(0, 31));
+
+    const tgl = new Date().toISOString().slice(0, 10);
+    const suffix = filterKls === 'ALL' ? 'Semua_Kelas' : filterKls.replace(/\s+/g, '_');
+    XLSX.writeFile(workbook, `Rekap_Nilai_CBT_${suffix}_${tgl}.xlsx`);
 }
 
 // ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
@@ -1754,15 +2069,16 @@ function renderTabelSiswaLogin() {
     });
 }
 
-// ================= AUTENTIKASI & UJIAN SISWA (1 PERANGKAT + FILTER KELAS/WAKTU) =================
+// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT) =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
 
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
-    showLoading("Memverifikasi akun & sesi perangkat...");
-    await fetchCbtDatabase(true);
+    showLoading("Memverifikasi akun & sesi perangkat di GAS...");
+    await fetchCbtDatabase(false);
+    await fetchSesiFromGAS(true);
 
     let siswa = databaseSiswa.find(s => s.username === username);
     if(!siswa) { 
@@ -1792,15 +2108,15 @@ async function autentikasiSiswa() {
         return;
     }
 
-    sesiLoginSiswa[username] = {
+    await setSesiToGAS({
+        username: username,
         deviceId: myDeviceId,
         status: existingSession && existingSession.status === "Sedang Ujian" ? "Sedang Ujian" : "Login Aktif",
         nama: siswa.nama,
         kelas: siswa.kelas,
         mapel: existingSession ? existingSession.mapel : "-",
         updatedAt: getLocalIsoNow()
-    };
-    await saveCbtDatabaseToGist();
+    });
     hideLoading();
 
     currentSiswaObj = siswa;
@@ -1837,12 +2153,11 @@ async function autentikasiSiswa() {
 
 async function logoutSiswa() {
     if(currentSiswaObj) {
-        showLoading("Melepaskan sesi perangkat...");
-        await fetchCbtDatabase(true);
+        showLoading("Melepaskan sesi perangkat di GAS...");
+        await fetchSesiFromGAS(true);
         const sess = sesiLoginSiswa[currentSiswaObj.username];
         if(sess && sess.deviceId === getOrCreateDeviceId() && sess.status !== "Selesai" && !(sess.status && sess.status.includes("Curang"))) {
-            delete sesiLoginSiswa[currentSiswaObj.username];
-            await saveCbtDatabaseToGist();
+            await deleteSesiFromGAS(currentSiswaObj.username);
         }
         hideLoading();
     }
@@ -1910,15 +2225,15 @@ async function mulaiUjianPilihan() {
     mapelSiswaLogin = mapel;
 
     if(currentSiswaObj) {
-        sesiLoginSiswa[currentSiswaObj.username] = {
+        await setSesiToGAS({
+            username: currentSiswaObj.username,
             deviceId: getOrCreateDeviceId(),
             status: "Sedang Ujian",
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapel,
             updatedAt: getLocalIsoNow()
-        };
-        saveCbtDatabaseToGist();
+        });
     }
 
     try {
@@ -1997,13 +2312,11 @@ function renderSoalSiswa() {
     const jawabanTersimpan = jawabanSiswa[currentSoalIndex] || null;
     const jumlahTerjawab = Object.keys(jawabanSiswa).length;
 
-    // Update bar navigasi Before / Next di bawah Mata Pelajaran
     document.getElementById('labelNomorSoal').innerText = `Soal ${currentSoalIndex + 1} dari ${totalSoal}`;
     document.getElementById('labelStatusTerjawab').innerText = `Terjawab: ${jumlahTerjawab} / ${totalSoal} soal`;
     document.getElementById('btnPrevSoal').disabled = (currentSoalIndex === 0);
     document.getElementById('btnNextSoal').disabled = (currentSoalIndex === totalSoal - 1);
 
-    // Render hanya 1 soal yang sedang aktif
     let html = `<div class="soal-box"><p>Soal ${currentSoalIndex + 1}. ${item.soal}</p>`;
     if (item.gambar) {
         html += `<img src="${item.gambar}" class="img-soal">`;
@@ -2111,18 +2424,17 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
 
     if(currentSiswaObj) {
         try {
-            await fetchCbtDatabase(true);
-            sesiLoginSiswa[currentSiswaObj.username] = {
+            await setSesiToGAS({
+                username: currentSiswaObj.username,
                 deviceId: getOrCreateDeviceId(),
                 status: statusFinal,
                 nama: namaSiswaLogin,
                 kelas: kelasSiswaLogin,
                 mapel: mapelSiswaLogin,
                 updatedAt: getLocalIsoNow()
-            };
-            await saveCbtDatabaseToGist();
+            });
         } catch(e) {
-            console.error("Gagal mengunci status sesi di Gist:", e);
+            console.error("Gagal mengunci status sesi di GAS:", e);
         }
     }
 
@@ -2176,7 +2488,7 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
-        renderTabelSesiAktif();
+        fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
