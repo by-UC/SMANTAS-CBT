@@ -1165,17 +1165,32 @@ function restoreDatabaseJson(event) {
 }
 
 async function hapusDatabaseGist() {
-    if(!confirm("PERINGATAN! Semua data Siswa dan Jadwal Ujian di Gist akan dihapus permanen. Lanjutkan?")) return;
-    if(!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database?")) return;
+    if(!confirm("PERINGATAN! Semua data Siswa, Jadwal Ujian di Gist, Sesi & Log di GAS, file Hasil Ujian, serta gambar soal di Drive akan dihapus permanen. Lanjutkan?")) return;
+    if(!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database, log, hasil ujian, dan gambar soal di Drive?")) return;
 
-    showLoading("Menghapus dan mereset database di Gist...");
+    showLoading("Menghapus database Gist, mereset sesi/log & membersihkan file Drive...");
     databaseSiswa = [];
     daftarJadwalUjian = [];
+    sesiLoginSiswa = {};
+    logSiswaLogin = [];
+
     await saveCbtDatabaseToGist();
+
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "resetAllSesiAndLog",
+            includeDriveAssets: true
+        }));
+    } catch (e) {
+        console.error("Gagal mereset sesi, log & aset Drive di GAS:", e);
+    }
+
     renderTabelDaftarSiswa();
     renderTabelJadwal();
+    renderTabelSesiAktif();
+    renderTabelSiswaLogin();
     hideLoading();
-    alert("Database siswa dan jadwal ujian berhasil dihapus/direset!");
+    alert("Seluruh database, sesi, log, file hasil ujian, dan gambar soal di Drive berhasil dihapus/direset!");
 }
 
 function initDropdowns() {
