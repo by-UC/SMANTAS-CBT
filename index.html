@@ -241,6 +241,43 @@
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
 
+                /* BADGE PILL RIWAYAT STATUS UJIAN */
+        .status-pill-wrap {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+        .status-pill-curang {
+            background-color: #dc3545;
+            color: #ffffff;
+        }
+        .status-pill-selesai {
+            background-color: #28a745;
+            color: #ffffff;
+        }
+        .status-pill-reset {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .status-pill-ujian {
+            background-color: #fd7e14;
+            color: #ffffff;
+        }
+        .status-pill-login {
+            background-color: #008080;
+            color: #ffffff;
+        }
+
         /* BANNER PERINGATAN FULLSCREEN */
         .exam-security-bar {
             background: #fff3cd;
@@ -698,54 +735,66 @@
             </div>
         </div>
 
-        <!-- TAB 5: PENGATURAN -->
+        <!-- TAB 5: PENGATURAN (2 BARIS: BARIS 1 DURASI & PASSWORD, BARIS 2 BACKUP & RESET DB) -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- PENGATURAN JP -->
-            <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
-                <div class="form-group">
-                    <label>Durasi 1 JP (dalam Menit):</label>
-                    <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
-                    <small style="color: #666; display: block; margin-top: 4px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
-                </div>
-                <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 10px;">Simpan Pengaturan JP</button>
-            </div>
-
-            <!-- PASSWORD ADMIN -->
-            <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Manajemen Password Admin</h4>
-                <label>Password Admin Saat Ini:</label>
-                <div class="pass-display-box">
-                    <span id="currentAdminPassDisplay">••••••••</span>
-                    <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
-                </div>
-                <div class="form-group" style="margin-bottom: 10px;">
-                    <label>Ubah Password Admin Baru:</label>
-                    <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
-                </div>
-                <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 10px;">Simpan Password Baru</button>
-            </div>
-
-            <!-- BACKUP & RESTORE DB -->
-            <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
-                <div class="row-flex">
-                    <div class="form-group">
-                        <label>Backup Seluruh Database ke File JSON:</label>
-                        <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 10px;">Download Backup DB (.json)</button>
+            <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
+            <div class="siswa-top-two-col">
+                <!-- KOLOM KIRI: PENGATURAN JP -->
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
+                        <div class="form-group">
+                            <label>Durasi 1 JP (dalam Menit):</label>
+                            <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
+                            <small style="color: #666; display: block; margin-top: 4px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Restore Database dari File Backup (.json):</label>
-                        <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 10px;">Simpan Pengaturan JP</button>
+                </div>
+
+                <!-- KOLOM KANAN: PASSWORD ADMIN -->
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; color: #008080;">Manajemen Password Admin</h4>
+                        <label>Password Admin Saat Ini:</label>
+                        <div class="pass-display-box">
+                            <span id="currentAdminPassDisplay">••••••••</span>
+                            <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label>Ubah Password Admin Baru:</label>
+                            <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+                        </div>
                     </div>
+                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 10px;">Simpan Password Baru</button>
                 </div>
             </div>
 
-            <!-- HAPUS / RESET DB -->
-            <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
-                <h4 style="margin: 0 0 8px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
-                <p style="font-size: 13px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
-                <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 10px;">Hapus Seluruh Database (Reset DB)</button>
+            <!-- BARIS 2: BACKUP/RESTORE & RESET DB -->
+            <div class="siswa-top-two-col">
+                <!-- KOLOM KIRI: BACKUP & RESTORE DB -->
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                        <div class="form-group">
+                            <label>Backup Seluruh Database ke File JSON:</label>
+                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 10px;">Download Backup DB (.json)</button>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Restore Database dari File Backup (.json):</label>
+                            <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KOLOM KANAN: HAPUS / RESET DB -->
+                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 13px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
+                    </div>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 10px;">Hapus Seluruh Database (Reset DB)</button>
+                </div>
             </div>
         </div>
 
@@ -1014,6 +1063,115 @@ async function saveCbtDatabaseToGist() {
 }
 
 // ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GOOGLE APPS SCRIPT (GAS) =================
+// ================= RIWAYAT STATUS UJIAN (TIDAK HILANG SAAT RESET + HITUNGAN 2x, 3x) =================
+function parseTokenCount(token) {
+    const m = String(token || "").trim().match(/^(.*?)(?:\s*\((\d+)x\))?$/i);
+    if (!m) return { base: String(token || "").trim(), count: 1 };
+    return {
+        base: m[1].trim(),
+        count: m[2] ? parseInt(m[2], 10) : 1
+    };
+}
+
+function formatTokenCount(base, count) {
+    return count > 1 ? `${base} (${count}x)` : base;
+}
+
+function gabungRiwayatStatus(statusLama, statusBaru) {
+    const baru = String(statusBaru || "").trim();
+    const lamaRaw = String(statusLama || "").trim();
+    if (!lamaRaw || lamaRaw === "-" || lamaRaw === "Login Aktif") {
+        return baru;
+    }
+
+    const daftarLama = lamaRaw.split(",").map(s => s.trim()).filter(Boolean);
+    if (!baru) return daftarLama.join(", ");
+
+    // Bersihkan marker "Sedang Ujian" jika ada di paling akhir sebelum digabung dengan hasil final
+    if (daftarLama[daftarLama.length - 1] === "Sedang Ujian" && baru !== "Sedang Ujian") {
+        daftarLama.pop();
+    }
+
+    if (daftarLama.length === 0) {
+        return baru;
+    }
+
+    // Jika status baru adalah jenis pelanggaran Curang (misal Curang Pindah Tab / Curang Fullscreen),
+    // cek apakah jenis curang tersebut sudah ada di riwayat; jika sudah ada, naikkan hitungannya menjadi (2x), (3x), dst.
+    if (baru.toLowerCase().startsWith("curang")) {
+        const parsedBaru = parseTokenCount(baru);
+        const existingIdx = daftarLama.findIndex(tok =>
+            parseTokenCount(tok).base.toLowerCase() === parsedBaru.base.toLowerCase()
+        );
+        if (existingIdx !== -1) {
+            const parsedLama = parseTokenCount(daftarLama[existingIdx]);
+            const totalCount = parsedLama.count + parsedBaru.count;
+            daftarLama[existingIdx] = formatTokenCount(parsedLama.base, totalCount);
+            return daftarLama.join(", ");
+        }
+    }
+
+    // Hindari duplikasi berturut-turut untuk status non-curang (misal "Direset, Direset" atau "Sedang Ujian, Sedang Ujian")
+    if (daftarLama[daftarLama.length - 1].toLowerCase() === baru.toLowerCase()) {
+        return daftarLama.join(", ");
+    }
+
+    daftarLama.push(baru);
+    return daftarLama.join(", ");
+}
+
+function cekStatusTerkunci(statusStr) {
+    const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
+    if (tokens.length === 0) return false;
+    const terakhir = tokens[tokens.length - 1];
+    // Terkunci jika status terakhir adalah Selesai, atau jika hasil ujian terakhir adalah Curang (belum Direset / Sedang Ujian lagi)
+    if (terakhir === "Direset" || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
+        return false;
+    }
+    return terakhir === "Selesai" || terakhir.toLowerCase().startsWith("curang");
+}
+
+function getStatusTerakhir(statusStr) {
+    const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
+    return tokens.length > 0 ? tokens[tokens.length - 1] : "";
+}
+
+function formatPelanggaranRingkas(alasan) {
+    const low = String(alasan || "").toLowerCase();
+    if (low.includes("full screen") || low.includes("fullscreen")) {
+        return "Curang Fullscreen";
+    }
+    if (low.includes("tab") || low.includes("jendela") || low.includes("aplikasi") || low.includes("menyembunyikan")) {
+        return "Curang Pindah Tab";
+    }
+    return alasan ? `Curang (${alasan})` : "Curang";
+}
+
+function renderStatusBadgesHtml(statusStr) {
+    const raw = String(statusStr || "").trim();
+    if (!raw || raw === "-") {
+        return `<span class="status-pill status-pill-login">-</span>`;
+    }
+
+    const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+    const pills = parts.map(part => {
+        const low = part.toLowerCase();
+        let cls = "status-pill-login";
+        if (low.includes("curang")) {
+            cls = "status-pill-curang";
+        } else if (low.includes("selesai")) {
+            cls = "status-pill-selesai";
+        } else if (low.includes("reset")) {
+            cls = "status-pill-reset";
+        } else if (low.includes("sedang")) {
+            cls = "status-pill-ujian";
+        }
+        return `<span class="status-pill ${cls}">${part}</span>`;
+    });
+
+    return `<div class="status-pill-wrap">${pills.join("")}</div>`;
+}
+
 function normalisasiSesiDariGAS(rawData) {
     const map = {};
     if (!rawData) return map;
@@ -1172,14 +1330,7 @@ function renderTabelSesiAktif() {
             return;
         }
         tampilCount++;
-        let statusBadge = `<span style="color:#008080; font-weight:bold;">${s.status || 'Login Aktif'}</span>`;
-        if(s.status && s.status.includes("Curang")) {
-            statusBadge = `<span style="color:#dc3545; font-weight:bold;">${s.status}</span>`;
-        } else if(s.status === "Selesai") {
-            statusBadge = `<span style="color:#28a745; font-weight:bold;">${s.status}</span>`;
-        } else if(s.status === "Sedang Ujian") {
-            statusBadge = `<span style="color:#d97706; font-weight:bold;">Sedang Ujian</span>`;
-        }
+        let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
 
         tbody.innerHTML += `<tr>
             <td><b>${username}</b></td>
@@ -1199,12 +1350,26 @@ function renderTabelSesiAktif() {
 }
 
 async function resetLoginSiswaAdmin(username) {
-    if(!confirm(`Reset kunci perangkat & status ujian di GAS untuk akun "${username}"?\nSiswa akan dapat login kembali di perangkat baru dan mengulang ujian.`)) return;
-    showLoading("Mereset sesi login siswa di GAS...");
-    await deleteSesiFromGAS(username);
+    if(!confirm(`Reset kunci perangkat & izinkan ujian ulang untuk akun "${username}"?\nRiwayat status sebelumnya (misal Curang / Selesai) tetap tersimpan dan akan disambung dengan status berikutnya.`)) return;
+    showLoading("Mereset kunci perangkat & menyambung riwayat status di GAS...");
+    const sesiLama = sesiLoginSiswa[username];
+    if (sesiLama) {
+        const statusDenganReset = gabungRiwayatStatus(sesiLama.status, "Direset");
+        await setSesiToGAS({
+            username: username,
+            deviceId: "",
+            status: statusDenganReset,
+            nama: sesiLama.nama || "",
+            kelas: sesiLama.kelas || "",
+            mapel: sesiLama.mapel || "-",
+            updatedAt: getLocalIsoNow()
+        });
+    } else {
+        await deleteSesiFromGAS(username);
+    }
     await fetchSesiFromGAS(true);
     hideLoading();
-    alert(`Sesi login & kunci ujian untuk "${username}" berhasil di-reset di GAS!`);
+    alert(`Kunci perangkat untuk "${username}" berhasil di-reset! Riwayat status sebelumnya tetap tercatat.`);
 }
 
 async function refreshSemuaDataAdmin() {
@@ -1557,6 +1722,133 @@ function renderTabelDaftarSiswa() {
     }
 }
 
+// ================= KOMPRESI GAMBAR SOAL (< 50 KB, TAJAM & TIDAK PECAH) =================
+const MAX_GAMBAR_SOAL_BYTES = 50 * 1024; // 50 KB
+const MAX_GAMBAR_SOAL_DIM = 1280;     // Batas sisi terpanjang agar teks/diagram tetap terbaca jelas
+
+function estimasiUkuranBase64Bytes(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== "string") return 0;
+    const parts = dataUrl.split(",");
+    const base64Part = parts.length > 1 ? parts[1] : parts[0];
+    const clean = base64Part.replace(/\s+/g, "");
+    const padding = (clean.match(/=+$/) || [""])[0].length;
+    return Math.max(0, Math.floor((clean.length * 3) / 4) - padding);
+}
+
+function loadImageFromDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (err) => reject(err);
+        img.src = dataUrl;
+    });
+}
+
+function renderCanvasToDataUrl(img, width, height, mimeType, quality, fillWhiteBg = false) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    const ctx = canvas.getContext("2d", { alpha: !fillWhiteBg });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    if (fillWhiteBg) {
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL(mimeType, quality);
+}
+
+async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR_SOAL_BYTES) {
+    try {
+        const ukuranAwal = estimasiUkuranBase64Bytes(base64DataUrl);
+        if (ukuranAwal > 0 && ukuranAwal <= maxBytes) {
+            return { dataUrl: base64DataUrl, sizeBytes: ukuranAwal, compressed: false };
+        }
+
+        const img = await loadImageFromDataUrl(base64DataUrl);
+        let width = img.naturalWidth || img.width || 800;
+        let height = img.naturalHeight || img.height || 600;
+
+        // Batasi dimensi awal agar resolusi aman dan ukuran file lebih terkendali
+        const maxDimAwal = Math.max(width, height);
+        if (maxDimAwal > MAX_GAMBAR_SOAL_DIM) {
+            const scale = MAX_GAMBAR_SOAL_DIM / maxDimAwal;
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+        }
+
+        let bestDataUrl = null;
+        let bestSize = Infinity;
+
+        // Tahap 1: Coba WebP dengan kualitas bertahap (latar putih agar transparan tidak hitam saat jatuh ke JPEG)
+        const qualities = [0.85, 0.78, 0.72, 0.65, 0.58, 0.50];
+        for (let step = 0; step < 5; step++) {
+            for (const q of qualities) {
+                const candidateWebp = renderCanvasToDataUrl(img, width, height, "image/webp", q, true);
+                const sizeWebp = estimasiUkuranBase64Bytes(candidateWebp);
+                if (sizeWebp < bestSize) {
+                    bestSize = sizeWebp;
+                    bestDataUrl = candidateWebp;
+                }
+                if (sizeWebp <= maxBytes) {
+                    return { dataUrl: candidateWebp, sizeBytes: sizeWebp, compressed: true };
+                }
+            }
+
+            // Coba JPEG sebagai alternatif universal jika WebP masih di atas 50 KB
+            for (const q of [0.82, 0.74, 0.66, 0.58, 0.50]) {
+                const candidateJpeg = renderCanvasToDataUrl(img, width, height, "image/jpeg", q, true);
+                const sizeJpeg = estimasiUkuranBase64Bytes(candidateJpeg);
+                if (sizeJpeg < bestSize) {
+                    bestSize = sizeJpeg;
+                    bestDataUrl = candidateJpeg;
+                }
+                if (sizeJpeg <= maxBytes) {
+                    return { dataUrl: candidateJpeg, sizeBytes: sizeJpeg, compressed: true };
+                }
+            }
+
+            // Kecilkan dimensi bertahap (82%) sambil menjaga keterbacaan teks/gambar soal
+            width = Math.max(320, Math.round(width * 0.82));
+            height = Math.max(240, Math.round(height * 0.82));
+        }
+
+        // Tahap 2: Penurunan kualitas/dimensi lanjutan jika gambar sangat kompleks/besar
+        let qFallback = 0.45;
+        while (bestSize > maxBytes && (qFallback >= 0.25 || width > 320)) {
+            const candidate = renderCanvasToDataUrl(img, width, height, "image/jpeg", Math.max(0.25, qFallback), true);
+            const sz = estimasiUkuranBase64Bytes(candidate);
+            if (sz < bestSize) {
+                bestSize = sz;
+                bestDataUrl = candidate;
+            }
+            if (sz <= maxBytes) break;
+
+            if (qFallback > 0.25) {
+                qFallback = Number((qFallback - 0.05).toFixed(2));
+            } else {
+                width = Math.max(260, Math.round(width * 0.85));
+                height = Math.max(180, Math.round(height * 0.85));
+            }
+        }
+
+        return {
+            dataUrl: bestDataUrl || base64DataUrl,
+            sizeBytes: bestSize < Infinity ? bestSize : ukuranAwal,
+            compressed: true
+        };
+    } catch (err) {
+        console.warn("Gagal mengompres gambar soal, memakai gambar asli:", err);
+        return {
+            dataUrl: base64DataUrl,
+            sizeBytes: estimasiUkuranBase64Bytes(base64DataUrl),
+            compressed: false
+        };
+    }
+}
+
 // ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS) =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
@@ -1593,16 +1885,24 @@ async function bacaFileSoalOtomatis(event) {
             tempDiv.innerHTML = result.value;
             
             let totalImg = imagesList.length;
+            let ringkasanKompresi = [];
             for(let i = 0; i < totalImg; i++) {
                 let imgData = imagesList[i];
-                showLoading(`Mengunggah gambar ${i + 1} dari ${totalImg} ke Drive...`);
+                showLoading(`Mengompres & mengunggah gambar ${i + 1} dari ${totalImg} (< 50 KB)...`);
+
+                const hasilKompres = await kompresGambarSoalKeBawah50KB(imgData.data, MAX_GAMBAR_SOAL_BYTES);
+                const finalBase64 = hasilKompres.dataUrl;
+                const kbAkhir = (hasilKompres.sizeBytes / 1024).toFixed(1);
+                const isWebp = finalBase64.startsWith("data:image/webp");
+                const extFile = isWebp ? "webp" : "jpg";
+                ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
                 
                 try {
                     let uploadRes = await axios.post(GAS_URL, JSON.stringify({
                         action: "uploadImage",
                         folderName: "Soal_CBT_Drive",
-                        fileData: imgData.data,
-                        fileName: `soal_img_${Date.now()}_${i + 1}.png`
+                        fileData: finalBase64,
+                        fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
                     }));
 
                     if(uploadRes.data && uploadRes.data.status === "success") {
@@ -1620,7 +1920,8 @@ async function bacaFileSoalOtomatis(event) {
             let formattedText = konversiHtmlKeFormatCbtDenganLink(tempDiv);
             document.getElementById('soalBatchText').value = formattedText;
             hideLoading();
-            alert("File Word berhasil diproses! Gambar tersimpan di Google Drive dan link disematkan otomatis.");
+            const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
+            alert(`File Word berhasil diproses! Gambar dikompres (< 50 KB), tersimpan di Google Drive, dan link disematkan otomatis.${infoUkuran}`);
         } catch(err) {
             hideLoading();
             console.error(err);
@@ -2157,12 +2458,7 @@ function renderTabelSiswaLogin() {
         return;
     }
     logSiswaLogin.forEach(l => {
-        let badgeStatus = `<span style="color:orange; font-weight:bold;">${l.status}</span>`;
-        if (l.status && l.status.includes("Curang")) {
-            badgeStatus = `<span style="color:red; font-weight:bold;">${l.status}</span>`;
-        } else if (l.status === "Selesai") {
-            badgeStatus = `<span style="color:green; font-weight:bold;">Selesai</span>`;
-        }
+        let badgeStatus = renderStatusBadgesHtml(l.status);
         tbody.innerHTML += `<tr>
             <td>${l.nama}</td>
             <td>${l.kelas}</td>
@@ -2200,9 +2496,9 @@ async function autentikasiSiswa() {
     const myDeviceId = getOrCreateDeviceId();
     const existingSession = sesiLoginSiswa[username];
 
-    if(existingSession && (existingSession.status === "Selesai" || (existingSession.status && existingSession.status.includes("Curang")))) {
+    if(existingSession && cekStatusTerkunci(existingSession.status)) {
         hideLoading();
-        alert(`Akun Anda terkunci dengan status: "${existingSession.status}".\nSilakan hubungi Admin untuk mereset akun jika ingin ujian kembali.`);
+        alert(`Akun Anda terkunci dengan riwayat status: "${existingSession.status}".\nSilakan hubungi Admin untuk mereset akun jika ingin ujian kembali.`);
         return;
     }
 
@@ -2212,10 +2508,14 @@ async function autentikasiSiswa() {
         return;
     }
 
+    const statusSetelahLogin = existingSession && existingSession.status
+        ? existingSession.status
+        : "Login Aktif";
+
     await setSesiToGAS({
         username: username,
         deviceId: myDeviceId,
-        status: existingSession && existingSession.status === "Sedang Ujian" ? "Sedang Ujian" : "Login Aktif",
+        status: statusSetelahLogin,
         nama: siswa.nama,
         kelas: siswa.kelas,
         mapel: existingSession ? existingSession.mapel : "-",
@@ -2260,8 +2560,16 @@ async function logoutSiswa() {
         showLoading("Melepaskan sesi perangkat di GAS...");
         await fetchSesiFromGAS(true);
         const sess = sesiLoginSiswa[currentSiswaObj.username];
-        if(sess && sess.deviceId === getOrCreateDeviceId() && sess.status !== "Selesai" && !(sess.status && sess.status.includes("Curang"))) {
-            await deleteSesiFromGAS(currentSiswaObj.username);
+        if(sess && sess.deviceId === getOrCreateDeviceId() && !cekStatusTerkunci(sess.status)) {
+            if (sess.status && sess.status !== "Login Aktif") {
+                await setSesiToGAS({
+                    ...sess,
+                    deviceId: "",
+                    updatedAt: getLocalIsoNow()
+                });
+            } else {
+                await deleteSesiFromGAS(currentSiswaObj.username);
+            }
         }
         hideLoading();
     }
@@ -2328,11 +2636,14 @@ async function mulaiUjianPilihan() {
 
     mapelSiswaLogin = mapel;
 
+    let riwayatStatusSaatIni = "Sedang Ujian";
     if(currentSiswaObj) {
+        const prevSess = sesiLoginSiswa[currentSiswaObj.username];
+        riwayatStatusSaatIni = gabungRiwayatStatus(prevSess ? prevSess.status : "", "Sedang Ujian");
         await setSesiToGAS({
             username: currentSiswaObj.username,
             deviceId: getOrCreateDeviceId(),
-            status: "Sedang Ujian",
+            status: riwayatStatusSaatIni,
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapel,
@@ -2346,7 +2657,7 @@ async function mulaiUjianPilihan() {
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapel,
-            status: "Sedang Mengerjakan",
+            status: riwayatStatusSaatIni,
             nilai: null
         }));
     } catch(e) {
@@ -2363,7 +2674,8 @@ async function loadSoalUjian() {
         const allSoal = await fetchAllSoalFromGist();
         const kelasTrim = kelasSiswaLogin.trim();
 
-        listSoal = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
+        const soalTerfilter = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
+        listSoal = siapkanSoalDanOpsiAcak(soalTerfilter);
 
         hideLoading();
         if(!Array.isArray(listSoal) || listSoal.length === 0) { 
@@ -2392,6 +2704,54 @@ async function loadSoalUjian() {
         hideLoading();
         alert("Gagal memuat soal: " + err.message); 
     }
+}
+
+// ================= ACAK URUTAN SOAL & OPSI JAWABAN SISWA =================
+function acakArrayFisherYates(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function siapkanSoalDanOpsiAcak(rawSoalList) {
+    // 1. Acak urutan butir soal
+    const soalTeracak = acakArrayFisherYates(rawSoalList);
+
+    return soalTeracak.map(item => {
+        const kunciHurufAsli = decodeKunciGist(item.kunci);
+        const daftarHurufTersedia = ['A', 'B', 'C', 'D', 'E'].filter(
+            opt => item.options && item.options[opt] !== undefined && String(item.options[opt]).trim() !== ""
+        );
+
+        // 2. Pasangkan tiap pilihan dengan teks dan status kebenarannya sebelum diacak
+        const pasanganOpsi = daftarHurufTersedia.map(huruf => ({
+            teks: item.options[huruf],
+            isBenar: huruf === kunciHurufAsli
+        }));
+
+        // 3. Acak posisi opsi jawaban
+        const pasanganTeracak = acakArrayFisherYates(pasanganOpsi);
+
+        const optionsBaru = {};
+        let kunciHurufBaru = 'A';
+
+        pasanganTeracak.forEach((p, idx) => {
+            const labelBaru = daftarHurufTersedia[idx]; // Label tampilan tetap A, B, C, D, E
+            optionsBaru[labelBaru] = p.teks;
+            if (p.isBenar) {
+                kunciHurufBaru = labelBaru;
+            }
+        });
+
+        return {
+            ...item,
+            options: optionsBaru,
+            kunci: encodeKunciGist(kunciHurufBaru)
+        };
+    });
 }
 
 // ================= TAMPILAN PER SOAL + BEFORE / NEXT =================
@@ -2524,7 +2884,11 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         if(jawabanSiswa[index] === kunciAsli) benar++;
     });
     let nilaiAkhir = listSoal.length > 0 ? Number(((benar / listSoal.length) * 100).toFixed(2)) : 0;
-    const statusFinal = isCurang ? `Selesai (Curang: ${alasanCurang})` : "Selesai";
+    const statusBaru = isCurang ? formatPelanggaranRingkas(alasanCurang) : "Selesai";
+    const statusSebelum = currentSiswaObj && sesiLoginSiswa[currentSiswaObj.username]
+        ? sesiLoginSiswa[currentSiswaObj.username].status
+        : "";
+    const statusFinal = gabungRiwayatStatus(statusSebelum, statusBaru);
 
     if(currentSiswaObj) {
         try {
