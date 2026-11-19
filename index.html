@@ -18,7 +18,7 @@
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
-            max-width: 980px; 
+            max-width: 1180px; 
             margin: 20px auto; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
@@ -133,6 +133,83 @@
         .row-flex { display: flex; gap: 10px; flex-wrap: wrap; }
         .row-flex > div { flex: 1; min-width: 180px; }
         .row-flex > div.jp-col { flex: 0 0 130px; min-width: 120px; max-width: 135px; }
+
+        /* 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI */
+        .jadwal-time-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-wrap: nowrap;
+        }
+        .jadwal-time-row .time-col {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .jadwal-time-row .jp-inline-col {
+            flex: 0 0 88px;
+            min-width: 82px;
+        }
+        .jadwal-time-row input[type="datetime-local"] {
+            padding: 8px 6px;
+            font-size: 12px;
+        }
+        .jadwal-time-row input[type="number"] {
+            padding: 8px 8px;
+            font-size: 13px;
+        }
+        @media (max-width: 640px) {
+            .jadwal-time-row {
+                flex-wrap: wrap;
+            }
+            .jadwal-time-row .time-col {
+                flex: 1 1 100%;
+            }
+            .jadwal-time-row .jp-inline-col {
+                flex: 1 1 100%;
+            }
+        }
+
+        /* DUA KOLOM TAB DAFTAR UJIAN */
+        .ujian-two-col {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .ujian-col-left {
+            flex: 1.15;
+            min-width: 0;
+        }
+        .ujian-col-right {
+            flex: 1.15;
+            min-width: 0;
+        }
+        @media (max-width: 900px) {
+            .ujian-two-col {
+                flex-direction: column;
+            }
+            .ujian-col-left, .ujian-col-right {
+                width: 100%;
+            }
+        }
+
+        /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA (TAMBAH SISWA & UPLOAD DATA SISWA) */
+        .siswa-top-two-col {
+            display: flex;
+            gap: 15px;
+            align-items: stretch;
+        }
+        .siswa-top-two-col > .admin-card {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 820px) {
+            .siswa-top-two-col {
+                flex-direction: column;
+            }
+        }
         
         .error-msg { color: red; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
         .section-view, .admin-view { display: none; }
@@ -141,7 +218,7 @@
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 620px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 520px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
         th { background-color: #008080; color: white; }
         
@@ -389,9 +466,14 @@
         <div id="adminTabMonitoring" class="admin-view active">
             <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GAS) -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                     <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
-                    <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 190px; padding: 5px 8px; font-size: 12px;">
+                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 5px 8px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+                    </div>
                 </div>
                 <p style="font-size: 12px; color: #555; margin-top: 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
                 <div class="table-responsive">
@@ -418,10 +500,6 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <select id="filterKelasLogExport" style="width: auto; padding: 4px 8px; font-size: 11px;">
-                            <option value="ALL">Semua Kelas</option>
-                        </select>
-                        <button onclick="exportRekapLogXlsx()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #28a745;">Export .xlsx</button>
                         <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
                     </div>
                 </div>
@@ -444,61 +522,68 @@
             </div>
         </div>
 
-        <!-- TAB 2: DAFTAR UJIAN -->
+        <!-- TAB 2: DAFTAR UJIAN (DUA KOLOM: KIRI BUAT JADWAL, KANAN DAFTAR UJIAN AKTIF) -->
         <div id="adminTabUjian" class="admin-view">
-            <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Buat Jadwal & Upload Soal Ujian (Multi-Kelas)</h4>
-                <div class="form-group">
-                    <label>Pilih Mata Pelajaran:</label>
-                    <select id="jadwalMapel">
-                        <option value="">-- Pilih Mapel --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Pilih Kelas (Bisa pilih lebih dari 1):</label>
-                    <div class="checkbox-grid" id="checkboxKelasContainer"></div>
-                </div>
-                <div class="row-flex">
+            <div class="ujian-two-col">
+                <!-- KOLOM KIRI: BUAT JADWAL -->
+                <div class="admin-card ujian-col-left">
+                    <h4 style="margin: 0 0 10px 0; color: #008080;">Buat Jadwal</h4>
                     <div class="form-group">
-                        <label>Waktu Mulai Ujian:</label>
-                        <input type="datetime-local" id="waktuMulai" onchange="hitungWaktuSelesaiOtomatis()">
-                    </div>
-                    <div class="form-group jp-col">
-                        <label id="labelJumlahJp">JP (40 mnt/JP):</label>
-                        <input type="number" id="jumlahJp" min="1" max="20" value="2" oninput="hitungWaktuSelesaiOtomatis()" onchange="hitungWaktuSelesaiOtomatis()">
+                        <label>Pilih Mata Pelajaran:</label>
+                        <select id="jadwalMapel">
+                            <option value="">-- Pilih Mapel --</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Waktu Selesai Ujian (Terkunci):</label>
-                        <input type="datetime-local" id="waktuSelesai" class="locked-input" readonly tabindex="-1">
+                        <label>Pilih Kelas (Bisa pilih lebih dari 1):</label>
+                        <div class="checkbox-grid" id="checkboxKelasContainer"></div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
-                    <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
-                    <textarea id="soalBatchText" rows="5" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
-                </div>
-                <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
-            </div>
 
-            <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                    <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
-                    <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0;">Lihat Semua Bank Soal (Gist)</button>
+                    <!-- 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI -->
+                    <div class="jadwal-time-row form-group">
+                        <div class="time-col">
+                            <label>Waktu Mulai Ujian:</label>
+                            <input type="datetime-local" id="waktuMulai" onchange="hitungWaktuSelesaiOtomatis()">
+                        </div>
+                        <div class="jp-inline-col">
+                            <label id="labelJumlahJp">JP (40m):</label>
+                            <input type="number" id="jumlahJp" min="1" max="20" value="2" oninput="hitungWaktuSelesaiOtomatis()" onchange="hitungWaktuSelesaiOtomatis()">
+                        </div>
+                        <div class="time-col">
+                            <label>Waktu Selesai (Terkunci):</label>
+                            <input type="datetime-local" id="waktuSelesai" class="locked-input" readonly tabindex="-1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
+                        <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
+                        <textarea id="soalBatchText" rows="5" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
+                    </div>
+                    <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
                 </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Mata Pelajaran</th>
-                                <th>Kelas</th>
-                                <th>JP</th>
-                                <th>Mulai</th>
-                                <th>Selesai</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbodyJadwal"></tbody>
-                    </table>
+
+                <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
+                <div class="admin-card ujian-col-right">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
+                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0;">Lihat Semua Bank Soal (Gist)</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mata Pelajaran</th>
+                                    <th>Kelas</th>
+                                    <th>JP</th>
+                                    <th>Mulai</th>
+                                    <th>Selesai</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyJadwal"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -535,51 +620,65 @@
 
         <!-- TAB 4: DATA SISWA & UPLOAD -->
         <div id="adminTabSiswa" class="admin-view">
-            <!-- FORM TAMBAH / EDIT SISWA SATUAN -->
-            <div class="admin-card">
-                <h4 id="judulFormSiswaSatuan" style="margin: 0 0 10px 0; color: #008080;">Tambah Siswa Satuan</h4>
-                <input type="hidden" id="editSiswaIndex" value="-1">
-                <div class="row-flex">
-                    <div class="form-group">
-                        <label>Nama Lengkap Siswa:</label>
-                        <input type="text" id="inputNamaSiswa" placeholder="Contoh: Ahmad Fauzi">
+            <!-- SEJAJAR KIRI-KANAN: TAMBAH SISWA & UPLOAD DATA SISWA -->
+            <div class="siswa-top-two-col">
+                <!-- KIRI: TAMBAH SISWA -->
+                <div class="admin-card">
+                    <div>
+                        <h4 id="judulFormSiswaSatuan" style="margin: 0 0 10px 0; color: #008080;">Tambah Siswa</h4>
+                        <input type="hidden" id="editSiswaIndex" value="-1">
+                        <div class="row-flex">
+                            <div class="form-group">
+                                <label>Nama Lengkap Siswa:</label>
+                                <input type="text" id="inputNamaSiswa" placeholder="Contoh: Ahmad Fauzi">
+                            </div>
+                            <div class="form-group">
+                                <label>Kelas:</label>
+                                <select id="selectKelasSiswaSatuan">
+                                    <option value="">-- Pilih Kelas --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row-flex">
+                            <div class="form-group">
+                                <label>Username / NIS:</label>
+                                <input type="text" id="inputUsernameSiswa" placeholder="Contoh: 262710001">
+                            </div>
+                            <div class="form-group">
+                                <label>Password:</label>
+                                <input type="text" id="inputPasswordSiswa" placeholder="Masukkan password siswa...">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Kelas:</label>
-                        <select id="selectKelasSiswaSatuan">
-                            <option value="">-- Pilih Kelas --</option>
-                        </select>
+                    <div class="row-flex" style="margin-top: 4px;">
+                        <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa</button>
+                        <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
                     </div>
                 </div>
-                <div class="row-flex">
-                    <div class="form-group">
-                        <label>Username / NIS:</label>
-                        <input type="text" id="inputUsernameSiswa" placeholder="Contoh: 262710001">
+
+                <!-- KANAN: UPLOAD DATA SISWA -->
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa</h4>
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label>Pilih File Excel (.xlsx / .xls):</label>
+                            <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Password:</label>
-                        <input type="text" id="inputPasswordSiswa" placeholder="Masukkan password siswa...">
-                    </div>
-                </div>
-                <div class="row-flex">
-                    <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa Satuan</button>
-                    <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
+                    <small style="color: #666;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
                 </div>
             </div>
 
-            <!-- UPLOAD MASSAL EXCEL -->
+            <!-- TABEL DAFTAR SISWA + CARI NAMA -->
             <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa Massal (Excel Template) ke Gist</h4>
-                <div class="form-group" style="margin-bottom: 5px;">
-                    <label>Pilih File Excel (.xlsx / .xls):</label>
-                    <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <h4 style="margin: 0; color: #008080;">Daftar Siswa</h4>
+                    <div style="display: flex; gap: 6px; align-items: center; flex: 1; max-width: 340px; min-width: 220px;">
+                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="padding: 7px 10px; font-size: 13px;">
+                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 7px 12px; font-size: 12px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 7px 10px; font-size: 12px; background: #6c757d;">Reset</button>
+                    </div>
                 </div>
-                <small style="color: #666;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
-            </div>
-
-            <!-- TABEL DAFTAR SISWA -->
-            <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Seluruh Siswa (dari Gist)</h4>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -824,7 +923,7 @@ async function simpanPengaturanJp() {
 function updateLabelJp() {
     const m = pengaturanCbt.menitPerJp || 40;
     const lbl = document.getElementById('labelJumlahJp');
-    if(lbl) lbl.innerText = `JP (${m} mnt/JP):`;
+    if(lbl) lbl.innerText = `JP (${m}m):`;
     const inp = document.getElementById('settingMenitPerJp');
     if(inp) inp.value = m;
 }
@@ -1046,6 +1145,12 @@ async function fetchLogLoginFromGAS() {
 }
 
 // ================= KONTROL SESI & RESET LOGIN ADMIN (GAS) =================
+function resetCariNamaSesi() {
+    const inp = document.getElementById('inputCariNamaSesi');
+    if (inp) inp.value = "";
+    renderTabelSesiAktif();
+}
+
 function renderTabelSesiAktif() {
     const tbody = document.getElementById('tbodySesiAktif');
     if(!tbody) return;
@@ -1057,9 +1162,16 @@ function renderTabelSesiAktif() {
         return;
     }
 
+    const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
+    let tampilCount = 0;
+
     keys.forEach(username => {
         const s = sesiLoginSiswa[username];
         if(!s) return;
+        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        tampilCount++;
         let statusBadge = `<span style="color:#008080; font-weight:bold;">${s.status || 'Login Aktif'}</span>`;
         if(s.status && s.status.includes("Curang")) {
             statusBadge = `<span style="color:#dc3545; font-weight:bold;">${s.status}</span>`;
@@ -1080,6 +1192,10 @@ function renderTabelSesiAktif() {
             </td>
         </tr>`;
     });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan pada sesi aktif.</td></tr>`;
+    }
 }
 
 async function resetLoginSiswaAdmin(username) {
@@ -1197,7 +1313,6 @@ function initDropdowns() {
     let jdMp = document.getElementById('jadwalMapel');
     let checkboxContainer = document.getElementById('checkboxKelasContainer');
     let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
-    let filterKelasLog = document.getElementById('filterKelasLogExport');
 
     if(jdMp) {
         jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
@@ -1209,13 +1324,6 @@ function initDropdowns() {
         selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
         daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
         if(prevVal) selKelasSatuan.value = prevVal;
-    }
-
-    if(filterKelasLog) {
-        const prevLogFilter = filterKelasLog.value;
-        filterKelasLog.innerHTML = '<option value="ALL">Semua Kelas</option>';
-        daftarKelas.forEach(k => filterKelasLog.innerHTML += `<option value="${k}">${k}</option>`);
-        if(prevLogFilter) filterKelasLog.value = prevLogFilter;
     }
 
     if(checkboxContainer) {
@@ -1354,8 +1462,8 @@ function batalEditSiswa() {
     document.getElementById('inputUsernameSiswa').value = "";
     document.getElementById('inputPasswordSiswa').value = "";
 
-    document.getElementById('judulFormSiswaSatuan').innerText = "Tambah Siswa Satuan";
-    document.getElementById('btnSimpanSiswaSatuan').innerText = "Simpan Siswa Satuan";
+    document.getElementById('judulFormSiswaSatuan').innerText = "Tambah Siswa";
+    document.getElementById('btnSimpanSiswaSatuan').innerText = "Simpan Siswa";
     document.getElementById('btnSimpanSiswaSatuan').style.background = "#008080";
     document.getElementById('btnBatalEditSiswa').style.display = "none";
 }
@@ -1409,6 +1517,12 @@ async function importDataSiswaToGist(event) {
     reader.readAsArrayBuffer(file);
 }
 
+function resetCariNamaSiswa() {
+    const inp = document.getElementById('inputCariNamaSiswa');
+    if (inp) inp.value = "";
+    renderTabelDaftarSiswa();
+}
+
 function renderTabelDaftarSiswa() {
     let tbody = document.getElementById('tbodyDaftarSiswa');
     if(!tbody) return;
@@ -1417,7 +1531,15 @@ function renderTabelDaftarSiswa() {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
         return;
     }
+
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
+    let tampilCount = 0;
+
     databaseSiswa.forEach((s, idx) => {
+        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        tampilCount++;
         tbody.innerHTML += `<tr>
             <td>${s.nama}</td>
             <td>${s.kelas}</td>
@@ -1429,6 +1551,10 @@ function renderTabelDaftarSiswa() {
             </td>
         </tr>`;
     });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+    }
 }
 
 // ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS) =================
@@ -1878,43 +2004,6 @@ function prosesExportHasilMultiKelasXlsx(mapelEnc, kelasJson) {
     const tgl = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(workbook, `Hasil_${safeMapel}_Semua_Kelas_${tgl}.xlsx`);
     tutupModalExport();
-}
-
-function exportRekapLogXlsx() {
-    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
-        alert("Belum ada data log/nilai untuk di-export. Klik 'Refresh Log' terlebih dahulu.");
-        return;
-    }
-
-    const filterKls = document.getElementById('filterKelasLogExport') ? document.getElementById('filterKelasLogExport').value : 'ALL';
-    const filtered = filterKls === 'ALL'
-        ? logSiswaLogin
-        : logSiswaLogin.filter(item => String(item.kelas || "").trim() === filterKls);
-
-    if (filtered.length === 0) {
-        alert(`Tidak ada data log ujian untuk kelas ${filterKls}.`);
-        return;
-    }
-
-    const rows = filtered.map((item, idx) => ({
-        "No": idx + 1,
-        "Nama": item.nama || "",
-        "Kelas": item.kelas || "",
-        "Mata Pelajaran": item.mapel || "",
-        "Status": item.status || "",
-        "Nilai": (item.nilai !== null && item.nilai !== undefined && item.nilai !== "") ? Number(item.nilai) : "-"
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-        { wch: 5 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 32 }, { wch: 10 }
-    ];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, filterKls === 'ALL' ? "Semua Kelas" : filterKls.slice(0, 31));
-
-    const tgl = new Date().toISOString().slice(0, 10);
-    const suffix = filterKls === 'ALL' ? 'Semua_Kelas' : filterKls.replace(/\s+/g, '_');
-    XLSX.writeFile(workbook, `Rekap_Nilai_CBT_${suffix}_${tgl}.xlsx`);
 }
 
 // ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
