@@ -134,6 +134,35 @@
         .row-flex > div { flex: 1; min-width: 180px; }
         .row-flex > div.jp-col { flex: 0 0 130px; min-width: 120px; max-width: 135px; }
 
+        /* GRID MATRIKS KHUSUS DAFTAR KELAS & DAFTAR MAPEL */
+        .master-matrix-grid {
+            display: grid;
+            gap: 6px 14px;
+            margin-top: 8px;
+            overflow-x: auto;
+        }
+        .master-matrix-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 4px 8px;
+            background: #ffffff;
+            border: 1px solid #e3e8e8;
+            border-radius: 4px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .master-matrix-item .item-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .master-matrix-item .item-label::before {
+            content: "• ";
+            font-weight: bold;
+            color: #333;
+        }
+
         /* 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI */
         .jadwal-time-row {
             display: flex;
@@ -241,7 +270,7 @@
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
 
-                /* BADGE PILL RIWAYAT STATUS UJIAN */
+        /* BADGE PILL RIWAYAT STATUS UJIAN */
         .status-pill-wrap {
             display: inline-flex;
             flex-wrap: wrap;
@@ -646,11 +675,11 @@
             <div class="row-flex">
                 <div class="admin-card" style="flex:1;">
                     <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Kelas</h4>
-                    <ul id="listKelas" style="padding-left: 20px; font-size: 14px;"></ul>
+                    <div id="listKelas" class="master-matrix-grid"></div>
                 </div>
                 <div class="admin-card" style="flex:1;">
                     <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Mata Pelajaran</h4>
-                    <ul id="listMapel" style="padding-left: 20px; font-size: 14px;"></ul>
+                    <div id="listMapel" class="master-matrix-grid"></div>
                 </div>
             </div>
         </div>
@@ -837,7 +866,6 @@ let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
 let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
 let databaseSiswa = [];
 let daftarJadwalUjian = []; 
-// sesiLoginSiswa kini dikelola & disinkronkan melalui Google Apps Script (GAS)
 let sesiLoginSiswa = {};
 let pengaturanCbt = {
     menitPerJp: 40,
@@ -1038,7 +1066,6 @@ async function fetchCbtDatabase(forceRefresh = false) {
 }
 
 async function saveCbtDatabaseToGist() {
-    // db_sesi tidak lagi ditulis ke Gist agar kuota Gist hemat dan bebas konflik saat ujian ramai
     let payloadData = {
         db_kelas: daftarKelas,
         db_mapel: daftarMapel,
@@ -1063,7 +1090,6 @@ async function saveCbtDatabaseToGist() {
 }
 
 // ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GOOGLE APPS SCRIPT (GAS) =================
-// ================= RIWAYAT STATUS UJIAN (TIDAK HILANG SAAT RESET + HITUNGAN 2x, 3x) =================
 function parseTokenCount(token) {
     const m = String(token || "").trim().match(/^(.*?)(?:\s*\((\d+)x\))?$/i);
     if (!m) return { base: String(token || "").trim(), count: 1 };
@@ -1087,7 +1113,6 @@ function gabungRiwayatStatus(statusLama, statusBaru) {
     const daftarLama = lamaRaw.split(",").map(s => s.trim()).filter(Boolean);
     if (!baru) return daftarLama.join(", ");
 
-    // Bersihkan marker "Sedang Ujian" jika ada di paling akhir sebelum digabung dengan hasil final
     if (daftarLama[daftarLama.length - 1] === "Sedang Ujian" && baru !== "Sedang Ujian") {
         daftarLama.pop();
     }
@@ -1096,8 +1121,6 @@ function gabungRiwayatStatus(statusLama, statusBaru) {
         return baru;
     }
 
-    // Jika status baru adalah jenis pelanggaran Curang (misal Curang Pindah Tab / Curang Fullscreen),
-    // cek apakah jenis curang tersebut sudah ada di riwayat; jika sudah ada, naikkan hitungannya menjadi (2x), (3x), dst.
     if (baru.toLowerCase().startsWith("curang")) {
         const parsedBaru = parseTokenCount(baru);
         const existingIdx = daftarLama.findIndex(tok =>
@@ -1111,7 +1134,6 @@ function gabungRiwayatStatus(statusLama, statusBaru) {
         }
     }
 
-    // Hindari duplikasi berturut-turut untuk status non-curang (misal "Direset, Direset" atau "Sedang Ujian, Sedang Ujian")
     if (daftarLama[daftarLama.length - 1].toLowerCase() === baru.toLowerCase()) {
         return daftarLama.join(", ");
     }
@@ -1124,16 +1146,10 @@ function cekStatusTerkunci(statusStr) {
     const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
     if (tokens.length === 0) return false;
     const terakhir = tokens[tokens.length - 1];
-    // Terkunci jika status terakhir adalah Selesai, atau jika hasil ujian terakhir adalah Curang (belum Direset / Sedang Ujian lagi)
     if (terakhir === "Direset" || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
         return false;
     }
     return terakhir === "Selesai" || terakhir.toLowerCase().startsWith("curang");
-}
-
-function getStatusTerakhir(statusStr) {
-    const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
-    return tokens.length > 0 ? tokens[tokens.length - 1] : "";
 }
 
 function formatPelanggaranRingkas(alasan) {
@@ -1153,7 +1169,6 @@ function renderStatusBadgesHtml(statusStr) {
         return `<span class="status-pill status-pill-login">-</span>`;
     }
 
-    // Pecah berdasarkan koma, dan jika ada format lama "Selesai (Curang: ...)", pisahkan juga "Selesai" dan "(Curang: ...)"
     const rawParts = raw.split(",").map(s => s.trim()).filter(Boolean);
     const parts = [];
     rawParts.forEach(part => {
@@ -1285,7 +1300,7 @@ async function deleteSesiFromGAS(username) {
 }
 
 // ================= CACHE SOAL UJIAN & PRIORITAS GIST_RAW_URL =================
-const SOAL_CACHE_TTL_MS = 15 * 60 * 1000; // Cache soal 15 menit per sesi browser agar hemat request saat 1.000+ siswa ujian
+const SOAL_CACHE_TTL_MS = 15 * 60 * 1000;
 
 function getSoalCacheKey(scope = "all") {
     return `smantas_cbt_soal_cache_${GIST_ID}_${scope}`;
@@ -1328,8 +1343,6 @@ function bersihkanCacheSoal() {
     } catch (e) {}
 }
 
-// Helper mengambil soal: untuk ujian siswa memprioritaskan GIST_RAW_URL + cache lokal,
-// sedangkan untuk manajemen/preview Admin memakai Gist API agar selalu real-time.
 async function fetchAllSoalFromGist(options = {}) {
     const preferRaw = options.preferRaw !== false;
     const forceRefresh = options.forceRefresh === true;
@@ -1589,21 +1602,65 @@ function initDropdowns() {
     renderListMaster();
 }
 
+/**
+ * Menyusun daftar item ke dalam matriks grid:
+ * - Mengisi hingga `maxRowsPerCol` baris per kolom (maksimal `maxCols` kolom: isi baris 1..maxRowsPerCol pada kolom 1,
+ *   lalu naik ke atas ke baris 1 pada kolom 2, dst. hingga kolom ke-`maxCols`).
+ * - Jika jumlah item > `maxRowsPerCol * maxCols` (melebihi 3 kolom), baris baru ditambahkan mulai baris ke-(maxRowsPerCol + 1),
+ *   (maxRowsPerCol + 2), dst.
+ */
+function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnName) {
+    if (!containerEl) return;
+    containerEl.innerHTML = "";
+
+    const total = items.length;
+    if (total === 0) {
+        containerEl.style.gridTemplateColumns = "1fr";
+        containerEl.style.gridAutoFlow = "row";
+        containerEl.innerHTML = `<div style="color:#777; font-size:13px; padding:4px 0;">Belum ada data.</div>`;
+        return;
+    }
+
+    const maxCols = 3;
+    const maxCap3Cols = maxRowsPerCol * maxCols;
+
+    let numCols;
+    let numRows;
+
+    if (total <= maxCap3Cols) {
+        numCols = Math.min(maxCols, Math.ceil(total / maxRowsPerCol));
+        numRows = Math.min(maxRowsPerCol, total);
+    } else {
+        numCols = maxCols;
+        const extraItems = total - maxCap3Cols;
+        const extraRows = Math.ceil(extraItems / maxCols);
+        numRows = maxRowsPerCol + extraRows;
+    }
+
+    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(135px, 1fr))`;
+    containerEl.style.gridTemplateRows = `repeat(${numRows}, auto)`;
+    containerEl.style.gridAutoFlow = "column";
+
+    items.forEach((labelText, idx) => {
+        const div = document.createElement("div");
+        div.className = "master-matrix-item";
+        div.innerHTML = `
+            <span class="item-label" title="${labelText}">${labelText}</span>
+            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
+        `;
+        containerEl.appendChild(div);
+    });
+}
+
 function renderListMaster() {
-    let ulKelas = document.getElementById('listKelas');
-    let ulMapel = document.getElementById('listMapel');
-    if(ulKelas) {
-        ulKelas.innerHTML = "";
-        daftarKelas.forEach((k, i) => {
-            ulKelas.innerHTML += `<li>${k} <button onclick="hapusKelas(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">Hapus</button></li>`;
-        });
-    }
-    if(ulMapel) {
-        ulMapel.innerHTML = "";
-        daftarMapel.forEach((m, i) => {
-            ulMapel.innerHTML += `<li>${m} <button onclick="hapusMapel(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">Hapus</button></li>`;
-        });
-    }
+    let divKelas = document.getElementById('listKelas');
+    let divMapel = document.getElementById('listMapel');
+
+    // Kelas: 7 baris per kolom, naik ke atas sampai 3 kolom, lalu tambah baris 8, 9, dst.
+    renderMatrixCategoryGrid(divKelas, daftarKelas, 7, "hapusKelas");
+
+    // Mata Pelajaran: 10 baris per kolom, naik ke atas sampai 3 kolom, lalu tambah baris 11, 12, 13, dst.
+    renderMatrixCategoryGrid(divMapel, daftarMapel, 10, "hapusMapel");
 }
 
 async function tambahKelas() {
@@ -1642,7 +1699,7 @@ async function tambahMapel() {
 }
 
 async function hapusMapel(index) {
-    if(!confirm("Yakin ingin menghapus mapel ini?")) return;
+    if(!confirm("Yakin ingin menghapus mata pelajaran ini?")) return;
     showLoading("Menghapus mata pelajaran...");
     daftarMapel.splice(index, 1);
     await saveCbtDatabaseToGist();
@@ -1811,8 +1868,8 @@ function renderTabelDaftarSiswa() {
 }
 
 // ================= KOMPRESI GAMBAR SOAL (< 50 KB, TAJAM & TIDAK PECAH) =================
-const MAX_GAMBAR_SOAL_BYTES = 50 * 1024; // 50 KB
-const MAX_GAMBAR_SOAL_DIM = 1280;     // Batas sisi terpanjang agar teks/diagram tetap terbaca jelas
+const MAX_GAMBAR_SOAL_BYTES = 50 * 1024;
+const MAX_GAMBAR_SOAL_DIM = 1280;
 
 function estimasiUkuranBase64Bytes(dataUrl) {
     if (!dataUrl || typeof dataUrl !== "string") return 0;
@@ -1859,7 +1916,6 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
         let width = img.naturalWidth || img.width || 800;
         let height = img.naturalHeight || img.height || 600;
 
-        // Batasi dimensi awal agar resolusi aman dan ukuran file lebih terkendali
         const maxDimAwal = Math.max(width, height);
         if (maxDimAwal > MAX_GAMBAR_SOAL_DIM) {
             const scale = MAX_GAMBAR_SOAL_DIM / maxDimAwal;
@@ -1870,7 +1926,6 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
         let bestDataUrl = null;
         let bestSize = Infinity;
 
-        // Tahap 1: Coba WebP dengan kualitas bertahap (latar putih agar transparan tidak hitam saat jatuh ke JPEG)
         const qualities = [0.85, 0.78, 0.72, 0.65, 0.58, 0.50];
         for (let step = 0; step < 5; step++) {
             for (const q of qualities) {
@@ -1885,7 +1940,6 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
                 }
             }
 
-            // Coba JPEG sebagai alternatif universal jika WebP masih di atas 50 KB
             for (const q of [0.82, 0.74, 0.66, 0.58, 0.50]) {
                 const candidateJpeg = renderCanvasToDataUrl(img, width, height, "image/jpeg", q, true);
                 const sizeJpeg = estimasiUkuranBase64Bytes(candidateJpeg);
@@ -1898,12 +1952,10 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
                 }
             }
 
-            // Kecilkan dimensi bertahap (82%) sambil menjaga keterbacaan teks/gambar soal
             width = Math.max(320, Math.round(width * 0.82));
             height = Math.max(240, Math.round(height * 0.82));
         }
 
-        // Tahap 2: Penurunan kualitas/dimensi lanjutan jika gambar sangat kompleks/besar
         let qFallback = 0.45;
         while (bestSize > maxBytes && (qFallback >= 0.25 || width > 320)) {
             const candidate = renderCanvasToDataUrl(img, width, height, "image/jpeg", Math.max(0.25, qFallback), true);
@@ -2805,7 +2857,6 @@ async function loadSoalUjian() {
     }
 }
 
-// ================= ACAK URUTAN SOAL & OPSI JAWABAN SISWA =================
 function acakArrayFisherYates(arr) {
     const copy = [...arr];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -2816,7 +2867,6 @@ function acakArrayFisherYates(arr) {
 }
 
 function siapkanSoalDanOpsiAcak(rawSoalList) {
-    // 1. Acak urutan butir soal
     const soalTeracak = acakArrayFisherYates(rawSoalList);
 
     return soalTeracak.map(item => {
@@ -2825,20 +2875,18 @@ function siapkanSoalDanOpsiAcak(rawSoalList) {
             opt => item.options && item.options[opt] !== undefined && String(item.options[opt]).trim() !== ""
         );
 
-        // 2. Pasangkan tiap pilihan dengan teks dan status kebenarannya sebelum diacak
         const pasanganOpsi = daftarHurufTersedia.map(huruf => ({
             teks: item.options[huruf],
             isBenar: huruf === kunciHurufAsli
         }));
 
-        // 3. Acak posisi opsi jawaban
         const pasanganTeracak = acakArrayFisherYates(pasanganOpsi);
 
         const optionsBaru = {};
         let kunciHurufBaru = 'A';
 
         pasanganTeracak.forEach((p, idx) => {
-            const labelBaru = daftarHurufTersedia[idx]; // Label tampilan tetap A, B, C, D, E
+            const labelBaru = daftarHurufTersedia[idx];
             optionsBaru[labelBaru] = p.teks;
             if (p.isBenar) {
                 kunciHurufBaru = labelBaru;
@@ -2853,7 +2901,6 @@ function siapkanSoalDanOpsiAcak(rawSoalList) {
     });
 }
 
-// ================= TAMPILAN PER SOAL + BEFORE / NEXT =================
 function pilihJawabanSiswa(index, opt) {
     jawabanSiswa[index] = opt;
     renderSoalSiswa();
@@ -2899,7 +2946,6 @@ function renderSoalSiswa() {
     document.getElementById('soalContainer').innerHTML = html;
 }
 
-// ================= PENGAWAS FULLSCREEN & PINDAH TAB (ANTI-CURANG) =================
 function pasangPengawasAntiCurang() {
     document.addEventListener('fullscreenchange', handleFullscreenViolation);
     document.addEventListener('webkitfullscreenchange', handleFullscreenViolation);
