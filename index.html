@@ -974,45 +974,121 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
-// ================= FORMAT SOAL.JSON: 1 SOAL = 1 BARIS =================
-function serializeSoalJsonOnePerLine(soalArray) {
-    const list = Array.isArray(soalArray) ? soalArray : [];
-    if (list.length === 0) return "[]";
-    const lines = list.map(item => `  ${JSON.stringify(item)}`);
+// ================= FORMAT SOAL.JSON: 1 MAPEL = 1 BARIS =================
+function normalisasiKeBarisPerMapel(rawItems) {
+    const arr = Array.isArray(rawItems) ? rawItems : [];
+    const mapelMap = new Map();
+
+    const getOrCreateGroup = (mapelName) => {
+        const key = String(mapelName || "Umum").trim() || "Umum";
+        if (!mapelMap.has(key)) {
+            mapelMap.set(key, {
+                mapel: key,
+                kelas: [],
+                soal: []
+            });
+        }
+        return mapelMap.get(key);
+    };
+
+    arr.forEach(entry => {
+        if (!entry || typeof entry !== "object") return;
+
+        // Bentuk baru: 1 mapel = 1 baris -> { mapel, kelas: [...], soal: [...] }
+        if (Array.isArray(entry.soal)) {
+            const grp = getOrCreateGroup(entry.mapel);
+            if (Array.isArray(entry.kelas)) {
+                entry.kelas.forEach(k => {
+                    if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
+                });
+            }
+            entry.soal.forEach(s => {
+                if (!s || typeof s !== "object") return;
+                const soalObj = {
+                    ...s,
+                    mapel: s.mapel || grp.mapel,
+                    kelas: Array.isArray(s.kelas) && s.kelas.length > 0 ? s.kelas : [...grp.kelas]
+                };
+                if (!grp.soal.some(existing => existing.id && soalObj.id && existing.id === soalObj.id)) {
+                    grp.soal.push(soalObj);
+                }
+            });
+            return;
+        }
+
+        // Kompatibilitas bentuk lama: tiap item adalah 1 butir soal -> { id, mapel, kelas, soal, options, kunci }
+        const grp = getOrCreateGroup(entry.mapel);
+        if (Array.isArray(entry.kelas)) {
+            entry.kelas.forEach(k => {
+                if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
+            });
+        }
+        if (entry.soal !== undefined) {
+            if (!grp.soal.some(existing => existing.id && entry.id && existing.id === entry.id)) {
+                grp.soal.push({
+                    ...entry,
+                    mapel: grp.mapel,
+                    kelas: Array.isArray(entry.kelas) ? [...entry.kelas] : [...grp.kelas]
+                });
+            }
+        }
+    });
+
+    return Array.from(mapelMap.values());
+}
+
+function serializeSoalJsonOneMapelPerLine(soalArrayOrMapelRows) {
+    const mapelRows = normalisasiKeBarisPerMapel(soalArrayOrMapelRows);
+    if (mapelRows.length === 0) return "[]";
+    const lines = mapelRows.map(row => `  ${JSON.stringify(row)}`);
     return `[\n${lines.join(",\n")}\n]`;
 }
 
 function parseSoalJsonFlexible(rawContent) {
     if (!rawContent) return [];
-    if (Array.isArray(rawContent)) return rawContent;
 
-    const text = String(rawContent).trim();
-    if (!text) return [];
+    let rawItems = [];
+    if (Array.isArray(rawContent)) {
+        rawItems = rawContent;
+    } else {
+        const text = String(rawContent).trim();
+        if (!text) return [];
+        try {
+            const parsed = JSON.parse(text);
+            rawItems = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? [parsed] : []);
+        } catch (_) {
+            const lines = text
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(l => l && l !== "[" && l !== "]")
+                .map(l => l.endsWith(",") ? l.slice(0, -1).trim() : l);
 
-    try {
-        const parsed = JSON.parse(text);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (_) {
-        // Fallback jika format per baris NDJSON ({...}\n{...}) atau baris berkoma
-        const lines = text
-            .split(/\r?\n/)
-            .map(l => l.trim())
-            .filter(l => l && l !== "[" && l !== "]")
-            .map(l => l.endsWith(",") ? l.slice(0, -1).trim() : l);
-
-        const items = [];
-        for (const line of lines) {
-            try {
-                const obj = JSON.parse(line);
-                if (obj && typeof obj === "object") items.push(obj);
-            } catch (lineErr) {
-                console.warn("Baris soal diabaikan karena tidak valid:", lineErr);
+            for (const line of lines) {
+                try {
+                    const obj = JSON.parse(line);
+                    if (obj && typeof obj === "object") rawItems.push(obj);
+                } catch (lineErr) {
+                    console.warn("Baris soal diabaikan karena tidak valid:", lineErr);
+                }
             }
         }
-        return items;
     }
+
+    // Ratakan ke daftar butir soal lengkap dengan mapel & kelas agar kompatibel dengan seluruh logika aplikasi
+    const mapelRows = normalisasiKeBarisPerMapel(rawItems);
+    const flatSoal = [];
+    mapelRows.forEach(row => {
+        row.soal.forEach(item => {
+            flatSoal.push({
+                ...item,
+                mapel: item.mapel || row.mapel,
+                kelas: Array.isArray(item.kelas) && item.kelas.length > 0 ? item.kelas : [...row.kelas]
+            });
+        });
+    });
+    return flatSoal;
 }
-// ====================================================================
+// =====================================================================
 
 // ================= SANDI KUNCI JAWABAN (K=A, L=B, M=C, N=D, O=E) =================
 const MAP_OPT_TO_CIPHER = { 'A': 'K', 'B': 'L', 'C': 'M', 'D': 'N', 'E': 'O' };
@@ -2204,7 +2280,7 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
     }
 }
 
-// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS + 1 SOAL 1 BARIS) =================
+// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS + 1 MAPEL 1 BARIS) =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -2333,7 +2409,7 @@ async function simpanJadwalDanSoal() {
     await saveCbtDatabaseToGist();
 
     if(rawText) {
-        showLoading("Menyimpan soal (1 soal 1 baris, hemat Gist)...");
+        showLoading("Menyimpan soal (1 mapel 1 baris, hemat Gist)...");
         let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
 
         if(parsedSoal.length === 0) {
@@ -2386,7 +2462,7 @@ async function simpanJadwalDanSoal() {
             });
 
             await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-                files: { [filename]: { content: serializeSoalJsonOnePerLine(contentSoal) } }
+                files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
             }, githubHeaders);
             bersihkanCacheSoal();
         } catch(e) { 
@@ -2398,7 +2474,7 @@ async function simpanJadwalDanSoal() {
 
     hideLoading();
     renderTabelJadwal();
-    alert("Jadwal ujian dan soal berhasil disimpan (1 soal 1 baris, hemat Gist)!");
+    alert("Jadwal ujian dan soal berhasil disimpan (1 mapel 1 baris, hemat Gist)!");
     document.getElementById('soalBatchText').value = "";
     document.getElementById('fileSoalAny').value = "";
 }
@@ -2792,7 +2868,7 @@ async function hapusSoalUntukKelas(mapel, kelasList) {
         });
 
         await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-            files: { [filename]: { content: serializeSoalJsonOnePerLine(contentSoal) } }
+            files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
         }, githubHeaders);
         bersihkanCacheSoal();
 
