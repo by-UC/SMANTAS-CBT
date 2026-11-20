@@ -205,11 +205,11 @@
             align-items: flex-start;
         }
         .ujian-col-left {
-            flex: 1.15;
+            flex: 1.05;
             min-width: 0;
         }
         .ujian-col-right {
-            flex: 1.15;
+            flex: 1.3;
             min-width: 0;
         }
         @media (max-width: 900px) {
@@ -219,6 +219,76 @@
             .ujian-col-left, .ujian-col-right {
                 width: 100%;
             }
+        }
+
+        /* TABEL DAFTAR UJIAN AKTIF PAS LEBAR TANPA SCROLLBAR HORIZONTAL */
+        .table-jadwal-wrap {
+            width: 100%;
+            overflow-x: visible;
+        }
+        .table-jadwal-aktif {
+            width: 100%;
+            min-width: 100%;
+            table-layout: fixed;
+            margin-top: 6px;
+        }
+        .table-jadwal-aktif th,
+        .table-jadwal-aktif td {
+            padding: 5px 5px;
+            font-size: 11px;
+            line-height: 1.25;
+            vertical-align: middle;
+        }
+        .table-jadwal-aktif .col-mapel {
+            width: 17%;
+            overflow-wrap: anywhere;
+        }
+        .table-jadwal-aktif .col-kelas {
+            width: 31%;
+            overflow-wrap: anywhere;
+        }
+        .table-jadwal-aktif .col-jp {
+            width: 7%;
+            text-align: center;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        .table-jadwal-aktif .col-waktu {
+            width: 16%;
+            font-size: 10px;
+            line-height: 1.2;
+            padding-left: 3px;
+            padding-right: 3px;
+        }
+        .table-jadwal-aktif .col-aksi {
+            width: 13%;
+            padding: 4px 3px;
+        }
+        .jadwal-aksi-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .jadwal-aksi-top-row {
+            display: flex;
+            gap: 3px;
+        }
+        .jadwal-aksi-top-row .btn-jadwal-act {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            padding: 3px 2px;
+            font-size: 9.5px;
+            line-height: 1.15;
+            text-align: center;
+        }
+        .jadwal-aksi-stack .btn-jadwal-full {
+            width: 100%;
+            margin: 0;
+            padding: 3px 2px;
+            font-size: 9.5px;
+            line-height: 1.15;
+            text-align: center;
         }
 
         /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA (TAMBAH SISWA & UPLOAD DATA SISWA) */
@@ -261,8 +331,67 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-info:hover { background: #138496; }
 
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
-        .checkbox-grid label { font-weight: normal; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        /* PILIH KELAS 7 KOLOM + PILIH SEMUA PER BARIS */
+        .checkbox-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 7px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .kelas-row-line {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
+            gap: 4px 6px;
+            align-items: center;
+        }
+        .kelas-row-line label {
+            font-weight: normal;
+            font-size: 11.5px;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .kelas-row-line input[type="checkbox"] {
+            margin: 0;
+            flex-shrink: 0;
+        }
+        .btn-pilih-baris {
+            width: auto;
+            padding: 2px 6px;
+            font-size: 10px;
+            line-height: 1.2;
+            border-radius: 3px;
+            background: #e9ecef;
+            color: #333;
+            border: 1px solid #bbb;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-pilih-baris:hover {
+            background: #008080;
+            color: #fff;
+            border-color: #008080;
+        }
+        .btn-pilih-baris.active-all {
+            background: #008080;
+            color: #fff;
+            border-color: #008080;
+        }
+        @media (max-width: 600px) {
+            .kelas-row-line {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+            }
+        }
 
         .pass-display-box {
             display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px;
@@ -631,20 +760,20 @@
 
                 <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
                 <div class="admin-card ujian-col-right">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                        <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
-                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0;">Lihat Semua Bank Soal (Gist)</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                        <h4 style="margin: 0; color: #008080; font-size: 14px;">Daftar Ujian Aktif</h4>
+                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0; padding:3px 8px; font-size:10px;">Lihat Semua Bank Soal (Gist)</button>
                     </div>
-                    <div class="table-responsive">
-                        <table>
+                    <div class="table-jadwal-wrap">
+                        <table class="table-jadwal-aktif">
                             <thead>
                                 <tr>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Kelas</th>
-                                    <th>JP</th>
-                                    <th>Mulai</th>
-                                    <th>Selesai</th>
-                                    <th>Aksi</th>
+                                    <th class="col-mapel">Mata Pelajaran</th>
+                                    <th class="col-kelas">Kelas</th>
+                                    <th class="col-jp">JP</th>
+                                    <th class="col-waktu">Mulai</th>
+                                    <th class="col-waktu">Selesai</th>
+                                    <th class="col-aksi">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyJadwal"></tbody>
@@ -1593,22 +1722,74 @@ function initDropdowns() {
     }
 
     if(checkboxContainer) {
-        checkboxContainer.innerHTML = "";
-        daftarKelas.forEach(k => {
-            checkboxContainer.innerHTML += `<label><input type="checkbox" name="kelasCheck" value="${k}"> ${k}</label>`;
-        });
+        renderCheckboxKelasPerBaris(checkboxContainer);
     }
 
     renderListMaster();
 }
 
-/**
- * Menyusun daftar item ke dalam matriks grid:
- * - Mengisi hingga `maxRowsPerCol` baris per kolom (maksimal `maxCols` kolom: isi baris 1..maxRowsPerCol pada kolom 1,
- *   lalu naik ke atas ke baris 1 pada kolom 2, dst. hingga kolom ke-`maxCols`).
- * - Jika jumlah item > `maxRowsPerCol * maxCols` (melebihi 3 kolom), baris baru ditambahkan mulai baris ke-(maxRowsPerCol + 1),
- *   (maxRowsPerCol + 2), dst.
- */
+function renderCheckboxKelasPerBaris(container) {
+    container.innerHTML = "";
+    const colsPerRow = 7;
+
+    for (let i = 0; i < daftarKelas.length; i += colsPerRow) {
+        const rowChunk = daftarKelas.slice(i, i + colsPerRow);
+        const rowIndex = Math.floor(i / colsPerRow);
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "kelas-row-line";
+        rowDiv.setAttribute("data-row-idx", rowIndex);
+
+        rowChunk.forEach(k => {
+            const lbl = document.createElement("label");
+            lbl.title = k;
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.name = "kelasCheck";
+            cb.value = k;
+            cb.setAttribute("data-row-idx", rowIndex);
+            cb.onchange = () => sinkronkanTombolPilihBaris(rowIndex);
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(" " + k));
+            rowDiv.appendChild(lbl);
+        });
+
+        const btnAll = document.createElement("button");
+        btnAll.type = "button";
+        btnAll.className = "btn-pilih-baris";
+        btnAll.id = `btnPilihBaris_${rowIndex}`;
+        btnAll.title = "Pilih / Batal pilih semua kelas pada baris ini";
+        btnAll.innerText = "All";
+        btnAll.onclick = () => togglePilihBarisKelas(rowIndex);
+        rowDiv.appendChild(btnAll);
+
+        container.appendChild(rowDiv);
+    }
+}
+
+function togglePilihBarisKelas(rowIndex) {
+    const checkboxes = Array.from(document.querySelectorAll(`input[name="kelasCheck"][data-row-idx="${rowIndex}"]`));
+    if (checkboxes.length === 0) return;
+
+    const semuaSudahTercentang = checkboxes.every(cb => cb.checked);
+    checkboxes.forEach(cb => {
+        cb.checked = !semuaSudahTercentang;
+    });
+    sinkronkanTombolPilihBaris(rowIndex);
+}
+
+function sinkronkanTombolPilihBaris(rowIndex) {
+    const checkboxes = Array.from(document.querySelectorAll(`input[name="kelasCheck"][data-row-idx="${rowIndex}"]`));
+    const btn = document.getElementById(`btnPilihBaris_${rowIndex}`);
+    if (!btn || checkboxes.length === 0) return;
+
+    const semuaTercentang = checkboxes.every(cb => cb.checked);
+    if (semuaTercentang) {
+        btn.classList.add("active-all");
+    } else {
+        btn.classList.remove("active-all");
+    }
+}
+
 function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnName) {
     if (!containerEl) return;
     containerEl.innerHTML = "";
@@ -1656,10 +1837,7 @@ function renderListMaster() {
     let divKelas = document.getElementById('listKelas');
     let divMapel = document.getElementById('listMapel');
 
-    // Kelas: 7 baris per kolom, naik ke atas sampai 3 kolom, lalu tambah baris 8, 9, dst.
     renderMatrixCategoryGrid(divKelas, daftarKelas, 7, "hapusKelas");
-
-    // Mata Pelajaran: 10 baris per kolom, naik ke atas sampai 3 kolom, lalu tambah baris 11, 12, 13, dst.
     renderMatrixCategoryGrid(divMapel, daftarMapel, 10, "hapusMapel");
 }
 
@@ -2263,7 +2441,25 @@ function getGroupedJadwalList() {
             });
         }
     });
+
+    // Urutkan jadwal terbaru (berdasarkan tanggal/waktu mulai, lalu selesai) di paling atas
+    groups.sort((a, b) => {
+        const timeA = new Date(a.mulai || 0).getTime() || 0;
+        const timeB = new Date(b.mulai || 0).getTime() || 0;
+        if (timeB !== timeA) return timeB - timeA;
+        const endA = new Date(a.selesai || 0).getTime() || 0;
+        const endB = new Date(b.selesai || 0).getTime() || 0;
+        return endB - endA;
+    });
+
     return groups;
+}
+
+function formatWaktuRingkasTabel(isoStr) {
+    if (!isoStr) return "-";
+    const parts = String(isoStr).replace("T", " ").split(" ");
+    if (parts.length < 2) return isoStr;
+    return `${parts[0]}<br>${parts[1]}`;
 }
 
 function renderTabelJadwal() {
@@ -2284,15 +2480,19 @@ function renderTabelJadwal() {
         const mapelEnc = encodeURIComponent(g.mapel);
 
         tbody.innerHTML += `<tr>
-            <td><b>${g.mapel}</b></td>
-            <td>${kelasStr}</td>
-            <td>${g.jp ? g.jp + ' JP' : '-'}</td>
-            <td>${g.mulai.replace('T', ' ')}</td>
-            <td>${g.selesai.replace('T', ' ')}</td>
-            <td>
-                <button onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-info">Lihat Soal</button>
-                <button onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-success">Export Hasil (.xlsx)</button>
-                <button onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-sm btn-danger">Hapus</button>
+            <td class="col-mapel"><b>${g.mapel}</b></td>
+            <td class="col-kelas">${kelasStr}</td>
+            <td class="col-jp">${g.jp ? g.jp + ' JP' : '-'}</td>
+            <td class="col-waktu">${formatWaktuRingkasTabel(g.mulai)}</td>
+            <td class="col-waktu">${formatWaktuRingkasTabel(g.selesai)}</td>
+            <td class="col-aksi">
+                <div class="jadwal-aksi-stack">
+                    <div class="jadwal-aksi-top-row">
+                        <button type="button" onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-info btn-jadwal-act">Soal</button>
+                        <button type="button" onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-danger btn-jadwal-act">Hapus</button>
+                    </div>
+                    <button type="button" onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-success btn-jadwal-full">Hasil</button>
+                </div>
             </td>
         </tr>`;
     });
