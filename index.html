@@ -153,20 +153,38 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            flex-wrap: wrap;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             padding: 7px 10px;
             border-radius: 4px;
             margin-bottom: 12px;
         }
+        .soal-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
         .btn-nav-soal {
             width: auto;
-            min-width: 96px;
+            min-width: 88px;
             padding: 7px 12px;
             font-size: 12.5px;
             background: #008080;
             color: #fff;
             border-radius: 4px;
+        }
+        .btn-selesai-top {
+            width: auto;
+            padding: 7px 14px;
+            font-size: 12.5px;
+            background: #28a745;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .btn-selesai-top:hover {
+            background: #218838;
         }
         .btn-nav-soal.btn-before {
             background: #6c757d;
@@ -856,20 +874,21 @@
             Mata Pelajaran: Memuat...
         </div>
 
-        <!-- TOMBOL BEFORE & NEXT DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
+        <!-- TOMBOL BEFORE, NEXT & SELESAIKAN UJIAN DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
         <div class="soal-nav-bar">
-            <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
+            <div class="soal-nav-left">
+                <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
+                <button type="button" id="btnNextSoal" class="btn-nav-soal" onclick="navigasiSoal(1)">Next →</button>
+            </div>
             <div class="soal-progress-info">
                 <span id="labelNomorSoal">Soal 1 dari 1</span>
                 <span class="soal-progress-sub" id="labelStatusTerjawab">Terjawab: 0 / 1</span>
             </div>
-            <button type="button" id="btnNextSoal" class="btn-nav-soal" onclick="navigasiSoal(1)">Next →</button>
+            <button type="button" id="btnSelesaiUjian" class="btn-selesai-top" onclick="selesaiUjian(false)">Selesaikan & Kirim Ujian</button>
         </div>
 
         <!-- KONTAINER 1 SOAL AKTIF -->
         <div id="soalContainer"></div>
-
-        <button id="btnSelesaiUjian" onclick="selesaiUjian(false)" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
     </div>
 
     <!-- 4. VIEW PANEL ADMIN MASTER -->
@@ -921,7 +940,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
                     <div style="display: flex; gap: 5px; align-items: center;">
-                        <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                        <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                        <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #dc3545;">🗑️ Hapus Semua Log</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -2355,6 +2375,75 @@ async function fetchLogLoginFromGAS() {
         console.error("Gagal mengambil log login dari GAS:", e);
     }
     renderTabelSiswaLogin();
+}
+
+async function hapusSemuaLogSpreadsheet() {
+    const jumlahLog = Array.isArray(logSiswaLogin) ? logSiswaLogin.length : 0;
+    if (jumlahLog === 0) {
+        alert("Tidak ada data log pengerjaan & nilai untuk dihapus.");
+        return;
+    }
+
+    if (!confirm(`PERINGATAN! Yakin ingin menghapus SEMUA data Log Pengerjaan & Nilai Siswa (${jumlahLog} baris) di Spreadsheet?`)) return;
+    if (!confirm("Konfirmasi terakhir: Seluruh log pengerjaan & nilai siswa di Spreadsheet akan dihapus permanen. Lanjutkan?")) return;
+
+    showLoading("Menghapus seluruh log pengerjaan & nilai di Spreadsheet...");
+    try {
+        const candidateActions = [
+            "clearLogLogin",
+            "resetLogLogin",
+            "deleteAllLogLogin",
+            "clearLog",
+            "deleteLog",
+            "resetAllSesiAndLog"
+        ];
+
+        let berhasilDiGas = false;
+        let lastGasMessage = "";
+
+        for (const actName of candidateActions) {
+            try {
+                const payload = actName === "resetAllSesiAndLog"
+                    ? { action: actName, onlyLog: true, includeDriveAssets: false }
+                    : { action: actName };
+
+                const res = await axios.post(GAS_URL, JSON.stringify(payload));
+                const data = res && res.data;
+
+                if (data && data.status === "success") {
+                    berhasilDiGas = true;
+                    break;
+                }
+
+                const msg = (data && data.message) ? String(data.message) : "";
+                lastGasMessage = msg || lastGasMessage;
+
+                if (!msg.toLowerCase().includes("invalid action")) {
+                    break;
+                }
+            } catch (reqErr) {
+                lastGasMessage = reqErr.message || lastGasMessage;
+            }
+        }
+
+        logSiswaLogin = [];
+        renderTabelSiswaLogin();
+        hideLoading();
+
+        if (berhasilDiGas) {
+            await fetchLogLoginFromGAS();
+            alert("Seluruh log pengerjaan & nilai siswa di Spreadsheet berhasil dihapus!");
+        } else {
+            alert(
+                "Tampilan Log Pengerjaan & Nilai di aplikasi sudah dibersihkan, namun endpoint GAS saat ini belum mendukung aksi hapus log (" +
+                (lastGasMessage || "Invalid action") +
+                ").\n\nTambahkan handler aksi `clearLogLogin` di kode Google Apps Script (doPost) agar penghapusan tersimpan permanen di Spreadsheet."
+            );
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal menghapus log di Spreadsheet: " + e.message);
+    }
 }
 
 // ================= KONTROL SESI & RESET LOGIN ADMIN (GAS) =================
