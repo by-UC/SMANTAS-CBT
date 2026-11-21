@@ -3708,8 +3708,10 @@ function prosesExportHasilMultiKelasXlsx(mapelEnc, kelasJson) {
     }
 
     const safeMapel = mapel.replace(/\s+/g, '_');
+    const safeKelasGroup = kelasList.map(k => String(k || '').trim().replace(/\s+/g, '_')).filter(Boolean).join(',');
+    const kelasTag = safeKelasGroup ? `_(${safeKelasGroup})` : '';
     const tgl = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `Hasil_${safeMapel}_Semua_Kelas_${tgl}.xlsx`);
+    XLSX.writeFile(workbook, `Hasil_${safeMapel}_Semua_Kelas${kelasTag}_${tgl}.xlsx`);
     tutupModalExport();
 }
 
