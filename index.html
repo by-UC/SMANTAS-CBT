@@ -350,7 +350,7 @@
             text-align: center;
         }
 
-        /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA (TAMBAH SISWA & UPLOAD DATA SISWA) */
+        /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA */
         .siswa-top-two-col {
             display: flex;
             gap: 10px;
@@ -458,6 +458,32 @@
             border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 13px; font-weight: bold; color: #0056b3; }
+
+        /* Token Box Admin (tersimpan di Google Drive token_cbt.json) */
+        .token-live-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            background: #e6f4f4;
+            border: 1px solid #008080;
+            border-radius: 5px;
+            padding: 7px 10px;
+            margin-bottom: 8px;
+        }
+        .token-live-code {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #0056b3;
+        }
+        .token-live-timer {
+            font-size: 11px;
+            color: #006666;
+            font-weight: bold;
+            text-align: right;
+        }
 
         /* BADGE PILL RIWAYAT STATUS UJIAN */
         .status-pill-wrap {
@@ -774,6 +800,10 @@
                 <option value="">-- Pilih Mata Pelajaran --</option>
             </select>
         </div>
+        <div class="form-group" id="groupTokenUjianSiswa">
+            <label>Token Ujian (4 Digit):</label>
+            <input type="text" id="inputTokenSiswa" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Masukkan 4 digit token dari pengawas..." style="font-family:monospace; font-size:15px; letter-spacing:3px; text-align:center;">
+        </div>
         <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 10px; border-radius:4px; font-size:11.5px; margin-bottom:10px;">
             <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan ujian langsung dikumpulkan!
         </div>
@@ -1071,11 +1101,45 @@
             </div>
         </div>
 
-        <!-- TAB 5: PENGATURAN (2 BARIS: BARIS 1 DURASI & PASSWORD, BARIS 2 BACKUP & RESET DB) -->
+        <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
+            <!-- BARIS 1: TOKEN OTOMATIS 4 DIGIT & DURASI JP -->
             <div class="siswa-top-two-col">
-                <!-- KOLOM KIRI: PENGATURAN JP -->
+                <!-- KOLOM KIRI: PENGATURAN TOKEN OTOMATIS (DRIVE: token_cbt.json) -->
+                <div class="admin-card">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px;">
+                            <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
+                        </div>
+                        <div class="token-live-box">
+                            <div>
+                                <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.json</code>):</div>
+                                <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                            </div>
+                            <div class="token-live-timer">
+                                <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
+                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin-top:4px; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                            </div>
+                        </div>
+                        <div class="row-flex">
+                            <div class="form-group">
+                                <label>Interval Ganti Token (Menit):</label>
+                                <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Wajib Token Saat Mulai Ujian:</label>
+                                <select id="settingWajibToken">
+                                    <option value="true">Aktif (Wajib)</option>
+                                    <option value="false">Nonaktif</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan Token ke Drive</button>
+                </div>
+
+                <!-- KOLOM KANAN: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
@@ -1087,8 +1151,11 @@
                     </div>
                     <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
                 </div>
+            </div>
 
-                <!-- KOLOM KANAN: PASSWORD ADMIN -->
+            <!-- BARIS 2: PASSWORD ADMIN & BACKUP/RESTORE DB -->
+            <div class="siswa-top-two-col">
+                <!-- KOLOM KIRI: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
@@ -1104,11 +1171,8 @@
                     </div>
                     <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 7px 10px;">Simpan Password Baru</button>
                 </div>
-            </div>
 
-            <!-- BARIS 2: BACKUP/RESTORE & RESET DB -->
-            <div class="siswa-top-two-col">
-                <!-- KOLOM KIRI: BACKUP & RESTORE DB -->
+                <!-- KOLOM KANAN: BACKUP & RESTORE DB -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
@@ -1122,14 +1186,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- KOLOM KANAN: HAPUS / RESET DB -->
-                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+            <!-- BARIS 3: HAPUS / RESET DB -->
+            <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
-                        <p style="font-size: 12px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
+                        <h4 style="margin: 0 0 4px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 12px; color: #555; margin: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
                     </div>
-                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 10px;">Hapus Seluruh Database (Reset DB)</button>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px; width:auto;">Hapus Seluruh Database (Reset DB)</button>
                 </div>
             </div>
         </div>
@@ -1144,13 +1210,174 @@ const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f93
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxjMvYkwrO3pv-ZgFSd5GJHc3KK1mrla9f8bs6Q-OTMlXx5g1C72G-lN9DAy1XD_U5h/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwwvaLo-vMIbS80DeCwoLk5jvY612mc6RipeXZ4cIM0NW0myRkcwzHMd0rPaU0z2w2Q/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
+
+// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.json) =================
+let tokenDriveState = {
+    token: "----",
+    intervalMenit: 5,
+    wajibToken: true,
+    expiresAt: 0,
+    serverOffsetMs: 0
+};
+let tokenCountdownTimerId = null;
+let isSyncingTokenFromDrive = false;
+
+function formatDetikKeMmSs(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+async function fetchTokenDariDrive(silent = true) {
+    if (isSyncingTokenFromDrive) return tokenDriveState;
+    isSyncingTokenFromDrive = true;
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getTokenConfig" }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            sinkronkanInputPengaturanToken();
+            sinkronkanTampilanInputTokenSiswa();
+        }
+    } catch (e) {
+        if (!silent) console.error("Gagal mengambil token_cbt.json dari Google Drive:", e);
+    } finally {
+        isSyncingTokenFromDrive = false;
+    }
+    return tokenDriveState;
+}
+
+function updateTampilanTokenAdmin() {
+    const codeEl = document.getElementById("adminTokenAktifDisplay");
+    const timerEl = document.getElementById("adminTokenCountdown");
+    if (!codeEl || !timerEl) return;
+
+    codeEl.innerText = tokenDriveState.token || "----";
+
+    if (!tokenDriveState.expiresAt) {
+        timerEl.innerText = "--:--";
+        return;
+    }
+
+    const estServerNow = Date.now() + (tokenDriveState.serverOffsetMs || 0);
+    const remainingMs = tokenDriveState.expiresAt - estServerNow;
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    timerEl.innerText = formatDetikKeMmSs(remainingSec);
+
+    if (remainingMs <= 0 && !isSyncingTokenFromDrive) {
+        fetchTokenDariDrive(true);
+    }
+}
+
+function mulaiTimerTokenAdmin() {
+    if (tokenCountdownTimerId) clearInterval(tokenCountdownTimerId);
+    updateTampilanTokenAdmin();
+    tokenCountdownTimerId = setInterval(updateTampilanTokenAdmin, 1000);
+}
+
+function sinkronkanInputPengaturanToken() {
+    const inpInterval = document.getElementById("settingTokenIntervalMenit");
+    const selWajib = document.getElementById("settingWajibToken");
+    if (inpInterval) inpInterval.value = tokenDriveState.intervalMenit || 5;
+    if (selWajib) selWajib.value = tokenDriveState.wajibToken !== false ? "true" : "false";
+    updateTampilanTokenAdmin();
+}
+
+async function simpanPengaturanToken() {
+    const intervalVal = parseInt(document.getElementById("settingTokenIntervalMenit").value, 10);
+    const wajibVal = document.getElementById("settingWajibToken").value === "true";
+
+    if (isNaN(intervalVal) || intervalVal < 1) {
+        alert("Interval ganti token minimal 1 menit!");
+        return;
+    }
+
+    showLoading("Menyimpan pengaturan & file token_cbt.json ke Google Drive...");
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "saveTokenConfig",
+            intervalMenit: intervalVal,
+            wajibToken: wajibVal,
+            regenerate: false
+        }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || intervalVal,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            sinkronkanInputPengaturanToken();
+            sinkronkanTampilanInputTokenSiswa();
+            hideLoading();
+            alert(`Berhasil! File token_cbt.json di Google Drive diperbarui (interval ${intervalVal} menit).`);
+        } else {
+            hideLoading();
+            alert("Gagal menyimpan token ke Drive: " + (res.data?.message || "Unknown error"));
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal terhubung ke GAS saat menyimpan token: " + e.message);
+    }
+}
+
+async function acakUlangTokenDrive() {
+    if (!confirm("Acak ulang token 4 digit di file token_cbt.json (Google Drive) sekarang?")) return;
+    showLoading("Mengacak ulang token_cbt.json di Google Drive...");
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "saveTokenConfig",
+            intervalMenit: tokenDriveState.intervalMenit || 5,
+            wajibToken: tokenDriveState.wajibToken !== false,
+            regenerate: true
+        }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            updateTampilanTokenAdmin();
+        }
+    } catch (e) {
+        alert("Gagal mengacak token di Drive: " + e.message);
+    }
+    hideLoading();
+}
+
+function sinkronkanTampilanInputTokenSiswa() {
+    const groupEl = document.getElementById("groupTokenUjianSiswa");
+    const inpEl = document.getElementById("inputTokenSiswa");
+    if (!groupEl) return;
+    if (tokenDriveState.wajibToken !== false) {
+        groupEl.style.display = "block";
+    } else {
+        groupEl.style.display = "none";
+        if (inpEl) inpEl.value = "";
+    }
+}
+// ==================================================================================
 
 // ================= HEADER SEJAJAR ADMIN =================
 function sinkronkanHeaderAdmin() {
@@ -1432,6 +1659,7 @@ function toggleRoleLogin() {
         setCompactMode(true);
 
         if (currentSiswaObj) {
+            sinkronkanTampilanInputTokenSiswa();
             document.getElementById('viewPilihUjianSiswa').classList.add('active');
         } else {
             document.getElementById('viewLoginSiswa').classList.add('active');
@@ -1971,8 +2199,9 @@ async function resetLoginSiswaAdmin(username) {
 }
 
 async function refreshSemuaDataAdmin() {
-    showLoading("Menyegarkan data Master Gist, Sesi GAS & Log Spreadsheet...");
+    showLoading("Menyegarkan data Master Gist, Token Drive, Sesi GAS & Log...");
     await fetchCbtDatabase(true);
+    await fetchTokenDariDrive(true);
     await fetchSesiFromGAS(true);
     await fetchLogLoginFromGAS();
     hideLoading();
@@ -2655,6 +2884,96 @@ function konversiHtmlKeFormatCbtDenganLink(element) {
     return textOut;
 }
 
+// ================= HELPER COCOK & HAPUS SOAL DI SOAL.JSON =================
+function normStr(val) {
+    return String(val || "").trim().toLowerCase();
+}
+
+function getItemMapelNorm(item) {
+    if (!item || typeof item !== "object") return "";
+    if (item.mapel) return normStr(item.mapel);
+    if (item.namaUjian) {
+        const parts = String(item.namaUjian).split("_");
+        if (parts.length > 1) return normStr(parts.slice(0, -1).join(" "));
+    }
+    return "";
+}
+
+function itemCocokMapel(item, mapelTarget) {
+    const targetNorm = normStr(mapelTarget);
+    if (!targetNorm) return false;
+    const itemMapel = getItemMapelNorm(item);
+    if (itemMapel === targetNorm) return true;
+    const slugTarget = targetNorm.replace(/\s+/g, "_");
+    const slugItem = itemMapel.replace(/\s+/g, "_");
+    if (slugItem === slugTarget) return true;
+    if (item.namaUjian && normStr(item.namaUjian).startsWith(slugTarget + "_")) return true;
+    return false;
+}
+
+function hapusKelasDariSoalList(contentSoal, mapel, kelasList) {
+    const targetKelasSet = new Set((kelasList || []).map(k => normStr(k)).filter(Boolean));
+    const oldFolderNames = new Set(
+        (kelasList || []).map(k => normStr(`${String(mapel || "").replace(/\s+/g, "_")}_${String(k || "").replace(/\s+/g, "_")}`))
+    );
+
+    const updated = [];
+    let dihapusCount = 0;
+
+    contentSoal.forEach(item => {
+        if (!item || typeof item !== "object") return;
+
+        if (itemCocokMapel(item, mapel)) {
+            if (Array.isArray(item.kelas) && item.kelas.length > 0) {
+                const sebelumLen = item.kelas.length;
+                const sisaKelas = item.kelas.filter(k => !targetKelasSet.has(normStr(k)));
+                if (sisaKelas.length < sebelumLen) {
+                    dihapusCount += (sebelumLen - sisaKelas.length);
+                }
+                if (sisaKelas.length > 0) {
+                    updated.push({ ...item, kelas: sisaKelas });
+                }
+                return;
+            }
+
+            if (item.namaUjian && oldFolderNames.has(normStr(item.namaUjian))) {
+                dihapusCount++;
+                return;
+            }
+
+            if (!Array.isArray(item.kelas) || item.kelas.length === 0) {
+                dihapusCount++;
+                return;
+            }
+        }
+
+        updated.push(item);
+    });
+
+    return { updated, dihapusCount };
+}
+
+async function eksekusiHapusSoalDiGist(mapel, kelasList) {
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const files = gistRes.data.files || {};
+    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    const contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
+
+    const resultHapus = hapusKelasDariSoalList(contentSoal, mapel, kelasList);
+    const serialized = serializeSoalJsonOneMapelPerLine(resultHapus.updated);
+
+    await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+        files: { [filename]: { content: serialized } }
+    }, githubHeaders);
+
+    bersihkanCacheSoal();
+    const parsedFresh = parseSoalJsonFlexible(serialized);
+    simpanCacheSoal("admin_api", parsedFresh);
+    simpanCacheSoal("raw_exam", parsedFresh);
+    return resultHapus.dihapusCount;
+}
+
 async function simpanJadwalDanSoal() {
     let mapel = document.getElementById('jadwalMapel').value;
     let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
@@ -2690,30 +3009,17 @@ async function simpanJadwalDanSoal() {
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
         try {
             let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
-            let filename = Object.keys(gistRes.data.files)[0];
-            let rawContent = gistRes.data.files[filename].content;
+            const files = gistRes.data.files || {};
+            const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+            let rawContent = files[filename].content;
             
             let contentSoal = parseSoalJsonFlexible(rawContent);
-
-            contentSoal.forEach(item => {
-                if(item.mapel === mapel && Array.isArray(item.kelas)) {
-                    item.kelas = item.kelas.filter(k => !checkedKelas.includes(k));
-                }
-            });
-            const oldFolderNames = checkedKelas.map(k => `${mapel.replace(/\s+/g, '_')}_${k.replace(/\s+/g, '_')}`);
-            contentSoal = contentSoal.filter(item => {
-                if(Array.isArray(item.kelas) && item.mapel === mapel) {
-                    return item.kelas.length > 0;
-                }
-                if(item.namaUjian && oldFolderNames.includes(item.namaUjian)) {
-                    return false;
-                }
-                return true;
-            });
+            const cleaned = hapusKelasDariSoalList(contentSoal, mapel, checkedKelas);
+            contentSoal = cleaned.updated;
 
             parsedSoal.forEach(newItem => {
                 const existingIdentical = contentSoal.find(oldItem =>
-                    oldItem.mapel === newItem.mapel &&
+                    itemCocokMapel(oldItem, newItem.mapel) &&
                     oldItem.soal === newItem.soal &&
                     oldItem.kunci === newItem.kunci &&
                     JSON.stringify(oldItem.options) === JSON.stringify(newItem.options)
@@ -2721,7 +3027,7 @@ async function simpanJadwalDanSoal() {
 
                 if (existingIdentical && Array.isArray(existingIdentical.kelas)) {
                     newItem.kelas.forEach(k => {
-                        if (!existingIdentical.kelas.includes(k)) {
+                        if (!existingIdentical.kelas.some(ek => normStr(ek) === normStr(k))) {
                             existingIdentical.kelas.push(k);
                         }
                     });
@@ -3025,11 +3331,13 @@ function prosesExportHasilMultiKelasXlsx(mapelEnc, kelasJson) {
 
 // ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
 function cekSoalCocokKelas(item, mapel, kelasTarget) {
-    if(item.mapel === mapel && Array.isArray(item.kelas)) {
-        return item.kelas.includes(kelasTarget);
+    if (!itemCocokMapel(item, mapel)) return false;
+    const targetNorm = normStr(kelasTarget);
+    if (Array.isArray(item.kelas) && item.kelas.length > 0) {
+        return item.kelas.some(k => normStr(k) === targetNorm);
     }
-    const legacyName = `${mapel.replace(/\s+/g, '_')}_${kelasTarget.replace(/\s+/g, '_')}`;
-    return item.namaUjian === legacyName;
+    const legacyName = normStr(`${String(mapel || "").replace(/\s+/g, '_')}_${String(kelasTarget || "").replace(/\s+/g, '_')}`);
+    return normStr(item.namaUjian) === legacyName;
 }
 
 async function lihatSoalJadwal(mapelEnc, kelasJson) {
@@ -3042,10 +3350,11 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
 
     const seenIds = new Set();
     const matchedSoal = [];
-    allSoal.forEach(item => {
+    allSoal.forEach((item, idx) => {
         const cocok = kelasList.some(k => cekSoalCocokKelas(item, mapel, k));
-        if(cocok && !seenIds.has(item.id)) {
-            seenIds.add(item.id);
+        const keyId = item.id !== undefined && item.id !== null ? String(item.id) : `idx_${idx}`;
+        if(cocok && !seenIds.has(keyId)) {
+            seenIds.add(keyId);
             matchedSoal.push(item);
         }
     });
@@ -3114,38 +3423,17 @@ function tutupModalSoal() {
 }
 
 async function hapusSoalUntukKelas(mapel, kelasList) {
-    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari Gist?`)) return;
-    showLoading("Menghapus soal dari Gist...");
+    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari soal.json di Gist?`)) return;
+    showLoading("Menghapus soal dari soal.json di Gist...");
 
-    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
     try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
-        let filename = Object.keys(gistRes.data.files)[0];
-        let contentSoal = parseSoalJsonFlexible(gistRes.data.files[filename].content || "[]");
-
-        contentSoal.forEach(item => {
-            if(item.mapel === mapel && Array.isArray(item.kelas)) {
-                item.kelas = item.kelas.filter(k => !kelasList.includes(k));
-            }
-        });
-        const oldFolderNames = kelasList.map(k => `${mapel.replace(/\s+/g, '_')}_${k.replace(/\s+/g, '_')}`);
-        contentSoal = contentSoal.filter(item => {
-            if(Array.isArray(item.kelas) && item.mapel === mapel) return item.kelas.length > 0;
-            if(item.namaUjian && oldFolderNames.includes(item.namaUjian)) return false;
-            return true;
-        });
-
-        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-            files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
-        }, githubHeaders);
-        bersihkanCacheSoal();
-
+        await eksekusiHapusSoalDiGist(mapel, kelasList);
         hideLoading();
         tutupModalSoal();
-        alert("Soal berhasil dihapus dari Gist!");
+        alert(`Soal untuk ${mapel} (${kelasList.join(', ')}) berhasil dihapus dari soal.json!`);
     } catch(err) {
         hideLoading();
-        alert("Gagal menghapus soal: " + err.message);
+        alert("Gagal menghapus soal dari soal.json: " + err.message);
     }
 }
 
@@ -3154,16 +3442,24 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
 
-    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')}?`)) return;
-    showLoading("Menghapus jadwal...");
+    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus menghapus soalnya di soal.json?`)) return;
+    showLoading("Menghapus jadwal & membersihkan soal di soal.json...");
 
     indices.sort((a, b) => b - a).forEach(idx => {
         daftarJadwalUjian.splice(idx, 1);
     });
 
     await saveCbtDatabaseToGist();
+
+    try {
+        await eksekusiHapusSoalDiGist(mapel, kelasList);
+    } catch (err) {
+        console.error("Gagal membersihkan soal di soal.json saat hapus jadwal:", err);
+    }
+
     renderTabelJadwal();
     hideLoading();
+    alert(`Jadwal dan soal "${mapel}" (${kelasList.join(', ')}) berhasil dihapus!`);
 }
 
 function renderTabelSiswaLogin() {
@@ -3186,16 +3482,17 @@ function renderTabelSiswaLogin() {
     });
 }
 
-// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT) =================
+// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT + TOKEN DRIVE) =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
 
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
-    showLoading("Memverifikasi akun & sesi perangkat di GAS...");
+    showLoading("Memverifikasi akun, sesi & konfigurasi token...");
     await fetchCbtDatabase(false);
     await fetchSesiFromGAS(true);
+    await fetchTokenDariDrive(true);
 
     let siswa = databaseSiswa.find(s => s.username === username);
     if(!siswa) { 
@@ -3267,6 +3564,10 @@ async function autentikasiSiswa() {
         });
     }
 
+    sinkronkanTampilanInputTokenSiswa();
+    const inpToken = document.getElementById('inputTokenSiswa');
+    if (inpToken) inpToken.value = "";
+
     document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewLoginSiswa').classList.remove('active');
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
@@ -3329,6 +3630,29 @@ function isCurrentlyFullscreen() {
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
     if(!mapel) { alert("Pilih mata pelajaran ujian yang tersedia terlebih dahulu!"); return; }
+
+    const tokenInput = String(document.getElementById('inputTokenSiswa')?.value || "").trim();
+    if (tokenDriveState.wajibToken !== false && !tokenInput) {
+        alert("Masukkan 4 digit token ujian terlebih dahulu!");
+        return;
+    }
+
+    showLoading("Memverifikasi token ujian dari Google Drive...");
+    try {
+        const verRes = await axios.post(GAS_URL, JSON.stringify({
+            action: "verifyToken",
+            token: tokenInput
+        }));
+        hideLoading();
+        if (!verRes.data || verRes.data.status !== "success" || verRes.data.valid !== true) {
+            alert("Token 4 digit salah atau sudah berganti! Minta token terbaru kepada pengawas.");
+            return;
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal memverifikasi token ujian: " + e.message);
+        return;
+    }
 
     await masukFullscreenWajib();
 
@@ -3709,6 +4033,8 @@ function switchAdminTab(tabName) {
         document.getElementById('adminTabSettings').classList.add('active');
         updateLabelJp();
         renderAdminPasswordDisplay();
+        fetchTokenDariDrive(true);
+        mulaiTimerTokenAdmin();
     }
 }
 
@@ -3744,6 +4070,7 @@ function hideLoading() {
 window.onload = async function() {
     showLoading("Memuat data sistem...");
     await fetchCbtDatabase(true);
+    await fetchTokenDariDrive(true);
     hideLoading();
 
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
