@@ -409,6 +409,40 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-info:hover { background: #138496; }
 
+        /* TOMBOL RESET MAPEL & RESET PERANGKAT */
+        .reset-aksi-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            align-items: center;
+        }
+        .btn-reset-mapel {
+            width: auto;
+            padding: 3px 6px;
+            font-size: 10px;
+            line-height: 1.15;
+            border-radius: 3px;
+            background: #ffc107;
+            color: #212529;
+            font-weight: bold;
+        }
+        .btn-reset-mapel:hover {
+            background: #e0a800;
+        }
+        .btn-reset-perangkat {
+            width: auto;
+            padding: 3px 6px;
+            font-size: 10px;
+            line-height: 1.15;
+            border-radius: 3px;
+            background: #fd7e14;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .btn-reset-perangkat:hover {
+            background: #e36a08;
+        }
+
         /* PILIH KELAS 7 KOLOM + PILIH SEMUA PER BARIS */
         .checkbox-grid {
             display: flex;
@@ -839,7 +873,10 @@
             <span id="infoKelasSiswa" style="font-size: 12.5px; color: #555;">Kelas: -</span>
         </div>
         <div class="form-group">
-            <label>Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                <label style="margin-bottom:0;">Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
+                <button type="button" onclick="muatUlangDaftarMapelSiswa()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#17a2b8;">↻ Muat Ulang Mapel</button>
+            </div>
             <select id="pilihMapelAktif">
                 <option value="">-- Pilih Mata Pelajaran --</option>
             </select>
@@ -902,12 +939,49 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN, TOKEN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
-            <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GAS) -->
+            <!-- PANEL TOKEN OTOMATIS 4 DIGIT (DIPINDAHKAN KE TAB MONITORING AKUN) -->
+            <div class="admin-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
+                    <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                    <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
+                </div>
+                <div class="token-live-box">
+                    <div>
+                        <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.json</code>):</div>
+                        <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                    </div>
+                    <div class="token-live-timer">
+                        <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
+                        <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
+                            <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
+                            <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-flex" style="align-items:flex-end;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Interval Ganti Token (Menit):</label>
+                        <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Wajib Token Saat Mulai Ujian:</label>
+                        <select id="settingWajibToken">
+                            <option value="true">Aktif (Wajib)</option>
+                            <option value="false">Nonaktif</option>
+                        </select>
+                    </div>
+                    <div style="flex:0 0 auto; min-width:auto;">
+                        <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 12px; width:auto;">Simpan Pengaturan Token ke Drive</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABEL KONTROL SESI & RESET MAPEL / PERANGKAT SISWA (GAS) -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
+                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
                     <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                         <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 175px; padding: 4px 7px; font-size: 11.5px;">
                         <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #008080;">Cari</button>
@@ -915,7 +989,7 @@
                         <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
+                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script. Gunakan <b>Reset-&lt;Mapel&gt;</b> untuk membuka kunci mapel aktif tertentu, atau <b>Reset-Perangkat</b> untuk melepas kunci perangkat.</p>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -925,7 +999,7 @@
                                 <th>Kelas</th>
                                 <th>Status Sesi</th>
                                 <th>Perangkat</th>
-                                <th style="width: 145px;">Aksi Reset</th>
+                                <th style="width: 210px;">Aksi Reset</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySesiAktif">
@@ -939,7 +1013,8 @@
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
-                    <div style="display: flex; gap: 5px; align-items: center;">
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 175px; padding: 4px 7px; font-size: 11.5px;">
                         <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
                         <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #dc3545;">🗑️ Hapus Semua Log</button>
                     </div>
@@ -953,10 +1028,11 @@
                                 <th>Mata Pelajaran</th>
                                 <th>Status</th>
                                 <th>Nilai</th>
+                                <th style="width: 90px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySiswaLogin">
-                            <tr><td colspan="5" style="text-align:center;">Memuat data log dari Spreadsheet...</td></tr>
+                            <tr><td colspan="6" style="text-align:center;">Memuat data log dari Spreadsheet...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1156,46 +1232,9 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- BARIS 1: TOKEN OTOMATIS 4 DIGIT & DURASI JP -->
+            <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
             <div class="siswa-top-two-col">
-                <!-- KOLOM KIRI: PENGATURAN TOKEN OTOMATIS (DRIVE: token_cbt.json) -->
-                <div class="admin-card">
-                    <div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px;">
-                            <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
-                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
-                        </div>
-                        <div class="token-live-box">
-                            <div>
-                                <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.json</code>):</div>
-                                <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
-                            </div>
-                            <div class="token-live-timer">
-                                <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
-                                <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
-                                    <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
-                                    <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row-flex">
-                            <div class="form-group">
-                                <label>Interval Ganti Token (Menit):</label>
-                                <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
-                            </div>
-                            <div class="form-group">
-                                <label>Wajib Token Saat Mulai Ujian:</label>
-                                <select id="settingWajibToken">
-                                    <option value="true">Aktif (Wajib)</option>
-                                    <option value="false">Nonaktif</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan Token ke Drive</button>
-                </div>
-
-                <!-- KOLOM KANAN: PENGATURAN JP -->
+                <!-- KOLOM KIRI: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
@@ -1207,11 +1246,8 @@
                     </div>
                     <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
                 </div>
-            </div>
 
-            <!-- BARIS 2: PASSWORD ADMIN & BACKUP/RESTORE DB -->
-            <div class="siswa-top-two-col">
-                <!-- KOLOM KIRI: PASSWORD ADMIN -->
+                <!-- KOLOM KANAN: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
@@ -1227,19 +1263,19 @@
                     </div>
                     <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 7px 10px;">Simpan Password Baru</button>
                 </div>
+            </div>
 
-                <!-- KOLOM KANAN: BACKUP & RESTORE DB -->
-                <div class="admin-card">
-                    <div>
-                        <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
-                        <div class="form-group">
-                            <label>Backup Seluruh Database ke File JSON:</label>
-                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Restore Database dari File Backup (.json):</label>
-                            <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
-                        </div>
+            <!-- BARIS 2: BACKUP/RESTORE DB -->
+            <div class="admin-card">
+                <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                <div class="row-flex">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Backup Seluruh Database ke File JSON:</label>
+                        <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Restore Database dari File Backup (.json):</label>
+                        <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
                     </div>
                 </div>
             </div>
@@ -1295,7 +1331,7 @@ const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f93
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwwvaLo-vMIbS80DeCwoLk5jvY612mc6RipeXZ4cIM0NW0myRkcwzHMd0rPaU0z2w2Q/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbz4xExpcmbVEqGk-NAPrQEJZY2RColGyEcnrv3yvdyxAaA9TTvvGkpgDsNua9JDAU3A/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
@@ -1739,6 +1775,225 @@ let currentSiswaObj = null;
 let isExamInProgress = false;
 let isSubmittingExam = false;
 
+// ================= SESI LOGIN SISWA LOKAL & KUNCI PER MAPEL (REVISI 0) =================
+const SISWA_SESSION_STORAGE_KEY = "smantas_cbt_siswa_session_v1";
+
+function simpanSesiSiswaLokal(sessionObj) {
+    try {
+        localStorage.setItem(SISWA_SESSION_STORAGE_KEY, JSON.stringify(sessionObj));
+    } catch (e) {}
+}
+
+function bacaSesiSiswaLokal() {
+    try {
+        const raw = localStorage.getItem(SISWA_SESSION_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusSesiSiswaLokal() {
+    try {
+        localStorage.removeItem(SISWA_SESSION_STORAGE_KEY);
+    } catch (e) {}
+}
+
+function getLockedMapelStorageKey(username) {
+    return `smantas_cbt_locked_mapel_${String(username || "").trim()}`;
+}
+
+function bacaLockedMapelLokal(username) {
+    try {
+        const raw = localStorage.getItem(getLockedMapelStorageKey(username));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.map(m => normStr(m)).filter(Boolean) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function simpanLockedMapelLokal(username, mapelArr) {
+    try {
+        const unique = [...new Set((mapelArr || []).map(m => normStr(m)).filter(Boolean))];
+        localStorage.setItem(getLockedMapelStorageKey(username), JSON.stringify(unique));
+    } catch (e) {}
+}
+
+function tandaiMapelTerkunciLokal(username, mapelName) {
+    if (!username || !mapelName) return;
+    const current = bacaLockedMapelLokal(username);
+    const mNorm = normStr(mapelName);
+    if (!current.includes(mNorm)) {
+        current.push(mNorm);
+        simpanLockedMapelLokal(username, current);
+    }
+}
+
+function bukaKunciMapelLokal(username, mapelName = null) {
+    if (!username) return;
+    if (!mapelName) {
+        try {
+            localStorage.removeItem(getLockedMapelStorageKey(username));
+        } catch (e) {}
+        return;
+    }
+    const target = normStr(mapelName);
+    const sisa = bacaLockedMapelLokal(username).filter(m => m !== target);
+    simpanLockedMapelLokal(username, sisa);
+}
+
+function getUnlockedMapelList(username) {
+    try {
+        const raw = localStorage.getItem(`smantas_cbt_unlocked_mapel_${String(username || "").trim()}`);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function tandaiMapelDiresetLokal(username, mapelName) {
+    if (!username || !mapelName) return;
+    bukaKunciMapelLokal(username, mapelName);
+    const list = getUnlockedMapelList(username);
+    const mNorm = normStr(mapelName);
+    const filtered = list.filter(item => normStr(item.mapel) !== mNorm);
+    filtered.push({ mapel: mapelName, unlockedAt: Date.now() });
+    try {
+        localStorage.setItem(`smantas_cbt_unlocked_mapel_${String(username || "").trim()}`, JSON.stringify(filtered));
+    } catch (e) {}
+}
+
+function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
+    const targetMapel = normStr(mapelName);
+    if (!targetMapel) return false;
+
+    const sess = sesiLoginSiswa[username];
+    const sessStatus = sess ? String(sess.status || "").trim() : "";
+    const sessMapelNorm = sess ? normStr(sess.mapel) : "";
+    const resetTerbaru = sessStatus.endsWith("Direset");
+
+    // Jika admin mereset sesi secara spesifik untuk mapel tersebut
+    if (resetTerbaru && sessMapelNorm === targetMapel) {
+        bukaKunciMapelLokal(username, mapelName);
+        return false;
+    }
+
+    // Cek daftar mapel terkunci di penyimpanan lokal perangkat
+    const lockedLocal = bacaLockedMapelLokal(username);
+    if (lockedLocal.includes(targetMapel)) {
+        return true;
+    }
+
+    // Cek riwayat log spreadsheet untuk siswa & mapel ini
+    const logs = Array.isArray(logSiswaLogin) ? logSiswaLogin : [];
+    const namaNorm = normStr(namaSiswa || (sess && sess.nama) || "");
+    const kelasNorm = normStr(kelasSiswa || (sess && sess.kelas) || "");
+
+    const logMapelIni = logs.filter(l =>
+        normStr(l.mapel) === targetMapel &&
+        (!namaNorm || normStr(l.nama) === namaNorm) &&
+        (!kelasNorm || normStr(l.kelas) === kelasNorm)
+    );
+
+    if (logMapelIni.length > 0) {
+        const lastLog = logMapelIni[logMapelIni.length - 1];
+        const st = String(lastLog.status || "");
+        if (st.includes("Selesai") || st.toLowerCase().includes("curang")) {
+            if (!resetTerbaru) {
+                return true;
+            }
+        }
+    }
+
+    // Fallback cek sesi GAS jika mapel pada sesi sama dengan mapel yang dicek
+    if (sess && sessMapelNorm === targetMapel && cekStatusTerkunci(sessStatus)) {
+        return true;
+    }
+
+    return false;
+}
+
+function renderOpsiMapelUntukSiswa(siswa) {
+    const selectMapel = document.getElementById('pilihMapelAktif');
+    if (!selectMapel || !siswa) return;
+
+    document.getElementById('salamSiswa').innerText = `Selamat Datang, ${siswa.nama}`;
+    document.getElementById('infoKelasSiswa').innerText = `Kelas: ${siswa.kelas}`;
+
+    selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
+
+    const now = getLocalIsoNow();
+    const kelasTrim = String(siswa.kelas || "").trim().toLowerCase();
+
+    const jadwalAktifKelas = daftarJadwalUjian.filter(j => {
+        const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
+        const waktuMatch = (now >= j.mulai && now <= j.selesai);
+        return kelasMatch && waktuMatch;
+    });
+
+    if (jadwalAktifKelas.length === 0) {
+        selectMapel.innerHTML = '<option value="">-- Tidak ada jadwal ujian aktif untuk kelas & waktu saat ini --</option>';
+        return;
+    }
+
+    jadwalAktifKelas.forEach(j => {
+        const terkunci = isMapelTerkunciUntukSiswa(siswa.username, siswa.nama, siswa.kelas, j.mapel);
+        if (terkunci) {
+            selectMapel.innerHTML += `<option value="${j.mapel}" disabled style="color:#999; background:#f1f1f1;">[TERKUNCI - Selesai/Curang] ${j.mapel}</option>`;
+        } else {
+            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Selesai: ${j.selesai.replace('T', ' ')})</option>`;
+        }
+    });
+}
+
+async function muatUlangDaftarMapelSiswa() {
+    if (!currentSiswaObj) return;
+    showLoading("Memperbarui daftar mata pelajaran & status ujian...");
+    await fetchCbtDatabase(true);
+    await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
+    await fetchTokenDariDrive(true);
+    renderOpsiMapelUntukSiswa(currentSiswaObj);
+    sinkronkanTampilanInputTokenSiswa();
+    hideLoading();
+}
+
+async function tampilkanHalamanPilihUjianSiswa(siswa) {
+    currentSiswaObj = siswa;
+    namaSiswaLogin = siswa.nama;
+    kelasSiswaLogin = siswa.kelas;
+
+    simpanSesiSiswaLokal({
+        username: siswa.username,
+        nama: siswa.nama,
+        kelas: siswa.kelas,
+        deviceId: getOrCreateDeviceId()
+    });
+
+    await fetchLogLoginFromGAS();
+    renderOpsiMapelUntukSiswa(siswa);
+    sinkronkanTampilanInputTokenSiswa();
+
+    const inpToken = document.getElementById('inputTokenSiswa');
+    if (inpToken) inpToken.value = "";
+
+    currentLoginRole = 'siswa';
+    const btnToggle = document.getElementById('btnRoleToggle');
+    if (btnToggle) {
+        btnToggle.innerText = "Login Siswa";
+        btnToggle.classList.remove('admin-mode');
+    }
+
+    setCompactMode(true);
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('tabMenu').style.display = 'none';
+    document.getElementById('viewPilihUjianSiswa').classList.add('active');
+    sinkronkanHeaderAdmin();
+}
+// ====================================================================================
+
 function getOrCreateDeviceId() {
     let devId = localStorage.getItem("smantas_cbt_device_id");
     if (!devId) {
@@ -1785,6 +2040,7 @@ function toggleRoleLogin() {
         setCompactMode(true);
 
         if (currentSiswaObj) {
+            renderOpsiMapelUntukSiswa(currentSiswaObj);
             sinkronkanTampilanInputTokenSiswa();
             document.getElementById('viewPilihUjianSiswa').classList.add('active');
         } else {
@@ -1929,7 +2185,7 @@ async function cekRateLimitGistApi(silent = false) {
 
 // ================= DATABASE MASTER GIST (HEMAT KUOTA: RAW-FIRST + DIRECT PATCH) =================
 const CBT_DB_CACHE_KEY = `smantas_cbt_master_cache_${CBT_GIST_ID}`;
-const CBT_DB_CACHE_TTL_MS = 2 * 60 * 1000; // 2 menit cache lokal
+const CBT_DB_CACHE_TTL_MS = 2 * 60 * 1000;
 
 function terapkanDataCbtMaster(data) {
     if (!data || typeof data !== 'object') return;
@@ -2002,7 +2258,6 @@ async function fetchCbtDatabase(forceRefresh = false, preferApi = false) {
                 data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
             }
         } else {
-            // Utamakan Gist Raw (tidak memakan kuota Gist API) dengan bucket 30 detik
             try {
                 const bucket = forceRefresh ? Date.now() : Math.floor(Date.now() / 30000);
                 let res = await axios.get(`${CBT_GIST_RAW_URL}?t=${bucket}`);
@@ -2044,7 +2299,6 @@ async function saveCbtDatabaseToGist() {
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
     const serialized = JSON.stringify(payloadData);
     try {
-        // Langsung PATCH ke db_cbt.json tanpa GET pendahuluan (hemat 50% kuota API tulis)
         await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
             files: { "db_cbt.json": { content: serialized } }
         }, githubHeaders);
@@ -2123,7 +2377,7 @@ function cekStatusTerkunci(statusStr) {
     const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
     if (tokens.length === 0) return false;
     const terakhir = tokens[tokens.length - 1];
-    if (terakhir === "Direset" || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
+    if (terakhir === "Direset" || terakhir.endsWith("Direset") || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
         return false;
     }
     return terakhir === "Selesai" || terakhir.toLowerCase().startsWith("curang");
@@ -2369,12 +2623,70 @@ async function fetchLogLoginFromGAS() {
     try {
         let res = await axios.post(GAS_URL, JSON.stringify({ action: "getLogLogin" }));
         if(res.data && res.data.status === "success") {
-            logSiswaLogin = res.data.data;
+            logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
         }
     } catch(e) {
         console.error("Gagal mengambil log login dari GAS:", e);
     }
     renderTabelSiswaLogin();
+    renderTabelSesiAktif();
+}
+
+async function hapusBarisLogSpreadsheet(index) {
+    if (!Array.isArray(logSiswaLogin) || index < 0 || index >= logSiswaLogin.length) return;
+    const row = logSiswaLogin[index];
+    const infoLabel = `${row.nama || "-"} (${row.kelas || "-"} - ${row.mapel || "-"})`;
+
+    if (!confirm(`Hapus baris log untuk ${infoLabel}?`)) return;
+
+    showLoading("Menghapus baris log terpilih...");
+    try {
+        const candidateActions = [
+            "deleteLogRow",
+            "deleteLogEntry",
+            "removeLogRow",
+            "deleteLog"
+        ];
+
+        let berhasilDiGas = false;
+        let lastGasMessage = "";
+
+        for (const actName of candidateActions) {
+            try {
+                const res = await axios.post(GAS_URL, JSON.stringify({
+                    action: actName,
+                    index: index,
+                    row: row
+                }));
+                const data = res && res.data;
+                if (data && data.status === "success") {
+                    berhasilDiGas = true;
+                    break;
+                }
+                const msg = (data && data.message) ? String(data.message) : "";
+                lastGasMessage = msg || lastGasMessage;
+                if (!msg.toLowerCase().includes("invalid action")) {
+                    break;
+                }
+            } catch (reqErr) {
+                lastGasMessage = reqErr.message || lastGasMessage;
+            }
+        }
+
+        logSiswaLogin.splice(index, 1);
+        renderTabelSiswaLogin();
+        renderTabelSesiAktif();
+        hideLoading();
+
+        if (berhasilDiGas) {
+            await fetchLogLoginFromGAS();
+        } else if (lastGasMessage && !lastGasMessage.toLowerCase().includes("invalid action")) {
+            console.warn("GAS hapus baris log:", lastGasMessage);
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal menghapus baris log: " + e.message);
+    }
 }
 
 async function hapusSemuaLogSpreadsheet() {
@@ -2446,11 +2758,69 @@ async function hapusSemuaLogSpreadsheet() {
     }
 }
 
-// ================= KONTROL SESI & RESET LOGIN ADMIN (GAS) =================
+// ================= KONTROL SESI, RESET MAPEL & RESET PERANGKAT ADMIN (GAS) =================
 function resetCariNamaSesi() {
     const inp = document.getElementById('inputCariNamaSesi');
     if (inp) inp.value = "";
     renderTabelSesiAktif();
+}
+
+function kumpulkanMapelAktifSiswa(username, sesiObj) {
+    const mapelSet = new Map();
+    const addMapel = (m) => {
+        const clean = String(m || "").trim();
+        if (!clean || clean === "-") return;
+        const key = normStr(clean);
+        if (!mapelSet.has(key)) mapelSet.set(key, clean);
+    };
+
+    if (sesiObj && sesiObj.mapel) {
+        addMapel(sesiObj.mapel);
+    }
+
+    const lockedArr = bacaLockedMapelLokal(username);
+    lockedArr.forEach(mNorm => {
+        const matched = daftarMapel.find(dm => normStr(dm) === mNorm);
+        addMapel(matched || mNorm);
+    });
+
+    const namaNorm = normStr(sesiObj && sesiObj.nama ? sesiObj.nama : "");
+    const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
+    if (Array.isArray(logSiswaLogin) && (namaNorm || kelasNorm)) {
+        logSiswaLogin.forEach(l => {
+            const cocokNama = !namaNorm || normStr(l.nama) === namaNorm;
+            const cocokKelas = !kelasNorm || normStr(l.kelas) === kelasNorm;
+            if (cocokNama && cocokKelas && l.mapel) {
+                addMapel(l.mapel);
+            }
+        });
+    }
+
+    // Jika belum ada mapel spesifik yang tercatat pada sesi/log/kunci, sediakan mapel yang ada di daftarMapel/jadwal
+    if (mapelSet.size === 0 && kelasNorm) {
+        daftarJadwalUjian.forEach(j => {
+            if (normStr(j.kelas) === kelasNorm && j.mapel) {
+                addMapel(j.mapel);
+            }
+        });
+    }
+
+    return Array.from(mapelSet.values());
+}
+
+function buatTombolResetAksiHtml(username, sesiObj) {
+    const mapelAktifList = kumpulkanMapelAktifSiswa(username, sesiObj);
+    const unameEnc = encodeURIComponent(username);
+    const btns = [];
+
+    mapelAktifList.forEach(mp => {
+        const mpEnc = encodeURIComponent(mp);
+        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${mp}</button>`);
+    });
+
+    btns.push(`<button type="button" onclick="resetPerangkatSiswaAdmin('${unameEnc}')" class="btn-reset-perangkat">Reset-Perangkat</button>`);
+
+    return `<div class="reset-aksi-group">${btns.join("")}</div>`;
 }
 
 function renderTabelSesiAktif() {
@@ -2475,6 +2845,7 @@ function renderTabelSesiAktif() {
         }
         tampilCount++;
         let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
+        const aksiHtml = buatTombolResetAksiHtml(username, s);
 
         tbody.innerHTML += `<tr>
             <td><b>${username}</b></td>
@@ -2482,9 +2853,7 @@ function renderTabelSesiAktif() {
             <td>${s.kelas || '-'}</td>
             <td>${statusBadge}</td>
             <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
-            <td>
-                <button onclick="resetLoginSiswaAdmin('${username}')" class="btn-sm btn-warning">Reset Login / Ujian</button>
-            </td>
+            <td>${aksiHtml}</td>
         </tr>`;
     });
 
@@ -2493,12 +2862,48 @@ function renderTabelSesiAktif() {
     }
 }
 
-async function resetLoginSiswaAdmin(username) {
-    if(!confirm(`Reset kunci perangkat & izinkan ujian ulang untuk akun "${username}"?\nRiwayat status sebelumnya (misal Curang / Selesai) tetap tersimpan dan akan disambung dengan status berikutnya.`)) return;
-    showLoading("Mereset kunci perangkat & menyambung riwayat status di GAS...");
+async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
+    const username = decodeURIComponent(usernameEnc);
+    const mapel = decodeURIComponent(mapelEnc);
+
+    if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nSiswa akan dapat mengerjakan ulang mapel ${mapel}.`)) return;
+
+    showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
+    tandaiMapelDiresetLokal(username, mapel);
+
+    const sesiLama = sesiLoginSiswa[username] || {
+        username: username,
+        deviceId: "",
+        status: "Login Aktif",
+        nama: "",
+        kelas: "",
+        mapel: mapel
+    };
+
+    const statusBaru = gabungRiwayatStatus(sesiLama.status, `Reset-${mapel}`);
+    await setSesiToGAS({
+        username: username,
+        deviceId: sesiLama.deviceId || "",
+        status: statusBaru,
+        nama: sesiLama.nama || "",
+        kelas: sesiLama.kelas || "",
+        mapel: mapel,
+        updatedAt: getLocalIsoNow()
+    });
+
+    await fetchSesiFromGAS(true);
+    hideLoading();
+    alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset!`);
+}
+
+async function resetPerangkatSiswaAdmin(usernameEnc) {
+    const username = decodeURIComponent(usernameEnc);
+    if(!confirm(`Reset kunci perangkat untuk akun "${username}"?\nPerangkat aktif saat ini akan dilepas agar akun dapat login di perangkat lain.`)) return;
+
+    showLoading(`Mereset kunci perangkat untuk ${username}...`);
     const sesiLama = sesiLoginSiswa[username];
     if (sesiLama) {
-        const statusDenganReset = gabungRiwayatStatus(sesiLama.status, "Direset");
+        const statusDenganReset = gabungRiwayatStatus(sesiLama.status, "Reset-Perangkat");
         await setSesiToGAS({
             username: username,
             deviceId: "",
@@ -2511,9 +2916,10 @@ async function resetLoginSiswaAdmin(username) {
     } else {
         await deleteSesiFromGAS(username);
     }
+
     await fetchSesiFromGAS(true);
     hideLoading();
-    alert(`Kunci perangkat untuk "${username}" berhasil di-reset! Riwayat status sebelumnya tetap tercatat.`);
+    alert(`Kunci perangkat untuk "${username}" berhasil di-reset!`);
 }
 
 async function refreshSemuaDataAdmin() {
@@ -2888,7 +3294,6 @@ async function hapusSemuaSiswa() {
     const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim();
     const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim();
 
-    // Jika sedang difilter per kelas/nama, tawarkan opsi hapus sesuai filter atau seluruh database siswa
     let targetSiswa = databaseSiswa;
     let labelScope = `SELURUH data siswa (${databaseSiswa.length} siswa)`;
 
@@ -2919,7 +3324,6 @@ async function hapusSemuaSiswa() {
 
     databaseSiswa = databaseSiswa.filter(s => !targetSet.has(s));
 
-    // Bersihkan sesi lokal terkait username yang dihapus
     usernamesDihapus.forEach(uname => {
         delete sesiLoginSiswa[uname];
     });
@@ -3361,7 +3765,6 @@ async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMape
         const adaKelasLama = itemKelasArr.some(k => oldKelasSet.has(normStr(k)));
         if (!adaKelasLama && itemKelasArr.length > 0) return item;
 
-        // Keluarkan kelas lama dari item, lalu tambahkan kelas baru
         const sisaKelas = itemKelasArr.filter(k => !oldKelasSet.has(normStr(k)));
         newKelasList.forEach(nk => {
             if (!sisaKelas.some(sk => normStr(sk) === normStr(nk))) {
@@ -3995,11 +4398,21 @@ function renderTabelSiswaLogin() {
     let tbody = document.getElementById('tbodySiswaLogin');
     if(!tbody) return;
     tbody.innerHTML = "";
-    if(logSiswaLogin.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
+
+    const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
+
+    if(!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
         return;
     }
-    logSiswaLogin.forEach(l => {
+
+    let tampilCount = 0;
+    logSiswaLogin.forEach((l, idx) => {
+        if (!l) return;
+        if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        tampilCount++;
         let badgeStatus = renderStatusBadgesHtml(l.status);
         tbody.innerHTML += `<tr>
             <td>${l.nama}</td>
@@ -4007,11 +4420,18 @@ function renderTabelSiswaLogin() {
             <td>${l.mapel}</td>
             <td>${badgeStatus}</td>
             <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+            <td>
+                <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
+            </td>
         </tr>`;
     });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+    }
 }
 
-// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT + TOKEN DRIVE) =================
+// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT + KUNCI PER MAPEL) =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
@@ -4039,15 +4459,9 @@ async function autentikasiSiswa() {
     const myDeviceId = getOrCreateDeviceId();
     const existingSession = sesiLoginSiswa[username];
 
-    if(existingSession && cekStatusTerkunci(existingSession.status)) {
-        hideLoading();
-        alert(`Akun Anda terkunci dengan riwayat status: "${existingSession.status}".\nSilakan hubungi Admin untuk mereset akun jika ingin ujian kembali.`);
-        return;
-    }
-
     if(existingSession && existingSession.deviceId && existingSession.deviceId !== myDeviceId) {
         hideLoading();
-        alert("AKSES DITOLAK!\nAkun Anda sedang aktif login di perangkat lain.\nUntuk pindah perangkat, silakan logout dari perangkat sebelumnya atau minta Admin melakukan Reset Login.");
+        alert("AKSES DITOLAK!\nAkun Anda sedang aktif login di perangkat lain.\nUntuk pindah perangkat, silakan logout dari perangkat sebelumnya atau minta Admin melakukan Reset-Perangkat.");
         return;
     }
 
@@ -4066,45 +4480,12 @@ async function autentikasiSiswa() {
     });
     hideLoading();
 
-    currentSiswaObj = siswa;
-    namaSiswaLogin = siswa.nama;
-    kelasSiswaLogin = siswa.kelas;
-
-    document.getElementById('salamSiswa').innerText = `Selamat Datang, ${siswa.nama}`;
-    document.getElementById('infoKelasSiswa').innerText = `Kelas: ${siswa.kelas}`;
-    
-    let selectMapel = document.getElementById('pilihMapelAktif');
-    selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
-
-    const now = getLocalIsoNow();
-    const kelasTrim = siswa.kelas.trim().toLowerCase();
-
-    let jadwalAktifKelas = daftarJadwalUjian.filter(j => {
-        const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
-        const waktuMatch = (now >= j.mulai && now <= j.selesai);
-        return kelasMatch && waktuMatch;
-    });
-
-    if(jadwalAktifKelas.length === 0) {
-        selectMapel.innerHTML = '<option value="">-- Tidak ada jadwal ujian aktif untuk kelas & waktu saat ini --</option>';
-    } else {
-        jadwalAktifKelas.forEach(j => {
-            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Selesai: ${j.selesai.replace('T', ' ')})</option>`;
-        });
-    }
-
-    sinkronkanTampilanInputTokenSiswa();
-    const inpToken = document.getElementById('inputTokenSiswa');
-    if (inpToken) inpToken.value = "";
-
-    document.getElementById('tabMenu').style.display = 'none';
-    document.getElementById('viewLoginSiswa').classList.remove('active');
-    document.getElementById('viewPilihUjianSiswa').classList.add('active');
-    sinkronkanHeaderAdmin();
+    await tampilkanHalamanPilihUjianSiswa(siswa);
 }
 
 async function logoutSiswa() {
     bersihkanCacheSoal();
+    hapusSesiSiswaLokal();
     if(currentSiswaObj) {
         showLoading("Melepaskan sesi perangkat di GAS...");
         await fetchSesiFromGAS(true);
@@ -4159,6 +4540,12 @@ function isCurrentlyFullscreen() {
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
     if(!mapel) { alert("Pilih mata pelajaran ujian yang tersedia terlebih dahulu!"); return; }
+
+    if(currentSiswaObj && isMapelTerkunciUntukSiswa(currentSiswaObj.username, namaSiswaLogin, kelasSiswaLogin, mapel)) {
+        alert(`Mata pelajaran "${mapel}" sudah selesai / terkunci dan harus direset oleh Admin.\nSilakan pilih mata pelajaran lain yang tersedia.`);
+        renderOpsiMapelUntukSiswa(currentSiswaObj);
+        return;
+    }
 
     const tokenInput = String(document.getElementById('inputTokenSiswa')?.value || "").trim();
     if (tokenDriveState.wajibToken !== false && !tokenInput) {
@@ -4273,7 +4660,6 @@ function bacaCadanganJawabanLokal(username, mapel, kelas) {
         if (String(parsed.username || "") !== String(username || "")) return null;
         if (normStr(parsed.mapel) !== normStr(mapel)) return null;
         if (normStr(parsed.kelas) !== normStr(kelas)) return null;
-        // Berlaku maksimal 12 jam
         if (parsed.savedAt && (Date.now() - parsed.savedAt > 12 * 60 * 60 * 1000)) {
             hapusCadanganJawabanLokal();
             return null;
@@ -4345,6 +4731,9 @@ async function prosesAntreanSubmitTertunda(silent = false) {
             await axios.post(GAS_URL, JSON.stringify(pending.logData));
         }
         await axios.post(GAS_URL, JSON.stringify(pending.payload));
+        if (pending.username && pending.mapel) {
+            tandaiMapelTerkunciLokal(pending.username, pending.mapel);
+        }
         hapusAntreanSubmitLokal();
         hapusCadanganJawabanLokal();
         if (!silent) {
@@ -4584,7 +4973,7 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
     lepasPengawasAntiCurang();
 
     showLoading(isCurang 
-        ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci & mengirim jawaban...` 
+        ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci mapel & mengirim jawaban...` 
         : "Mengirim jawaban ke server... Jangan tutup halaman!"
     );
 
@@ -4604,6 +4993,10 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         statusFinal = gabungRiwayatStatus(setelahCurang, "Selesai");
     } else {
         statusFinal = gabungRiwayatStatus(statusSebelum, "Selesai");
+    }
+
+    if (currentSiswaObj && mapelSiswaLogin) {
+        tandaiMapelTerkunciLokal(currentSiswaObj.username, mapelSiswaLogin);
     }
 
     const sesiData = currentSiswaObj ? {
@@ -4631,9 +5024,10 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         nilai: nilaiAkhir, jawaban: jawabanSiswa, status: statusFinal
     };
 
-    // Simpan cadangan lengkap sebelum kirim ke server agar jawaban tidak hilang jika internet putus
     simpanCadanganJawabanLokal();
     simpanAntreanSubmitLokal({
+        username: currentSiswaObj ? currentSiswaObj.username : "",
+        mapel: mapelSiswaLogin,
         sesiData: sesiData,
         logData: logData,
         payload: payload,
@@ -4669,13 +5063,18 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
             document.exitFullscreen().catch(() => {});
         }
         if (isCurang) {
-            alert(`UJIAN DIHENTIKAN OTOMATIS!\nAlasan: ${alasanCurang}.\nStatus: Dianggap Curang / Selesai.\nNilai Anda: ${nilaiAkhir}\n\nAkun Anda terkunci. Hubungi Admin jika perlu reset login.`);
+            alert(`UJIAN DIHENTIKAN OTOMATIS!\nAlasan: ${alasanCurang}.\nStatus: Dianggap Curang / Selesai.\nNilai Anda: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" kini TERKUNCI dan harus direset Admin. Anda tetap bisa memilih mapel lain yang tersedia.`);
         } else if(res.data && res.data.status === "success") {
-            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
         } else {
-            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
         }
-        location.reload();
+
+        if (currentSiswaObj) {
+            await tampilkanHalamanPilihUjianSiswa(currentSiswaObj);
+        } else {
+            location.reload();
+        }
     } catch(err) {
         hideLoading();
         isSubmittingExam = false;
@@ -4698,6 +5097,8 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
+        fetchTokenDariDrive(true);
+        mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
@@ -4719,8 +5120,6 @@ function switchAdminTab(tabName) {
         document.getElementById('adminTabSettings').classList.add('active');
         updateLabelJp();
         renderAdminPasswordDisplay();
-        fetchTokenDariDrive(true);
-        mulaiTimerTokenAdmin();
         cekRateLimitGistApi(true);
     }
 }
@@ -4762,6 +5161,7 @@ window.onload = async function() {
     showLoading("Memuat data sistem...");
     await prosesAntreanSubmitTertunda(false);
     await fetchCbtDatabase(false);
+    await fetchSesiFromGAS(true);
     await fetchTokenDariDrive(true);
     hideLoading();
 
@@ -4773,10 +5173,25 @@ window.onload = async function() {
         document.getElementById('viewPanelAdmin').classList.add('active');
         sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
-    } else {
-        setCompactMode(true);
-        sinkronkanHeaderAdmin();
+        return;
     }
+
+    const savedSiswaSess = bacaSesiSiswaLokal();
+    if(savedSiswaSess && savedSiswaSess.username) {
+        const siswaCocok = databaseSiswa.find(s => String(s.username) === String(savedSiswaSess.username));
+        const sesiServer = sesiLoginSiswa[savedSiswaSess.username];
+        const perangkatSama = !sesiServer || !sesiServer.deviceId || sesiServer.deviceId === getOrCreateDeviceId();
+
+        if(siswaCocok && perangkatSama) {
+            await tampilkanHalamanPilihUjianSiswa(siswaCocok);
+            return;
+        } else {
+            hapusSesiSiswaLokal();
+        }
+    }
+
+    setCompactMode(true);
+    sinkronkanHeaderAdmin();
 }
 </script>
 </body>
