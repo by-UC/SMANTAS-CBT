@@ -11,23 +11,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 6px; background: #f4f7f6; color: #333; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 8px; background: #f4f7f6; color: #333; }
         
         /* Container default (lebar untuk ujian & admin dashboard) */
         .container { 
             background: white; 
-            padding: 10px 12px; 
-            border-radius: 7px; 
-            max-width: 1220px; 
-            margin: 6px auto; 
-            box-shadow: 0 3px 10px rgba(0,0,0,0.08); 
+            padding: 14px 16px; 
+            border-radius: 8px; 
+            max-width: 1180px; 
+            margin: 10px auto; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
         }
         /* Mode diperkecil khusus halaman login */
         .container.login-compact {
             max-width: 420px;
-            margin-top: 28px;
-            padding: 16px;
+            margin-top: 32px;
+            padding: 18px;
         }
 
         h2, h3 { text-align: center; color: #0056b3; }
@@ -35,32 +35,32 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            gap: 12px;
             text-align: left;
-            margin-bottom: 7px;
+            margin-bottom: 10px;
             border-bottom: 2px solid #008080;
-            padding-bottom: 6px;
+            padding-bottom: 8px;
         }
         .header-box.centered-header {
             display: block;
             text-align: center;
         }
         .header-brand h2 {
-            margin: 0 0 1px 0;
-            font-size: 18px;
+            margin: 0 0 2px 0;
+            font-size: 19px;
             text-align: inherit;
         }
         .header-brand h3 {
             color: #008080;
             margin: 0;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: normal;
             text-align: inherit;
         }
         .header-admin-inline {
             display: none;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
             justify-content: flex-end;
         }
@@ -68,7 +68,7 @@
             display: flex;
         }
         .header-admin-title {
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: bold;
             color: #008080;
             white-space: nowrap;
@@ -76,13 +76,13 @@
         .header-admin-actions {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
         @media (max-width: 720px) {
             .header-box:not(.centered-header) {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 5px;
+                gap: 6px;
             }
             .header-admin-inline {
                 width: 100%;
@@ -90,12 +90,12 @@
             }
         }
 
-        .form-group { margin-bottom: 5px; }
-        label { display: block; font-weight: bold; margin-bottom: 2px; color: #444; font-size: 11px; }
+        .form-group { margin-bottom: 8px; }
+        label { display: block; font-weight: bold; margin-bottom: 3px; color: #444; font-size: 12px; }
         input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select { 
-            width: 100%; padding: 5px 7px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; 
+            width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; 
         }
-        input[type="file"] { font-size: 11px; padding: 2px 0; }
+        input[type="file"] { font-size: 12px; padding: 3px 0; }
         textarea { resize: vertical; }
         
         /* Style kolom input terkunci (readonly) */
@@ -107,17 +107,17 @@
             user-select: none;
         }
 
-        button { background: #008080; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        button { background: #008080; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; width: 100%; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #006666; }
         button:disabled { background: #b0bec5; cursor: not-allowed; opacity: 0.75; }
         
         /* Tombol Toggle Tunggal Login Siswa / Login Admin */
-        .single-role-bar { margin-bottom: 10px; }
+        .single-role-bar { margin-bottom: 12px; }
         .btn-role-toggle {
             background: #008080;
             color: #ffffff;
-            padding: 8px;
-            font-size: 12.5px;
+            padding: 9px;
+            font-size: 13px;
             border-radius: 4px;
             width: 100%;
             font-weight: bold;
@@ -135,14 +135,14 @@
         }
 
         /* Tab Navigation Admin */
-        .admin-tab-menu { display: flex; margin-bottom: 7px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
-        .admin-tab-btn { flex: 1; padding: 5px 6px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11px; min-width: 80px; border-radius: 4px 4px 0 0; }
+        .admin-tab-menu { display: flex; margin-bottom: 10px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
+        .admin-tab-btn { flex: 1; padding: 7px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 85px; border-radius: 4px 4px 0 0; }
         .admin-tab-btn.active { background: #008080; color: white; }
         
-        .soal-box { margin-bottom: 12px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; user-select: none; }
-        .soal-box p { font-size: 14px; line-height: 1.4; font-weight: bold; margin-top: 0; }
-        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 5px 0; border: 1px solid #ddd; display: block; }
-        .option-label { display: block; margin-bottom: 5px; padding: 8px 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.15s, border-color 0.15s; }
+        .soal-box { margin-bottom: 14px; border-bottom: 1px solid #dee2e6; padding-bottom: 12px; user-select: none; }
+        .soal-box p { font-size: 14.5px; line-height: 1.45; font-weight: bold; margin-top: 0; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 6px; padding: 9px 11px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 13.5px; transition: background 0.15s, border-color 0.15s; }
         .option-label:hover { background: #f0f8f8; border-color: #008080; }
         .option-label.selected-opt { background: #e6f4f4; border-color: #008080; }
         .option-label input { margin-right: 8px; }
@@ -155,15 +155,15 @@
             gap: 8px;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 6px 9px;
+            padding: 7px 10px;
             border-radius: 4px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .btn-nav-soal {
             width: auto;
-            min-width: 92px;
-            padding: 6px 11px;
-            font-size: 12px;
+            min-width: 96px;
+            padding: 7px 12px;
+            font-size: 12.5px;
             background: #008080;
             color: #fff;
             border-radius: 4px;
@@ -176,40 +176,40 @@
         }
         .soal-progress-info {
             text-align: center;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: bold;
             color: #0056b3;
             flex: 1;
         }
         .soal-progress-sub {
             display: block;
-            font-size: 10px;
+            font-size: 10.5px;
             font-weight: normal;
             color: #555;
             margin-top: 1px;
         }
         
-        .row-flex { display: flex; gap: 6px; flex-wrap: wrap; }
-        .row-flex > div { flex: 1; min-width: 140px; }
-        .row-flex > div.jp-col { flex: 0 0 110px; min-width: 100px; max-width: 120px; }
+        .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row-flex > div { flex: 1; min-width: 160px; }
+        .row-flex > div.jp-col { flex: 0 0 120px; min-width: 110px; max-width: 130px; }
 
         /* GRID MATRIKS KHUSUS DAFTAR KELAS & DAFTAR MAPEL */
         .master-matrix-grid {
             display: grid;
-            gap: 3px 6px;
-            margin-top: 4px;
+            gap: 4px 10px;
+            margin-top: 6px;
             overflow-x: auto;
         }
         .master-matrix-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 4px;
-            padding: 2px 6px;
+            gap: 6px;
+            padding: 3px 7px;
             background: #ffffff;
             border: 1px solid #e3e8e8;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 12px;
             white-space: nowrap;
         }
         .master-matrix-item .item-label {
@@ -225,7 +225,7 @@
         /* 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI */
         .jadwal-time-row {
             display: flex;
-            gap: 5px;
+            gap: 6px;
             align-items: flex-end;
             flex-wrap: nowrap;
         }
@@ -234,22 +234,24 @@
             min-width: 0;
         }
         .jadwal-time-row .jp-inline-col {
-            flex: 0 0 76px;
-            min-width: 70px;
+            flex: 0 0 82px;
+            min-width: 76px;
         }
         .jadwal-time-row input[type="datetime-local"] {
-            padding: 4px 4px;
-            font-size: 11px;
+            padding: 6px 5px;
+            font-size: 11.5px;
         }
         .jadwal-time-row input[type="number"] {
-            padding: 4px 6px;
-            font-size: 11.5px;
+            padding: 6px 7px;
+            font-size: 12px;
         }
         @media (max-width: 640px) {
             .jadwal-time-row {
                 flex-wrap: wrap;
             }
-            .jadwal-time-row .time-col,
+            .jadwal-time-row .time-col {
+                flex: 1 1 100%;
+            }
             .jadwal-time-row .jp-inline-col {
                 flex: 1 1 100%;
             }
@@ -258,7 +260,7 @@
         /* DUA KOLOM TAB DAFTAR UJIAN */
         .ujian-two-col {
             display: flex;
-            gap: 7px;
+            gap: 10px;
             align-items: flex-start;
         }
         .ujian-col-left {
@@ -287,13 +289,13 @@
             width: 100%;
             min-width: 100%;
             table-layout: fixed;
-            margin-top: 2px;
+            margin-top: 4px;
         }
         .table-jadwal-aktif th,
         .table-jadwal-aktif td {
-            padding: 3px 3px;
-            font-size: 10.5px;
-            line-height: 1.15;
+            padding: 4px 4px;
+            font-size: 11px;
+            line-height: 1.2;
             vertical-align: middle;
         }
         .table-jadwal-aktif .col-mapel {
@@ -312,14 +314,14 @@
         }
         .table-jadwal-aktif .col-waktu {
             width: 16%;
-            font-size: 9.5px;
-            line-height: 1.1;
+            font-size: 10px;
+            line-height: 1.15;
             padding-left: 2px;
             padding-right: 2px;
         }
         .table-jadwal-aktif .col-aksi {
             width: 13%;
-            padding: 2px;
+            padding: 3px 2px;
         }
         .jadwal-aksi-stack {
             display: flex;
@@ -334,24 +336,24 @@
             flex: 1;
             min-width: 0;
             margin: 0;
-            padding: 2px;
-            font-size: 9px;
+            padding: 2.5px 2px;
+            font-size: 9.5px;
             line-height: 1.1;
             text-align: center;
         }
         .jadwal-aksi-stack .btn-jadwal-full {
             width: 100%;
             margin: 0;
-            padding: 2px;
-            font-size: 9px;
+            padding: 2.5px 2px;
+            font-size: 9.5px;
             line-height: 1.1;
             text-align: center;
         }
 
-        /* DUA KOLOM SEJAJAR KIRI-KANAN */
+        /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA */
         .siswa-top-two-col {
             display: flex;
-            gap: 7px;
+            gap: 10px;
             align-items: stretch;
         }
         .siswa-top-two-col > .admin-card {
@@ -366,50 +368,20 @@
                 flex-direction: column;
             }
         }
-
-        /* TIGA KOLOM SEJAJAR 1 BARIS PADA TAB PENGATURAN BARIS 1 */
-        .settings-three-col {
-            display: flex;
-            gap: 7px;
-            align-items: stretch;
-        }
-        .settings-three-col > .admin-card {
-            flex: 1 1 0;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        @media (max-width: 980px) {
-            .settings-three-col {
-                flex-wrap: wrap;
-            }
-            .settings-three-col > .admin-card {
-                flex: 1 1 calc(50% - 4px);
-            }
-        }
-        @media (max-width: 640px) {
-            .settings-three-col {
-                flex-direction: column;
-            }
-            .settings-three-col > .admin-card {
-                flex: 1 1 100%;
-            }
-        }
         
-        .error-msg { color: red; font-size: 12px; margin-top: 5px; text-align: center; display: none; }
+        .error-msg { color: red; font-size: 12px; margin-top: 6px; text-align: center; display: none; }
         .section-view, .admin-view { display: none; }
         .section-view.active, .admin-view.active { display: block; }
-        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 7px 9px; border-radius: 5px; margin-bottom: 6px; }
-        .admin-card h4 { font-size: 12px; margin: 0 0 5px 0; color: #008080; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
+        .admin-card h4 { font-size: 13px; }
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 2px; min-width: 500px; }
-        th, td { border: 1px solid #ddd; padding: 3px 6px; text-align: left; font-size: 11px; line-height: 1.2; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; min-width: 520px; }
+        th, td { border: 1px solid #ddd; padding: 5px 7px; text-align: left; font-size: 12px; }
         th { background-color: #008080; color: white; }
         
-        .btn-sm { padding: 2px 6px; font-size: 10px; width: auto; border-radius: 3px; margin-right: 2px; margin-bottom: 0; }
+        .btn-sm { padding: 3px 7px; font-size: 10.5px; width: auto; border-radius: 3px; margin-right: 3px; margin-bottom: 1px; }
         .btn-success { background: #28a745; color: white; }
         .btn-success:hover { background: #218838; }
         .btn-warning { background: #ffc107; color: #212529; }
@@ -423,10 +395,10 @@
         .checkbox-grid {
             display: flex;
             flex-direction: column;
-            gap: 3px;
-            max-height: 110px;
+            gap: 4px;
+            max-height: 124px;
             overflow-y: auto;
-            padding: 4px 6px;
+            padding: 5px 7px;
             border: 1px solid #ccc;
             border-radius: 4px;
             background: #fff;
@@ -434,12 +406,12 @@
         .kelas-row-line {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
-            gap: 2px 4px;
+            gap: 3px 5px;
             align-items: center;
         }
         .kelas-row-line label {
             font-weight: normal;
-            font-size: 10.5px;
+            font-size: 11px;
             margin-bottom: 0;
             display: flex;
             align-items: center;
@@ -455,9 +427,9 @@
         }
         .btn-pilih-baris {
             width: auto;
-            padding: 1px 4px;
-            font-size: 9px;
-            line-height: 1.1;
+            padding: 1.5px 5px;
+            font-size: 9.5px;
+            line-height: 1.15;
             border-radius: 3px;
             background: #e9ecef;
             color: #333;
@@ -465,7 +437,11 @@
             font-weight: bold;
             white-space: nowrap;
         }
-        .btn-pilih-baris:hover,
+        .btn-pilih-baris:hover {
+            background: #008080;
+            color: #fff;
+            border-color: #008080;
+        }
         .btn-pilih-baris.active-all {
             background: #008080;
             color: #fff;
@@ -478,70 +454,83 @@
         }
 
         .pass-display-box {
-            display: flex; align-items: center; gap: 5px; background: #fff; padding: 3px 7px;
-            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px;
+            display: flex; align-items: center; gap: 6px; background: #fff; padding: 5px 10px;
+            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;
         }
-        .pass-display-box span { flex: 1; font-family: monospace; font-size: 12px; font-weight: bold; color: #0056b3; }
+        .pass-display-box span { flex: 1; font-family: monospace; font-size: 13px; font-weight: bold; color: #0056b3; }
 
-        /* Token Box Admin */
+        /* Token Box Admin (tersimpan di Google Drive token_cbt.json) */
         .token-live-box {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 6px;
+            gap: 8px;
             background: #e6f4f4;
             border: 1px solid #008080;
-            border-radius: 4px;
-            padding: 5px 8px;
-            margin-bottom: 5px;
+            border-radius: 5px;
+            padding: 7px 10px;
+            margin-bottom: 8px;
         }
         .token-live-code {
             font-family: monospace;
-            font-size: 17px;
+            font-size: 20px;
             font-weight: bold;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             color: #0056b3;
-            line-height: 1.15;
         }
         .token-live-timer {
-            font-size: 10px;
+            font-size: 11px;
             color: #006666;
             font-weight: bold;
             text-align: right;
-            line-height: 1.2;
         }
 
         /* BADGE PILL RIWAYAT STATUS UJIAN */
         .status-pill-wrap {
             display: inline-flex;
             flex-wrap: wrap;
-            gap: 2px;
+            gap: 3px;
             align-items: center;
         }
         .status-pill {
             display: inline-block;
-            padding: 1.5px 6px;
-            border-radius: 3px;
-            font-size: 10px;
+            padding: 2.5px 7px;
+            border-radius: 4px;
+            font-size: 10.5px;
             font-weight: bold;
-            line-height: 1.15;
+            line-height: 1.2;
             white-space: nowrap;
         }
-        .status-pill-curang { background-color: #dc3545; color: #ffffff; }
-        .status-pill-selesai { background-color: #28a745; color: #000000; }
-        .status-pill-reset { background-color: #ffc107; color: #212529; }
-        .status-pill-ujian { background-color: #fd7e14; color: #ffffff; }
-        .status-pill-login { background-color: #008080; color: #ffffff; }
+        .status-pill-curang {
+            background-color: #dc3545;
+            color: #ffffff;
+        }
+        .status-pill-selesai {
+            background-color: #28a745;
+            color: #000000;
+        }
+        .status-pill-reset {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .status-pill-ujian {
+            background-color: #fd7e14;
+            color: #ffffff;
+        }
+        .status-pill-login {
+            background-color: #008080;
+            color: #ffffff;
+        }
 
         /* BANNER PERINGATAN FULLSCREEN */
         .exam-security-bar {
             background: #fff3cd;
             border: 1px solid #ffeeba;
             color: #856404;
-            padding: 7px 9px;
+            padding: 8px 10px;
             border-radius: 4px;
             font-size: 11.5px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             text-align: center;
             font-weight: bold;
         }
@@ -557,28 +546,35 @@
             border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
         }
-        .modal-box.modal-sm { max-width: 440px; }
+        .modal-box.modal-sm {
+            max-width: 440px;
+        }
         .modal-header {
-            background: #008080; color: #fff; padding: 9px 13px;
+            background: #008080; color: #fff; padding: 10px 14px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .modal-body { padding: 12px; overflow-y: auto; flex: 1; background: #f9fbfb; }
+        .modal-body {
+            padding: 14px; overflow-y: auto; flex: 1; background: #f9fbfb;
+        }
         .modal-footer {
-            padding: 7px 13px; background: #eee; border-top: 1px solid #ddd;
+            padding: 8px 14px; background: #eee; border-top: 1px solid #ddd;
             display: flex; justify-content: flex-end; gap: 8px;
         }
         .preview-item {
             background: #fff; border: 1px solid #dce4e4; border-radius: 6px;
-            padding: 9px 11px; margin-bottom: 8px;
+            padding: 10px 12px; margin-bottom: 10px;
         }
         .preview-opt {
-            padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 12px; background: #f8f9fa;
+            padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 12.5px; background: #f8f9fa;
         }
         .preview-opt.is-kunci {
             background: #d4edda; border: 1px solid #28a745; font-weight: bold; color: #155724;
         }
         .export-kelas-btn-list {
-            display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
         }
 
         /* KARTU SISWA RINGKAS TINGGI 3 CM */
@@ -588,52 +584,116 @@
             gap: 6px;
         }
         .kartu-siswa-3cm {
-            height: 3cm; min-height: 3cm; max-height: 3cm;
-            border: 1px solid #222; border-radius: 4px; background: #ffffff;
-            padding: 4px 7px; display: flex; flex-direction: column; justify-content: space-between;
-            overflow: hidden; page-break-inside: avoid; break-inside: avoid;
+            height: 3cm;
+            min-height: 3cm;
+            max-height: 3cm;
+            border: 1px solid #222;
+            border-radius: 4px;
+            background: #ffffff;
+            padding: 4px 7px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         .kartu-3cm-top {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #008080; padding-bottom: 2px;
-            font-size: 8.5px; font-weight: bold; color: #0056b3; line-height: 1.1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #008080;
+            padding-bottom: 2px;
+            font-size: 8.5px;
+            font-weight: bold;
+            color: #0056b3;
+            line-height: 1.1;
         }
         .kartu-3cm-nama {
-            font-size: 10.5px; font-weight: bold; color: #111;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.15;
+            font-size: 10.5px;
+            font-weight: bold;
+            color: #111;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.15;
         }
         .kartu-3cm-cred {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px;
-            font-size: 9px; line-height: 1.15; background: #f6f9f9; padding: 2px 5px; border-radius: 3px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 6px;
+            font-size: 9px;
+            line-height: 1.15;
+            background: #f6f9f9;
+            padding: 2px 5px;
+            border-radius: 3px;
         }
-        .kartu-3cm-cred span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .kartu-3cm-cred span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         /* AREA CETAK KHUSUS PRINT */
-        #printKartuArea { display: none; }
+        #printKartuArea {
+            display: none;
+        }
         @media print {
-            body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; }
-            #mainContainer, #loadingOverlay, .modal-overlay { display: none !important; }
-            #printKartuArea { display: block !important; width: 100%; padding: 4mm; }
-            .kartu-siswa-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; }
+            body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #mainContainer, #loadingOverlay, .modal-overlay {
+                display: none !important;
+            }
+            #printKartuArea {
+                display: block !important;
+                width: 100%;
+                padding: 4mm;
+            }
+            .kartu-siswa-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 3mm;
+            }
             .kartu-siswa-3cm {
-                height: 3cm !important; min-height: 3cm !important; max-height: 3cm !important;
-                border: 1px solid #000 !important; box-shadow: none !important;
-                -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                height: 3cm !important;
+                min-height: 3cm !important;
+                max-height: 3cm !important;
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
 
         /* LOADING OVERLAY KUNCI LAYAR TOTAL */
         #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); z-index: 99999;
-            display: none; justify-content: center; align-items: center;
-            flex-direction: column; color: white; font-family: Arial, sans-serif; pointer-events: all;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: all;
         }
         .spinner {
-            width: 46px; height: 46px; border: 5px solid #f3f3f3; border-top: 5px solid #008080;
-            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px;
+            width: 50px; height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #008080;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -654,10 +714,12 @@
             <b id="modalSoalTitle" style="font-size: 14px;">Daftar Soal Terupload</b>
             <button onclick="tutupModalSoal()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
         </div>
-        <div class="modal-body" id="modalSoalBody">Memuat soal...</div>
+        <div class="modal-body" id="modalSoalBody">
+            Memuat soal...
+        </div>
         <div class="modal-footer">
-            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:5px 11px; font-size:11.5px;">Hapus Paket Soal Ini dari Gist</button>
-            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:5px 11px; font-size:11.5px;">Tutup</button>
+            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:6px 12px; font-size:11.5px;">Hapus Paket Soal Ini dari Gist</button>
+            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
         </div>
     </div>
 </div>
@@ -669,9 +731,11 @@
             <b id="modalExportTitle" style="font-size: 14px;">Export Hasil Ujian (.xlsx)</b>
             <button onclick="tutupModalExport()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
         </div>
-        <div class="modal-body" id="modalExportBody">Pilih kelas untuk mengunduh rekap nilai Excel:</div>
+        <div class="modal-body" id="modalExportBody">
+            Pilih kelas untuk mengunduh rekap nilai Excel:
+        </div>
         <div class="modal-footer">
-            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:5px 11px; font-size:11.5px;">Tutup</button>
+            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
         </div>
     </div>
 </div>
@@ -685,8 +749,8 @@
         </div>
         <div class="modal-body" id="modalKartuBody"></div>
         <div class="modal-footer">
-            <button type="button" onclick="eksekusiCetakKartu()" style="width:auto; background:#28a745; padding:5px 13px; font-size:12px;">🖨️ Cetak Sekarang</button>
-            <button type="button" onclick="tutupModalKartu()" style="width:auto; background:#6c757d; padding:5px 11px; font-size:12px;">Tutup</button>
+            <button type="button" onclick="eksekusiCetakKartu()" style="width:auto; background:#28a745; padding:6px 14px; font-size:12px;">🖨️ Cetak Sekarang</button>
+            <button type="button" onclick="tutupModalKartu()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:12px;">Tutup</button>
         </div>
     </div>
 </div>
@@ -700,8 +764,8 @@
         <div class="header-admin-inline" id="headerAdminInline">
             <span class="header-admin-title">Dashboard Admin CBT</span>
             <div class="header-admin-actions">
-                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 4px 8px; background: #17a2b8; font-size: 11px;">Refresh Data</button>
-                <button onclick="logoutAdmin()" style="width: auto; padding: 4px 8px; background: #dc3545; font-size: 11px;">Logout</button>
+                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 5px 10px; background: #17a2b8; font-size: 11.5px;">Refresh Data</button>
+                <button onclick="logoutAdmin()" style="width: auto; padding: 5px 10px; background: #dc3545; font-size: 11.5px;">Logout</button>
             </div>
         </div>
     </div>
@@ -724,11 +788,11 @@
         <button onclick="autentikasiSiswa()">MASUK PORTAL</button>
     </div>
 
-    <!-- 1B. VIEW PILIH UJIAN SISWA -->
+    <!-- 1B. VIEW PILIH UJIAN SISWA (Setelah Berhasil Login) -->
     <div id="viewPilihUjianSiswa" class="section-view">
-        <div style="background: #e9ecef; padding: 9px; border-radius: 4px; margin-bottom: 10px; text-align: center;">
-            <b id="salamSiswa" style="color: #008080; font-size: 13.5px;">Selamat Datang, Siswa</b><br>
-            <span id="infoKelasSiswa" style="font-size: 12px; color: #555;">Kelas: -</span>
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center;">
+            <b id="salamSiswa" style="color: #008080; font-size: 14px;">Selamat Datang, Siswa</b><br>
+            <span id="infoKelasSiswa" style="font-size: 12.5px; color: #555;">Kelas: -</span>
         </div>
         <div class="form-group">
             <label>Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
@@ -738,13 +802,13 @@
         </div>
         <div class="form-group" id="groupTokenUjianSiswa">
             <label>Token Ujian (4 Digit):</label>
-            <input type="text" id="inputTokenSiswa" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Masukkan 4 digit token dari pengawas..." style="font-family:monospace; font-size:14px; letter-spacing:3px; text-align:center;">
+            <input type="text" id="inputTokenSiswa" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Masukkan 4 digit token dari pengawas..." style="font-family:monospace; font-size:15px; letter-spacing:3px; text-align:center;">
         </div>
-        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:7px 9px; border-radius:4px; font-size:11px; margin-bottom:8px;">
+        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 10px; border-radius:4px; font-size:11.5px; margin-bottom:10px;">
             <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan ujian langsung dikumpulkan!
         </div>
         <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN (FULL SCREEN)</button>
-        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 6px;">Logout / Ganti Perangkat</button>
+        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 8px;">Logout / Ganti Perangkat</button>
     </div>
 
     <!-- 2. VIEW LOGIN ADMIN -->
@@ -757,15 +821,16 @@
         <div id="errorAdmin" class="error-msg">Password admin salah!</div>
     </div>
 
-    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA (TAMPILAN PER SOAL + BEFORE / NEXT) -->
     <div id="viewUjianSiswa" class="section-view">
         <div class="exam-security-bar">
             MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!
         </div>
-        <div style="background: #e9ecef; padding: 7px 9px; border-radius: 4px; margin-bottom: 7px; text-align: center; font-weight: bold; font-size: 12.5px;" id="infoUjianText">
+        <div style="background: #e9ecef; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; text-align: center; font-weight: bold; font-size: 13px;" id="infoUjianText">
             Mata Pelajaran: Memuat...
         </div>
 
+        <!-- TOMBOL BEFORE & NEXT DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
         <div class="soal-nav-bar">
             <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
             <div class="soal-progress-info">
@@ -775,6 +840,7 @@
             <button type="button" id="btnNextSoal" class="btn-nav-soal" onclick="navigasiSoal(1)">Next →</button>
         </div>
 
+        <!-- KONTAINER 1 SOAL AKTIF -->
         <div id="soalContainer"></div>
 
         <button id="btnSelesaiUjian" onclick="selesaiUjian(false)" style="background: #28a745;">Selesaikan & Kirim Ujian</button>
@@ -782,6 +848,7 @@
 
     <!-- 4. VIEW PANEL ADMIN MASTER -->
     <div id="viewPanelAdmin" class="section-view">
+        <!-- TAB MENU ADMIN -->
         <div class="admin-tab-menu">
             <button class="admin-tab-btn active" onclick="switchAdminTab('monitoring')">Monitoring Akun</button>
             <button class="admin-tab-btn" onclick="switchAdminTab('ujian')">Daftar Ujian</button>
@@ -790,19 +857,20 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
+            <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GAS) -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                    <h4>Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
-                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 165px; padding: 3px 6px; font-size: 11px;">
-                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #008080;">Cari</button>
-                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 3px 6px; font-size: 10.5px; background: #6c757d;">Reset</button>
-                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Sesi</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 175px; padding: 4px 7px; font-size: 11.5px;">
+                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
                     </div>
                 </div>
-                <p style="font-size: 10.5px; color: #555; margin: 0 0 4px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
+                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -812,7 +880,7 @@
                                 <th>Kelas</th>
                                 <th>Status Sesi</th>
                                 <th>Perangkat</th>
-                                <th style="width: 135px;">Aksi Reset</th>
+                                <th style="width: 145px;">Aksi Reset</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySesiAktif">
@@ -822,10 +890,13 @@
                 </div>
             </div>
 
+            <!-- TABEL LOG SPREADSHEET -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                    <h4>Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
-                    <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Log</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table id="tabelSiswaLogin">
@@ -846,11 +917,12 @@
             </div>
         </div>
 
-        <!-- TAB 2: DAFTAR UJIAN -->
+        <!-- TAB 2: DAFTAR UJIAN (DUA KOLOM: KIRI BUAT JADWAL, KANAN DAFTAR UJIAN AKTIF) -->
         <div id="adminTabUjian" class="admin-view">
             <div class="ujian-two-col">
+                <!-- KOLOM KIRI: BUAT JADWAL -->
                 <div class="admin-card ujian-col-left">
-                    <h4>Buat Jadwal</h4>
+                    <h4 style="margin: 0 0 8px 0; color: #008080;">Buat Jadwal</h4>
                     <div class="form-group">
                         <label>Pilih Mata Pelajaran:</label>
                         <select id="jadwalMapel">
@@ -862,6 +934,7 @@
                         <div class="checkbox-grid" id="checkboxKelasContainer"></div>
                     </div>
 
+                    <!-- 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI -->
                     <div class="jadwal-time-row form-group">
                         <div class="time-col">
                             <label>Waktu Mulai Ujian:</label>
@@ -880,15 +953,16 @@
                     <div class="form-group">
                         <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
                         <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
-                        <textarea id="soalBatchText" rows="3" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
+                        <textarea id="soalBatchText" rows="4" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
                     </div>
-                    <button onclick="simpanJadwalDanSoal()" style="background: #28a745; padding: 5px 9px;">Simpan Jadwal & Upload Soal</button>
+                    <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
                 </div>
 
+                <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
                 <div class="admin-card ujian-col-right">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; flex-wrap: wrap; gap: 4px;">
-                        <h4>Daftar Ujian Aktif</h4>
-                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:9.5px;">Lihat Semua Bank Soal (Gist)</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+                        <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
+                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0; padding:3px 8px; font-size:10px;">Lihat Semua Bank Soal (Gist)</button>
                     </div>
                     <div class="table-jadwal-wrap">
                         <table class="table-jadwal-aktif">
@@ -912,20 +986,20 @@
         <!-- TAB 3: KELOLA KELAS & MAPEL -->
         <div id="adminTabMaster" class="admin-view">
             <div class="admin-card">
-                <h4>Kelola Kelas & Mata Pelajaran</h4>
+                <h4 style="margin: 0 0 8px 0; color: #008080;">Kelola Kelas & Mata Pelajaran</h4>
                 <div class="row-flex">
-                    <div class="form-group" style="margin-bottom:2px;">
+                    <div class="form-group" style="margin-bottom:4px;">
                         <label>Tambah Kelas Baru:</label>
-                        <div style="display:flex; gap:5px;">
+                        <div style="display:flex; gap:6px;">
                             <input type="text" id="inputKelasBaru" placeholder="Contoh: XI-IPA-2">
-                            <button onclick="tambahKelas()" style="width:auto; background:#008080; padding:5px 10px; white-space:nowrap;">Tambah</button>
+                            <button onclick="tambahKelas()" style="width:auto; background:#008080; padding:7px 12px; white-space:nowrap;">Tambah</button>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-bottom:2px;">
+                    <div class="form-group" style="margin-bottom:4px;">
                         <label>Tambah Mapel Baru:</label>
-                        <div style="display:flex; gap:5px;">
+                        <div style="display:flex; gap:6px;">
                             <input type="text" id="inputMapelBaru" placeholder="Contoh: Sejarah Indonesia">
-                            <button onclick="tambahMapel()" style="width:auto; background:#008080; padding:5px 10px; white-space:nowrap;">Tambah</button>
+                            <button onclick="tambahMapel()" style="width:auto; background:#008080; padding:7px 12px; white-space:nowrap;">Tambah</button>
                         </div>
                     </div>
                 </div>
@@ -933,11 +1007,11 @@
 
             <div class="row-flex">
                 <div class="admin-card" style="flex:1;">
-                    <h4>Daftar Kelas</h4>
+                    <h4 style="margin: 0 0 6px 0; color: #008080;">Daftar Kelas</h4>
                     <div id="listKelas" class="master-matrix-grid"></div>
                 </div>
                 <div class="admin-card" style="flex:1;">
-                    <h4>Daftar Mata Pelajaran</h4>
+                    <h4 style="margin: 0 0 6px 0; color: #008080;">Daftar Mata Pelajaran</h4>
                     <div id="listMapel" class="master-matrix-grid"></div>
                 </div>
             </div>
@@ -945,10 +1019,12 @@
 
         <!-- TAB 4: DATA SISWA & UPLOAD -->
         <div id="adminTabSiswa" class="admin-view">
+            <!-- SEJAJAR KIRI-KANAN: TAMBAH SISWA & UPLOAD DATA SISWA -->
             <div class="siswa-top-two-col">
+                <!-- KIRI: TAMBAH SISWA -->
                 <div class="admin-card">
                     <div>
-                        <h4 id="judulFormSiswaSatuan">Tambah Siswa</h4>
+                        <h4 id="judulFormSiswaSatuan" style="margin: 0 0 8px 0; color: #008080;">Tambah Siswa</h4>
                         <input type="hidden" id="editSiswaIndex" value="-1">
                         <div class="row-flex">
                             <div class="form-group">
@@ -974,34 +1050,36 @@
                         </div>
                     </div>
                     <div class="row-flex" style="margin-top: 2px;">
-                        <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2; padding: 5px 9px;">Simpan Siswa</button>
-                        <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none; padding: 5px 9px;">Batal Edit</button>
+                        <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa</button>
+                        <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
                     </div>
                 </div>
 
+                <!-- KANAN: UPLOAD DATA SISWA -->
                 <div class="admin-card">
                     <div>
-                        <h4>Upload Data Siswa</h4>
-                        <div class="form-group" style="margin-bottom: 4px;">
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Upload Data Siswa</h4>
+                        <div class="form-group" style="margin-bottom: 6px;">
                             <label>Pilih File Excel (.xlsx / .xls):</label>
                             <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
                         </div>
                     </div>
-                    <small style="color: #666; font-size:10.5px;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
+                    <small style="color: #666; font-size:11px;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
                 </div>
             </div>
 
+            <!-- TABEL DAFTAR SISWA + CARI NAMA + CETAK KARTU 3 CM -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                    <h4>Daftar Siswa</h4>
-                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-                        <select id="filterKelasKartu" onchange="renderTabelDaftarSiswa()" style="width: auto; padding: 3px 6px; font-size: 11px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <h4 style="margin: 0; color: #008080;">Daftar Siswa</h4>
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <select id="filterKelasKartu" onchange="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 7px; font-size: 11.5px;">
                             <option value="">Semua Kelas</option>
                         </select>
-                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="width: 155px; padding: 3px 6px; font-size: 11px;">
-                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 3px 7px; font-size: 10.5px; background: #008080;">Cari</button>
-                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 3px 6px; font-size: 10.5px; background: #6c757d;">Reset</button>
-                        <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #28a745;">🖨️ Cetak Kartu (3 cm)</button>
+                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="width: 165px; padding: 4px 7px; font-size: 11.5px;">
+                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #28a745;">🖨️ Cetak Kartu (3 cm)</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -1012,7 +1090,7 @@
                                 <th>Kelas</th>
                                 <th>Username</th>
                                 <th>Password</th>
-                                <th style="width: 145px;">Aksi</th>
+                                <th style="width: 155px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyDaftarSiswa">
@@ -1025,82 +1103,82 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- BARIS 1: 3 KOLOM SEJAJAR -->
-            <div class="settings-three-col">
-                <!-- KOLOM 1: TOKEN UJIAN OTOMATIS (GOOGLE DRIVE) -->
+            <!-- BARIS 1: TOKEN OTOMATIS 4 DIGIT & DURASI JP -->
+            <div class="siswa-top-two-col">
+                <!-- KOLOM KIRI: PENGATURAN TOKEN OTOMATIS (DRIVE: token_cbt.json) -->
                 <div class="admin-card">
                     <div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:4px;">
-                            <h4 style="margin:0;">Token Ujian Otomatis (Google Drive)</h4>
-                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10px; color:#0056b3; text-decoration:underline; white-space:nowrap;">Drive ↗</a>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px;">
+                            <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
                         </div>
                         <div class="token-live-box">
                             <div>
-                                <div style="font-size:9.5px; color:#555;">Token Aktif:</div>
+                                <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.json</code>):</div>
                                 <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
                             </div>
                             <div class="token-live-timer">
-                                <div>Ganti: <span id="adminTokenCountdown">05:00</span></div>
-                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin-top:2px; padding:1.5px 5px; font-size:9.5px;">Acak</button>
+                                <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
+                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin-top:4px; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
                             </div>
                         </div>
                         <div class="row-flex">
                             <div class="form-group">
-                                <label>Interval (Menit):</label>
+                                <label>Interval Ganti Token (Menit):</label>
                                 <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
                             </div>
                             <div class="form-group">
-                                <label>Wajib Token:</label>
+                                <label>Wajib Token Saat Mulai Ujian:</label>
                                 <select id="settingWajibToken">
-                                    <option value="true">Aktif</option>
+                                    <option value="true">Aktif (Wajib)</option>
                                     <option value="false">Nonaktif</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <button onclick="simpanPengaturanToken()" style="background: #008080; padding: 5px 8px;">Simpan Token</button>
+                    <button onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan Token ke Drive</button>
                 </div>
 
-                <!-- KOLOM 2: PENGATURAN DURASI JAM PELAJARAN (JP) -->
+                <!-- KOLOM KANAN: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
-                        <h4>Pengaturan Durasi Jam Pelajaran (JP)</h4>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
                         <div class="form-group">
-                            <label>Durasi 1 JP (Menit):</label>
+                            <label>Durasi 1 JP (dalam Menit):</label>
                             <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
-                            <small style="color: #666; display: block; margin-top: 3px; font-size:10.5px; line-height:1.25;">Tersimpan ke Gist untuk menghitung Waktu Selesai Ujian otomatis.</small>
+                            <small style="color: #666; display: block; margin-top: 3px; font-size:11px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
                         </div>
                     </div>
-                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 5px 8px;">Simpan Pengaturan JP</button>
+                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
                 </div>
+            </div>
 
-                <!-- KOLOM 3: MANAJEMEN PASSWORD ADMIN -->
+            <!-- BARIS 2: PASSWORD ADMIN & BACKUP/RESTORE DB -->
+            <div class="siswa-top-two-col">
+                <!-- KOLOM KIRI: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
-                        <h4>Manajemen Password Admin</h4>
-                        <label>Password Saat Ini:</label>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
+                        <label>Password Admin Saat Ini:</label>
                         <div class="pass-display-box">
                             <span id="currentAdminPassDisplay">••••••••</span>
                             <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
                         </div>
-                        <div class="form-group">
-                            <label>Password Admin Baru:</label>
-                            <input type="text" id="newAdminPassword" placeholder="Masukkan password baru...">
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label>Ubah Password Admin Baru:</label>
+                            <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
                         </div>
                     </div>
-                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 5px 8px;">Simpan Password Baru</button>
+                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 7px 10px;">Simpan Password Baru</button>
                 </div>
-            </div>
 
-            <!-- BARIS 2: 2 KOLOM SEJAJAR -->
-            <div class="siswa-top-two-col">
-                <!-- KIRI: BACKUP & RESTORE DATABASE (db_cbt.json) -->
+                <!-- KOLOM KANAN: BACKUP & RESTORE DB -->
                 <div class="admin-card">
                     <div>
-                        <h4>Backup & Restore Database (db_cbt.json)</h4>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
                         <div class="form-group">
                             <label>Backup Seluruh Database ke File JSON:</label>
-                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 5px 8px;">Download Backup DB (.json)</button>
+                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Restore Database dari File Backup (.json):</label>
@@ -1108,19 +1186,22 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- KANAN: ZONA BERBAHAYA — HAPUS / RESET DATABASE -->
-                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+            <!-- BARIS 3: HAPUS / RESET DB -->
+            <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <h4 style="color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
-                        <p style="font-size: 11px; color: #555; margin: 0 0 6px 0; line-height: 1.3;">Menghapus seluruh data siswa dan jadwal ujian di Gist, sesi/log di GAS, serta file hasil ujian & gambar soal di Drive. Lakukan Backup terlebih dahulu.</p>
+                        <h4 style="margin: 0 0 4px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 12px; color: #555; margin: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
                     </div>
-                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 5px 10px;">Hapus Seluruh Database (Reset DB)</button>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px; width:auto;">Hapus Seluruh Database (Reset DB)</button>
                 </div>
             </div>
         </div>
 
     </div>
+
 </div>
 <script>
 // ================= KONFIGURASI SISTEM =================
@@ -1137,7 +1218,7 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
-// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE =================
+// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.json) =================
 let tokenDriveState = {
     token: "----",
     intervalMenit: 5,
@@ -1173,7 +1254,7 @@ async function fetchTokenDariDrive(silent = true) {
             sinkronkanTampilanInputTokenSiswa();
         }
     } catch (e) {
-        if (!silent) console.error("Gagal mengambil token dari Google Drive:", e);
+        if (!silent) console.error("Gagal mengambil token_cbt.json dari Google Drive:", e);
     } finally {
         isSyncingTokenFromDrive = false;
     }
@@ -1225,7 +1306,7 @@ async function simpanPengaturanToken() {
         return;
     }
 
-    showLoading("Menyimpan pengaturan token ke Google Drive...");
+    showLoading("Menyimpan pengaturan & file token_cbt.json ke Google Drive...");
     try {
         const res = await axios.post(GAS_URL, JSON.stringify({
             action: "saveTokenConfig",
@@ -1246,7 +1327,7 @@ async function simpanPengaturanToken() {
             sinkronkanInputPengaturanToken();
             sinkronkanTampilanInputTokenSiswa();
             hideLoading();
-            alert(`Pengaturan token diperbarui di Google Drive (interval ${intervalVal} menit).`);
+            alert(`Berhasil! File token_cbt.json di Google Drive diperbarui (interval ${intervalVal} menit).`);
         } else {
             hideLoading();
             alert("Gagal menyimpan token ke Drive: " + (res.data?.message || "Unknown error"));
@@ -1258,8 +1339,8 @@ async function simpanPengaturanToken() {
 }
 
 async function acakUlangTokenDrive() {
-    if (!confirm("Acak ulang token 4 digit di Google Drive sekarang?")) return;
-    showLoading("Mengacak ulang token di Google Drive...");
+    if (!confirm("Acak ulang token 4 digit di file token_cbt.json (Google Drive) sekarang?")) return;
+    showLoading("Mengacak ulang token_cbt.json di Google Drive...");
     try {
         const res = await axios.post(GAS_URL, JSON.stringify({
             action: "saveTokenConfig",
@@ -1528,6 +1609,7 @@ let mapelSiswaLogin = "";
 let namaSiswaLogin = "";
 let currentSiswaObj = null;
 
+// Status keamanan ujian aktif
 let isExamInProgress = false;
 let isSubmittingExam = false;
 
@@ -1735,7 +1817,7 @@ async function saveCbtDatabaseToGist() {
     }
 }
 
-// ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GAS =================
+// ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GOOGLE APPS SCRIPT (GAS) =================
 function parseTokenCount(token) {
     const m = String(token || "").trim().match(/^(.*?)(?:\s*\((\d+)x\))?$/i);
     if (!m) return { base: String(token || "").trim(), count: 1 };
@@ -2046,7 +2128,7 @@ async function fetchLogLoginFromGAS() {
     renderTabelSiswaLogin();
 }
 
-// ================= KONTROL SESI & RESET LOGIN ADMIN =================
+// ================= KONTROL SESI & RESET LOGIN ADMIN (GAS) =================
 function resetCariNamaSesi() {
     const inp = document.getElementById('inputCariNamaSesi');
     if (inp) inp.value = "";
@@ -2081,7 +2163,7 @@ function renderTabelSesiAktif() {
             <td>${s.nama || '-'}</td>
             <td>${s.kelas || '-'}</td>
             <td>${statusBadge}</td>
-            <td style="font-family:monospace; font-size:10px;">${s.deviceId || '-'}</td>
+            <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
             <td>
                 <button onclick="resetLoginSiswaAdmin('${username}')" class="btn-sm btn-warning">Reset Login / Ujian</button>
             </td>
@@ -2321,7 +2403,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
     if (total === 0) {
         containerEl.style.gridTemplateColumns = "1fr";
         containerEl.style.gridAutoFlow = "row";
-        containerEl.innerHTML = `<div style="color:#777; font-size:11.5px; padding:3px 0;">Belum ada data.</div>`;
+        containerEl.innerHTML = `<div style="color:#777; font-size:12px; padding:4px 0;">Belum ada data.</div>`;
         return;
     }
 
@@ -2341,7 +2423,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         numRows = maxRowsPerCol + extraRows;
     }
 
-    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(120px, 1fr))`;
+    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(130px, 1fr))`;
     containerEl.style.gridTemplateRows = `repeat(${numRows}, auto)`;
     containerEl.style.gridAutoFlow = "column";
 
@@ -2350,7 +2432,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         div.className = "master-matrix-item";
         div.innerHTML = `
             <span class="item-label" title="${labelText}">${labelText}</span>
-            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1px 5px; font-size:9.5px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
+            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1.5px 5px; font-size:10px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
         `;
         containerEl.appendChild(div);
     });
@@ -2696,7 +2778,7 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
     }
 }
 
-// ================= UPLOAD & PARSE SOAL =================
+// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS + 1 MAPEL 1 BARIS) =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -3400,7 +3482,7 @@ function renderTabelSiswaLogin() {
     });
 }
 
-// ================= AUTENTIKASI & UJIAN SISWA =================
+// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT + TOKEN DRIVE) =================
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
