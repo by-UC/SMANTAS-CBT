@@ -511,7 +511,7 @@
         }
         .pass-display-box span { flex: 1; font-family: monospace; font-size: 13px; font-weight: bold; color: #0056b3; }
 
-        /* Token Box Admin (tersimpan di Google Drive token_cbt.json) */
+        /* Token Box Admin (tersimpan di Google Drive token_cbt.xlsx) */
         .token-live-box {
             display: flex;
             align-items: center;
@@ -939,45 +939,8 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN, TOKEN & SESI PERANGKAT (SESI DI GAS) -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
-            <!-- PANEL TOKEN OTOMATIS 4 DIGIT (DIPINDAHKAN KE TAB MONITORING AKUN) -->
-            <div class="admin-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
-                    <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
-                </div>
-                <div class="token-live-box">
-                    <div>
-                        <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.json</code>):</div>
-                        <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
-                    </div>
-                    <div class="token-live-timer">
-                        <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
-                        <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
-                            <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
-                            <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row-flex" style="align-items:flex-end;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Interval Ganti Token (Menit):</label>
-                        <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Wajib Token Saat Mulai Ujian:</label>
-                        <select id="settingWajibToken">
-                            <option value="true">Aktif (Wajib)</option>
-                            <option value="false">Nonaktif</option>
-                        </select>
-                    </div>
-                    <div style="flex:0 0 auto; min-width:auto;">
-                        <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 12px; width:auto;">Simpan Pengaturan Token ke Drive</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- TABEL KONTROL SESI & RESET MAPEL / PERANGKAT SISWA (GAS) -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
@@ -1232,6 +1195,43 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
+            <!-- PANEL TOKEN OTOMATIS 4 DIGIT (DI TAB PENGATURAN) -->
+            <div class="admin-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
+                    <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                    <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
+                </div>
+                <div class="token-live-box">
+                    <div>
+                        <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
+                        <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                    </div>
+                    <div class="token-live-timer">
+                        <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
+                        <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
+                            <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
+                            <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-flex" style="align-items:flex-end;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Interval Ganti Token (Menit):</label>
+                        <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Wajib Token Saat Mulai Ujian:</label>
+                        <select id="settingWajibToken">
+                            <option value="true">Aktif (Wajib)</option>
+                            <option value="false">Nonaktif</option>
+                        </select>
+                    </div>
+                    <div style="flex:0 0 auto; min-width:auto;">
+                        <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 12px; width:auto;">Simpan Pengaturan Token ke Drive</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
             <div class="siswa-top-two-col">
                 <!-- KOLOM KIRI: PENGATURAN JP -->
@@ -1331,7 +1331,7 @@ const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f93
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz4xExpcmbVEqGk-NAPrQEJZY2RColGyEcnrv3yvdyxAaA9TTvvGkpgDsNua9JDAU3A/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbz-JYkUqnZhqzgaBBp_58H_9r-mi8QBoDWKuknOFqoysRJR0nDPJUf-HTMcg0Xh8pgz/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
@@ -1339,7 +1339,7 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
-// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.json) =================
+// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.xlsx) =================
 let tokenDriveState = {
     token: "----",
     intervalMenit: 5,
@@ -1375,7 +1375,7 @@ async function fetchTokenDariDrive(silent = true) {
             sinkronkanTampilanInputTokenSiswa();
         }
     } catch (e) {
-        if (!silent) console.error("Gagal mengambil token_cbt.json dari Google Drive:", e);
+        if (!silent) console.error("Gagal mengambil token_cbt.xlsx dari Google Drive:", e);
     } finally {
         isSyncingTokenFromDrive = false;
     }
@@ -1427,7 +1427,7 @@ async function simpanPengaturanToken() {
         return;
     }
 
-    showLoading("Menyimpan pengaturan & file token_cbt.json ke Google Drive...");
+    showLoading("Menyimpan pengaturan & file token_cbt.xlsx ke Google Drive...");
     try {
         const res = await axios.post(GAS_URL, JSON.stringify({
             action: "saveTokenConfig",
@@ -1448,7 +1448,7 @@ async function simpanPengaturanToken() {
             sinkronkanInputPengaturanToken();
             sinkronkanTampilanInputTokenSiswa();
             hideLoading();
-            alert(`Berhasil! File token_cbt.json di Google Drive diperbarui (interval ${intervalVal} menit).`);
+            alert(`Berhasil! File token_cbt.xlsx di Google Drive diperbarui (interval ${intervalVal} menit).`);
         } else {
             hideLoading();
             alert("Gagal menyimpan token ke Drive: " + (res.data?.message || "Unknown error"));
@@ -1460,8 +1460,8 @@ async function simpanPengaturanToken() {
 }
 
 async function acakUlangTokenDrive() {
-    if (!confirm("Acak ulang token 4 digit di file token_cbt.json (Google Drive) sekarang?")) return;
-    showLoading("Mengacak ulang token_cbt.json di Google Drive...");
+    if (!confirm("Acak ulang token 4 digit di file token_cbt.xlsx (Google Drive) sekarang?")) return;
+    showLoading("Mengacak ulang token_cbt.xlsx di Google Drive...");
     try {
         const res = await axios.post(GAS_URL, JSON.stringify({
             action: "saveTokenConfig",
@@ -1874,19 +1874,16 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const sessMapelNorm = sess ? normStr(sess.mapel) : "";
     const resetTerbaru = sessStatus.endsWith("Direset");
 
-    // Jika admin mereset sesi secara spesifik untuk mapel tersebut
     if (resetTerbaru && sessMapelNorm === targetMapel) {
         bukaKunciMapelLokal(username, mapelName);
         return false;
     }
 
-    // Cek daftar mapel terkunci di penyimpanan lokal perangkat
     const lockedLocal = bacaLockedMapelLokal(username);
     if (lockedLocal.includes(targetMapel)) {
         return true;
     }
 
-    // Cek riwayat log spreadsheet untuk siswa & mapel ini
     const logs = Array.isArray(logSiswaLogin) ? logSiswaLogin : [];
     const namaNorm = normStr(namaSiswa || (sess && sess.nama) || "");
     const kelasNorm = normStr(kelasSiswa || (sess && sess.kelas) || "");
@@ -1907,7 +1904,6 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
         }
     }
 
-    // Fallback cek sesi GAS jika mapel pada sesi sama dengan mapel yang dicek
     if (sess && sessMapelNorm === targetMapel && cekStatusTerkunci(sessStatus)) {
         return true;
     }
@@ -2639,49 +2635,24 @@ async function hapusBarisLogSpreadsheet(index) {
 
     if (!confirm(`Hapus baris log untuk ${infoLabel}?`)) return;
 
-    showLoading("Menghapus baris log terpilih...");
+    showLoading("Menghapus baris log terpilih di Spreadsheet...");
     try {
-        const candidateActions = [
-            "deleteLogRow",
-            "deleteLogEntry",
-            "removeLogRow",
-            "deleteLog"
-        ];
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "deleteLogRow",
+            index: index,
+            nama: row.nama || "",
+            kelas: row.kelas || "",
+            mapel: row.mapel || "",
+            status: row.status || ""
+        }));
 
-        let berhasilDiGas = false;
-        let lastGasMessage = "";
-
-        for (const actName of candidateActions) {
-            try {
-                const res = await axios.post(GAS_URL, JSON.stringify({
-                    action: actName,
-                    index: index,
-                    row: row
-                }));
-                const data = res && res.data;
-                if (data && data.status === "success") {
-                    berhasilDiGas = true;
-                    break;
-                }
-                const msg = (data && data.message) ? String(data.message) : "";
-                lastGasMessage = msg || lastGasMessage;
-                if (!msg.toLowerCase().includes("invalid action")) {
-                    break;
-                }
-            } catch (reqErr) {
-                lastGasMessage = reqErr.message || lastGasMessage;
-            }
-        }
-
-        logSiswaLogin.splice(index, 1);
-        renderTabelSiswaLogin();
-        renderTabelSesiAktif();
-        hideLoading();
-
-        if (berhasilDiGas) {
+        const data = res && res.data;
+        if (data && data.status === "success") {
             await fetchLogLoginFromGAS();
-        } else if (lastGasMessage && !lastGasMessage.toLowerCase().includes("invalid action")) {
-            console.warn("GAS hapus baris log:", lastGasMessage);
+            hideLoading();
+        } else {
+            hideLoading();
+            alert("Gagal menghapus baris log di Spreadsheet: " + (data?.message || "Unknown error"));
         }
     } catch (e) {
         hideLoading();
@@ -2796,7 +2767,6 @@ function kumpulkanMapelAktifSiswa(username, sesiObj) {
         });
     }
 
-    // Jika belum ada mapel spesifik yang tercatat pada sesi/log/kunci, sediakan mapel yang ada di daftarMapel/jadwal
     if (mapelSet.size === 0 && kelasNorm) {
         daftarJadwalUjian.forEach(j => {
             if (normStr(j.kelas) === kelasNorm && j.mapel) {
@@ -5097,8 +5067,6 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
-        fetchTokenDariDrive(true);
-        mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
@@ -5118,6 +5086,8 @@ function switchAdminTab(tabName) {
     } else if(tabName === 'settings') {
         document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
         document.getElementById('adminTabSettings').classList.add('active');
+        fetchTokenDariDrive(true);
+        mulaiTimerTokenAdmin();
         updateLabelJp();
         renderAdminPasswordDisplay();
         cekRateLimitGistApi(true);
