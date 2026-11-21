@@ -577,11 +577,16 @@
             margin-top: 8px;
         }
 
-        /* KARTU SISWA RINGKAS TINGGI 3 CM */
+        /* KARTU SISWA RINGKAS TINGGI 3 CM (1 BARIS 4 USER) */
         .kartu-siswa-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 6px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 5px;
+        }
+        @media (max-width: 760px) {
+            .kartu-siswa-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
         .kartu-siswa-3cm {
             height: 3cm;
@@ -590,7 +595,7 @@
             border: 1px solid #222;
             border-radius: 4px;
             background: #ffffff;
-            padding: 4px 7px;
+            padding: 3px 5px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -603,14 +608,14 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #008080;
-            padding-bottom: 2px;
-            font-size: 8.5px;
+            padding-bottom: 1px;
+            font-size: 7.5px;
             font-weight: bold;
             color: #0056b3;
             line-height: 1.1;
         }
         .kartu-3cm-nama {
-            font-size: 10.5px;
+            font-size: 9.5px;
             font-weight: bold;
             color: #111;
             white-space: nowrap;
@@ -619,17 +624,34 @@
             line-height: 1.15;
         }
         .kartu-3cm-cred {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2px 6px;
-            font-size: 9px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            font-size: 8px;
             line-height: 1.15;
             background: #f6f9f9;
-            padding: 2px 5px;
+            padding: 2px 4px;
             border-radius: 3px;
         }
-        .kartu-3cm-cred span {
+        .kartu-3cm-cred-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 3px;
             white-space: nowrap;
+            overflow: hidden;
+        }
+        .kartu-3cm-cred-label {
+            font-size: 8px;
+            color: #444;
+            flex-shrink: 0;
+        }
+        .kartu-3cm-cred-val {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            line-height: 1.05;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -650,12 +672,12 @@
             #printKartuArea {
                 display: block !important;
                 width: 100%;
-                padding: 4mm;
+                padding: 3mm;
             }
             .kartu-siswa-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 3mm;
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 2mm !important;
             }
             .kartu-siswa-3cm {
                 height: 3cm !important;
@@ -665,6 +687,10 @@
                 box-shadow: none !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .kartu-3cm-cred-val {
+                font-size: 16px !important;
+                font-weight: bold !important;
             }
         }
 
@@ -920,9 +946,12 @@
         <!-- TAB 2: DAFTAR UJIAN (DUA KOLOM: KIRI BUAT JADWAL, KANAN DAFTAR UJIAN AKTIF) -->
         <div id="adminTabUjian" class="admin-view">
             <div class="ujian-two-col">
-                <!-- KOLOM KIRI: BUAT JADWAL -->
-                <div class="admin-card ujian-col-left">
-                    <h4 style="margin: 0 0 8px 0; color: #008080;">Buat Jadwal</h4>
+                <!-- KOLOM KIRI: BUAT / EDIT JADWAL -->
+                <div class="admin-card ujian-col-left" id="cardFormJadwal">
+                    <h4 id="judulFormJadwal" style="margin: 0 0 8px 0; color: #008080;">Buat Jadwal</h4>
+                    <input type="hidden" id="editJadwalOrigIndices" value="">
+                    <input type="hidden" id="editJadwalOrigMapel" value="">
+                    <input type="hidden" id="editJadwalOrigKelas" value="">
                     <div class="form-group">
                         <label>Pilih Mata Pelajaran:</label>
                         <select id="jadwalMapel">
@@ -951,11 +980,14 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
+                        <label id="labelSoalUploadJadwal">Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
                         <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
                         <textarea id="soalBatchText" rows="4" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
                     </div>
-                    <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
+                    <div class="row-flex" style="margin-top:2px;">
+                        <button id="btnSimpanJadwal" onclick="simpanJadwalDanSoal()" style="background: #28a745; flex: 2;">Simpan Jadwal & Upload Soal</button>
+                        <button type="button" id="btnBatalEditJadwal" onclick="batalEditJadwal()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
+                    </div>
                 </div>
 
                 <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
@@ -1119,7 +1151,10 @@
                             </div>
                             <div class="token-live-timer">
                                 <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
-                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin-top:4px; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                                <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
+                                    <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
+                                    <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                                </div>
                             </div>
                         </div>
                         <div class="row-flex">
@@ -1188,7 +1223,36 @@
                 </div>
             </div>
 
-            <!-- BARIS 3: HAPUS / RESET DB -->
+            <!-- BARIS 3: CEK KUOTA / RATE LIMIT GITHUB GIST API -->
+            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
+                        <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
+                    </div>
+                    <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 6px 12px; width:auto; font-size:11.5px;">🔄 Cek Limit Gist API</button>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Sisa Kuota (Remaining)</div>
+                        <div id="gistLimitRemaining" style="font-size:16px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Terpakai (Used)</div>
+                        <div id="gistLimitUsed" style="font-size:16px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Reset Kuota Pada</div>
+                        <div id="gistLimitReset" style="font-size:13px; font-weight:bold; color:#333; font-family:monospace;">-</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
+                        <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARIS 4: HAPUS / RESET DB -->
             <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
@@ -1366,6 +1430,41 @@ async function acakUlangTokenDrive() {
     hideLoading();
 }
 
+async function salinTokenDrive() {
+    const tokenVal = String(tokenDriveState.token || "").trim();
+    if (!tokenVal || tokenVal === "----") {
+        alert("Token belum tersedia untuk disalin.");
+        return;
+    }
+    const teksSalin = `Token : ${tokenVal}`;
+    const btn = document.getElementById("btnSalinTokenDrive");
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(teksSalin);
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = teksSalin;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+        }
+        if (btn) {
+            const origText = btn.innerText;
+            btn.innerText = "✔ Tersalin!";
+            btn.style.background = "#28a745";
+            setTimeout(() => {
+                btn.innerText = origText;
+                btn.style.background = "";
+            }, 1600);
+        }
+    } catch (e) {
+        alert("Gagal menyalin token: " + e.message);
+    }
+}
+
 function sinkronkanTampilanInputTokenSiswa() {
     const groupEl = document.getElementById("groupTokenUjianSiswa");
     const inpEl = document.getElementById("inputTokenSiswa");
@@ -1400,13 +1499,19 @@ function buatHtmlKartuSiswa(daftar) {
     return daftar.map(s => `
         <div class="kartu-siswa-3cm">
             <div class="kartu-3cm-top">
-                <span>KARTU CBT • SMANTAS</span>
+                <span>KARTU CBT</span>
                 <span>${s.kelas || '-'}</span>
             </div>
             <div class="kartu-3cm-nama" title="${s.nama || '-'}">${s.nama || '-'}</div>
             <div class="kartu-3cm-cred">
-                <span><b>User:</b> ${s.username || '-'}</span>
-                <span><b>Pass:</b> ${s.password || '-'}</span>
+                <div class="kartu-3cm-cred-row">
+                    <span class="kartu-3cm-cred-label">User:</span>
+                    <span class="kartu-3cm-cred-val">${s.username || '-'}</span>
+                </div>
+                <div class="kartu-3cm-cred-row">
+                    <span class="kartu-3cm-cred-label">Pass:</span>
+                    <span class="kartu-3cm-cred-val">${s.password || '-'}</span>
+                </div>
             </div>
         </div>
     `).join("");
@@ -1751,39 +1856,152 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-// ================= DATABASE MASTER GIST =================
-async function fetchCbtDatabase(forceRefresh = false) {
+// ================= MONITOR RATE LIMIT GIST API =================
+async function cekRateLimitGistApi(silent = false) {
+    const remEl = document.getElementById('gistLimitRemaining');
+    const usedEl = document.getElementById('gistLimitUsed');
+    const resetEl = document.getElementById('gistLimitReset');
+    const statusEl = document.getElementById('gistLimitStatus');
+
+    if (!silent && remEl) remEl.innerText = "Memuat...";
+    try {
+        const res = await axios.get(`https://api.github.com/rate_limit?t=${Date.now()}`, {
+            headers: { "Authorization": `token ${GIST_TOKEN}` }
+        });
+        const core = res.data?.resources?.core || res.data?.rate || {};
+        const limit = Number(core.limit || 5000);
+        const remaining = Number(core.remaining ?? 0);
+        const used = Number(core.used ?? (limit - remaining));
+        const resetEpoch = Number(core.reset || 0);
+
+        let resetStr = "-";
+        if (resetEpoch > 0) {
+            const d = new Date(resetEpoch * 1000);
+            const pad = (n) => String(n).padStart(2, '0');
+            resetStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} WIB`;
+        }
+
+        if (remEl) {
+            remEl.innerText = `${remaining} / ${limit}`;
+            remEl.style.color = remaining > 500 ? "#28a745" : (remaining > 100 ? "#fd7e14" : "#dc3545");
+        }
+        if (usedEl) usedEl.innerText = `${used} req`;
+        if (resetEl) resetEl.innerText = resetStr;
+        if (statusEl) {
+            statusEl.innerText = remaining > 500 ? "Aman (Raw-First Aktif)" : "Waspada Kuota Menipis";
+            statusEl.style.color = remaining > 500 ? "#008080" : "#dc3545";
+        }
+    } catch (e) {
+        if (remEl) {
+            remEl.innerText = "Gagal cek";
+            remEl.style.color = "#dc3545";
+        }
+        if (statusEl) {
+            statusEl.innerText = "Error / Rate Limited";
+            statusEl.style.color = "#dc3545";
+        }
+        if (!silent) {
+            alert("Gagal mengecek limit GitHub Gist API: " + (e.response?.data?.message || e.message));
+        }
+    }
+}
+
+// ================= DATABASE MASTER GIST (HEMAT KUOTA: RAW-FIRST + DIRECT PATCH) =================
+const CBT_DB_CACHE_KEY = `smantas_cbt_master_cache_${CBT_GIST_ID}`;
+const CBT_DB_CACHE_TTL_MS = 2 * 60 * 1000; // 2 menit cache lokal
+
+function terapkanDataCbtMaster(data) {
+    if (!data || typeof data !== 'object') return;
+    if (Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
+    if (Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
+    if (Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
+    if (Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
+    if (data.db_pengaturan && typeof data.db_pengaturan === 'object') {
+        pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
+        if (data.db_pengaturan.adminPasswordPlain) {
+            localStorage.setItem("adminPasswordPlain", data.db_pengaturan.adminPasswordPlain);
+        }
+    }
+}
+
+function simpanCacheCbtMaster(data) {
+    try {
+        localStorage.setItem(CBT_DB_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            data: data
+        }));
+    } catch (e) {}
+}
+
+function bacaCacheCbtMaster() {
+    try {
+        const raw = localStorage.getItem(CBT_DB_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data || !parsed.savedAt) return null;
+        if (Date.now() - parsed.savedAt > CBT_DB_CACHE_TTL_MS) return null;
+        return parsed.data;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function fetchCbtDatabase(forceRefresh = false, preferApi = false) {
     if (isDataLoadedOnce && !forceRefresh) {
         return;
     }
 
+    if (!forceRefresh && !preferApi) {
+        const cached = bacaCacheCbtMaster();
+        if (cached) {
+            terapkanDataCbtMaster(cached);
+            isDataLoadedOnce = true;
+            initDropdowns();
+            renderTabelDaftarSiswa();
+            renderTabelJadwal();
+            updateLabelJp();
+            renderAdminPasswordDisplay();
+            return;
+        }
+    }
+
     try {
         let data = null;
-        try {
-            let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
-                headers: { "Authorization": `token ${GIST_TOKEN}` }
-            });
-            let fname = Object.keys(apiRes.data.files)[0];
-            data = JSON.parse(apiRes.data.files[fname].content);
-        } catch(apiErr) {
-            let res = await axios.get(CBT_GIST_RAW_URL + "?t=" + new Date().getTime());
-            data = res.data;
-        }
-
-        if(data && typeof data === 'object') {
-            if(Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
-            if(Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
-            if(Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
-            if(Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
-            if(data.db_pengaturan && typeof data.db_pengaturan === 'object') {
-                pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
-                if(data.db_pengaturan.adminPasswordPlain) {
-                    localStorage.setItem("adminPasswordPlain", data.db_pengaturan.adminPasswordPlain);
-                }
+        if (preferApi) {
+            try {
+                let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
+                    headers: { "Authorization": `token ${GIST_TOKEN}` }
+                });
+                const files = apiRes.data.files || {};
+                const fname = files["db_cbt.json"] ? "db_cbt.json" : Object.keys(files)[0];
+                data = JSON.parse(files[fname].content);
+            } catch (apiErr) {
+                const bucket = Math.floor(Date.now() / 30000);
+                let res = await axios.get(`${CBT_GIST_RAW_URL}?t=${bucket}`);
+                data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+            }
+        } else {
+            // Utamakan Gist Raw (tidak memakan kuota Gist API) dengan bucket 30 detik
+            try {
+                const bucket = forceRefresh ? Date.now() : Math.floor(Date.now() / 30000);
+                let res = await axios.get(`${CBT_GIST_RAW_URL}?t=${bucket}`);
+                data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+            } catch (rawErr) {
+                let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
+                    headers: { "Authorization": `token ${GIST_TOKEN}` }
+                });
+                const files = apiRes.data.files || {};
+                const fname = files["db_cbt.json"] ? "db_cbt.json" : Object.keys(files)[0];
+                data = JSON.parse(files[fname].content);
             }
         }
+
+        if (data && typeof data === 'object') {
+            terapkanDataCbtMaster(data);
+            simpanCacheCbtMaster(data);
+        }
         isDataLoadedOnce = true;
-    } catch(e) {
+    } catch (e) {
         console.error("Gagal mengambil db_cbt.json dari Gist:", e);
     }
     initDropdowns();
@@ -1803,17 +2021,27 @@ async function saveCbtDatabaseToGist() {
     };
 
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const serialized = JSON.stringify(payloadData);
     try {
-        let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
-        let filename = Object.keys(gistRes.data.files)[0];
-        
+        // Langsung PATCH ke db_cbt.json tanpa GET pendahuluan (hemat 50% kuota API tulis)
         await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
-            files: { [filename]: { content: JSON.stringify(payloadData) } }
+            files: { "db_cbt.json": { content: serialized } }
         }, githubHeaders);
+        simpanCacheCbtMaster(payloadData);
         isDataLoadedOnce = true;
-    } catch(err) {
-        console.error("Gagal menyimpan ke Gist db_cbt.json:", err);
-        alert("Gagal menyimpan ke Gist: " + err.message);
+    } catch (err) {
+        try {
+            let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
+            let filename = Object.keys(gistRes.data.files)[0];
+            await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
+                files: { [filename]: { content: serialized } }
+            }, githubHeaders);
+            simpanCacheCbtMaster(payloadData);
+            isDataLoadedOnce = true;
+        } catch (err2) {
+            console.error("Gagal menyimpan ke Gist db_cbt.json:", err2);
+            alert("Gagal menyimpan ke Gist: " + err2.message);
+        }
     }
 }
 
@@ -2200,7 +2428,7 @@ async function resetLoginSiswaAdmin(username) {
 
 async function refreshSemuaDataAdmin() {
     showLoading("Menyegarkan data Master Gist, Token Drive, Sesi GAS & Log...");
-    await fetchCbtDatabase(true);
+    await fetchCbtDatabase(true, true);
     await fetchTokenDariDrive(true);
     await fetchSesiFromGAS(true);
     await fetchLogLoginFromGAS();
@@ -2974,6 +3202,46 @@ async function eksekusiHapusSoalDiGist(mapel, kelasList) {
     return resultHapus.dihapusCount;
 }
 
+async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMapel, newKelasList) {
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const files = gistRes.data.files || {};
+    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
+
+    const oldKelasSet = new Set((oldKelasList || []).map(k => normStr(k)).filter(Boolean));
+    let berubah = false;
+
+    contentSoal = contentSoal.map(item => {
+        if (!itemCocokMapel(item, oldMapel)) return item;
+        const itemKelasArr = Array.isArray(item.kelas) ? item.kelas : [];
+        const adaKelasLama = itemKelasArr.some(k => oldKelasSet.has(normStr(k)));
+        if (!adaKelasLama && itemKelasArr.length > 0) return item;
+
+        // Keluarkan kelas lama dari item, lalu tambahkan kelas baru
+        const sisaKelas = itemKelasArr.filter(k => !oldKelasSet.has(normStr(k)));
+        newKelasList.forEach(nk => {
+            if (!sisaKelas.some(sk => normStr(sk) === normStr(nk))) {
+                sisaKelas.push(nk);
+            }
+        });
+        berubah = true;
+        return {
+            ...item,
+            mapel: newMapel,
+            kelas: sisaKelas
+        };
+    });
+
+    if (berubah) {
+        const serialized = serializeSoalJsonOneMapelPerLine(contentSoal);
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: { [filename]: { content: serialized } }
+        }, githubHeaders);
+        bersihkanCacheSoal();
+    }
+}
+
 async function simpanJadwalDanSoal() {
     let mapel = document.getElementById('jadwalMapel').value;
     let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
@@ -2982,12 +3250,28 @@ async function simpanJadwalDanSoal() {
     let selesai = document.getElementById('waktuSelesai').value;
     let rawText = document.getElementById('soalBatchText').value.trim();
 
+    const origIndicesStr = document.getElementById('editJadwalOrigIndices')?.value || "";
+    const origMapel = document.getElementById('editJadwalOrigMapel')?.value || "";
+    const origKelasStr = document.getElementById('editJadwalOrigKelas')?.value || "";
+    const isEditMode = origIndicesStr !== "";
+
     if(!mapel) { alert("Pilih Mata Pelajaran!"); return; }
     if(checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
     if(!mulai || !selesai) { alert("Tentukan waktu mulai dan jumlah JP!"); return; }
     if(mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
 
-    showLoading("Menyiapkan jadwal & menyimpan soal...");
+    showLoading(isEditMode ? "Memperbarui jadwal ujian..." : "Menyiapkan jadwal & menyimpan soal...");
+
+    if (isEditMode) {
+        try {
+            const origIndices = JSON.parse(origIndicesStr);
+            origIndices.sort((a, b) => b - a).forEach(idx => {
+                if (idx >= 0 && idx < daftarJadwalUjian.length) {
+                    daftarJadwalUjian.splice(idx, 1);
+                }
+            });
+        } catch (e) {}
+    }
 
     checkedKelas.forEach(kelas => {
         daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
@@ -3014,6 +3298,12 @@ async function simpanJadwalDanSoal() {
             let rawContent = files[filename].content;
             
             let contentSoal = parseSoalJsonFlexible(rawContent);
+            if (isEditMode && origMapel && origKelasStr) {
+                try {
+                    const origKelasList = JSON.parse(origKelasStr);
+                    contentSoal = hapusKelasDariSoalList(contentSoal, origMapel, origKelasList).updated;
+                } catch (e) {}
+            }
             const cleaned = hapusKelasDariSoalList(contentSoal, mapel, checkedKelas);
             contentSoal = cleaned.updated;
 
@@ -3045,13 +3335,24 @@ async function simpanJadwalDanSoal() {
             alert("Gagal upload soal ke Gist: " + e.message); 
             return; 
         }
+    } else if (isEditMode && origMapel && origKelasStr) {
+        try {
+            const origKelasList = JSON.parse(origKelasStr);
+            const mapelBerubah = normStr(origMapel) !== normStr(mapel);
+            const kelasBerubah = JSON.stringify([...origKelasList].sort()) !== JSON.stringify([...checkedKelas].sort());
+            if (mapelBerubah || kelasBerubah) {
+                showLoading("Menyesuaikan mapel/kelas pada bank soal di Gist...");
+                await sinkronkanKelasSoalSaatEditJadwal(origMapel, origKelasList, mapel, checkedKelas);
+            }
+        } catch (e) {
+            console.warn("Gagal sinkronisasi kelas soal saat edit jadwal:", e);
+        }
     }
 
     hideLoading();
+    batalEditJadwal();
     renderTabelJadwal();
-    alert("Jadwal ujian dan soal berhasil disimpan (1 mapel 1 baris, hemat Gist)!");
-    document.getElementById('soalBatchText').value = "";
-    document.getElementById('fileSoalAny').value = "";
+    alert(isEditMode ? "Jadwal ujian berhasil diperbarui!" : "Jadwal ujian dan soal berhasil disimpan (1 mapel 1 baris, hemat Gist)!");
 }
 
 function parseSoalDariTeks(text, mapelName, kelasArray) {
@@ -3159,6 +3460,14 @@ function renderTabelJadwal() {
         const kelasJson = encodeURIComponent(JSON.stringify(g.kelasList));
         const indicesJson = encodeURIComponent(JSON.stringify(g.indices));
         const mapelEnc = encodeURIComponent(g.mapel);
+        const groupPayloadEnc = encodeURIComponent(JSON.stringify({
+            mapel: g.mapel,
+            kelasList: g.kelasList,
+            jp: g.jp || 1,
+            mulai: g.mulai || "",
+            selesai: g.selesai || "",
+            indices: g.indices
+        }));
 
         tbody.innerHTML += `<tr>
             <td class="col-mapel"><b>${g.mapel}</b></td>
@@ -3169,14 +3478,89 @@ function renderTabelJadwal() {
             <td class="col-aksi">
                 <div class="jadwal-aksi-stack">
                     <div class="jadwal-aksi-top-row">
+                        <button type="button" onclick="editJadwalGroup('${groupPayloadEnc}')" class="btn-warning btn-jadwal-act">Edit</button>
                         <button type="button" onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-info btn-jadwal-act">Soal</button>
+                    </div>
+                    <div class="jadwal-aksi-top-row">
+                        <button type="button" onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-success btn-jadwal-act">Hasil</button>
                         <button type="button" onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-danger btn-jadwal-act">Hapus</button>
                     </div>
-                    <button type="button" onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-success btn-jadwal-full">Hasil</button>
                 </div>
             </td>
         </tr>`;
     });
+}
+
+function editJadwalGroup(groupPayloadEnc) {
+    const g = JSON.parse(decodeURIComponent(groupPayloadEnc));
+    if (!g) return;
+
+    document.getElementById('editJadwalOrigIndices').value = JSON.stringify(g.indices || []);
+    document.getElementById('editJadwalOrigMapel').value = g.mapel || "";
+    document.getElementById('editJadwalOrigKelas').value = JSON.stringify(g.kelasList || []);
+
+    const selMapel = document.getElementById('jadwalMapel');
+    if (selMapel) {
+        if (!Array.from(selMapel.options).some(opt => opt.value === g.mapel)) {
+            selMapel.innerHTML += `<option value="${g.mapel}">${g.mapel}</option>`;
+        }
+        selMapel.value = g.mapel;
+    }
+
+    const kelasSet = new Set((g.kelasList || []).map(k => normStr(k)));
+    const rowSet = new Set();
+    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
+        cb.checked = kelasSet.has(normStr(cb.value));
+        const rIdx = cb.getAttribute('data-row-idx');
+        if (rIdx !== null) rowSet.add(Number(rIdx));
+    });
+    rowSet.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
+
+    document.getElementById('waktuMulai').value = g.mulai || "";
+    document.getElementById('jumlahJp').value = g.jp || 1;
+    if (g.selesai) {
+        document.getElementById('waktuSelesai').value = g.selesai;
+    } else {
+        hitungWaktuSelesaiOtomatis();
+    }
+
+    document.getElementById('soalBatchText').value = "";
+    document.getElementById('fileSoalAny').value = "";
+
+    document.getElementById('judulFormJadwal').innerText = `Edit Jadwal: ${g.mapel}`;
+    document.getElementById('labelSoalUploadJadwal').innerText = "Ganti/Upload Soal Baru (Opsional — kosongkan jika soal tetap):";
+    document.getElementById('btnSimpanJadwal').innerText = "Update Jadwal";
+    document.getElementById('btnSimpanJadwal').style.background = "#008080";
+    document.getElementById('btnBatalEditJadwal').style.display = "block";
+
+    document.getElementById('cardFormJadwal')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function batalEditJadwal() {
+    document.getElementById('editJadwalOrigIndices').value = "";
+    document.getElementById('editJadwalOrigMapel').value = "";
+    document.getElementById('editJadwalOrigKelas').value = "";
+
+    document.getElementById('jadwalMapel').value = "";
+    const rowSet = new Set();
+    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
+        cb.checked = false;
+        const rIdx = cb.getAttribute('data-row-idx');
+        if (rIdx !== null) rowSet.add(Number(rIdx));
+    });
+    rowSet.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
+
+    document.getElementById('waktuMulai').value = "";
+    document.getElementById('jumlahJp').value = "1";
+    document.getElementById('waktuSelesai').value = "";
+    document.getElementById('soalBatchText').value = "";
+    document.getElementById('fileSoalAny').value = "";
+
+    document.getElementById('judulFormJadwal').innerText = "Buat Jadwal";
+    document.getElementById('labelSoalUploadJadwal').innerText = "Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:";
+    document.getElementById('btnSimpanJadwal').innerText = "Simpan Jadwal & Upload Soal";
+    document.getElementById('btnSimpanJadwal').style.background = "#28a745";
+    document.getElementById('btnBatalEditJadwal').style.display = "none";
 }
 
 // ================= FITUR EXPORT HASIL UJIAN PER KELAS (.XLSX) =================
@@ -4035,6 +4419,7 @@ function switchAdminTab(tabName) {
         renderAdminPasswordDisplay();
         fetchTokenDariDrive(true);
         mulaiTimerTokenAdmin();
+        cekRateLimitGistApi(true);
     }
 }
 
