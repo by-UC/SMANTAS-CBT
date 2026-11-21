@@ -11,33 +11,93 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f4f7f6; color: #333; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 8px; background: #f4f7f6; color: #333; }
         
         /* Container default (lebar untuk ujian & admin dashboard) */
         .container { 
             background: white; 
-            padding: 20px; 
+            padding: 12px 14px; 
             border-radius: 8px; 
-            max-width: 1180px; 
-            margin: 20px auto; 
+            max-width: 1240px; 
+            margin: 8px auto; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
         }
         /* Mode diperkecil khusus halaman login */
         .container.login-compact {
             max-width: 420px;
-            margin-top: 40px;
+            margin-top: 32px;
+            padding: 18px;
         }
 
         h2, h3 { text-align: center; color: #0056b3; }
-        .header-box { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #008080; padding-bottom: 10px; }
-        .header-box h2 { margin: 0 0 4px 0; font-size: 22px; }
-        .header-box h3 { color: #008080; margin: 0; font-size: 15px; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 13px; }
-        input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select { 
-            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; 
+        .header-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            text-align: left;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #008080;
+            padding-bottom: 6px;
         }
+        .header-box.centered-header {
+            display: block;
+            text-align: center;
+        }
+        .header-brand h2 {
+            margin: 0 0 2px 0;
+            font-size: 18px;
+            text-align: inherit;
+        }
+        .header-brand h3 {
+            color: #008080;
+            margin: 0;
+            font-size: 12px;
+            font-weight: normal;
+            text-align: inherit;
+        }
+        .header-admin-inline {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .header-admin-inline.active {
+            display: flex;
+        }
+        .header-admin-title {
+            font-size: 13.5px;
+            font-weight: bold;
+            color: #008080;
+            white-space: nowrap;
+        }
+        .header-admin-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 720px) {
+            .header-box:not(.centered-header) {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .header-admin-inline {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .form-group { margin-bottom: 7px; }
+        label { display: block; font-weight: bold; margin-bottom: 3px; color: #444; font-size: 11.5px; }
+        input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select { 
+            width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12.5px; 
+        }
+        input[type="file"] { font-size: 11.5px; padding: 2px 0; }
+        textarea { resize: vertical; }
         
         /* Style kolom input terkunci (readonly) */
         input.locked-input {
@@ -48,17 +108,17 @@
             user-select: none;
         }
 
-        button { background: #008080; color: white; padding: 11px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        button { background: #008080; color: white; padding: 7px 11px; border: none; border-radius: 4px; cursor: pointer; font-size: 12.5px; width: 100%; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #006666; }
         button:disabled { background: #b0bec5; cursor: not-allowed; opacity: 0.75; }
         
         /* Tombol Toggle Tunggal Login Siswa / Login Admin */
-        .single-role-bar { margin-bottom: 15px; }
+        .single-role-bar { margin-bottom: 12px; }
         .btn-role-toggle {
             background: #008080;
             color: #ffffff;
-            padding: 10px;
-            font-size: 14px;
+            padding: 9px;
+            font-size: 13px;
             border-radius: 4px;
             width: 100%;
             font-weight: bold;
@@ -76,35 +136,35 @@
         }
 
         /* Tab Navigation Admin */
-        .admin-tab-menu { display: flex; margin-bottom: 15px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; }
-        .admin-tab-btn { flex: 1; padding: 10px 10px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 12px; min-width: 95px; }
+        .admin-tab-menu { display: flex; margin-bottom: 8px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
+        .admin-tab-btn { flex: 1; padding: 6px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 85px; border-radius: 4px 4px 0 0; }
         .admin-tab-btn.active { background: #008080; color: white; }
         
-        .soal-box { margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; user-select: none; }
-        .soal-box p { font-size: 15px; line-height: 1.5; font-weight: bold; margin-top: 0; }
-        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; border: 1px solid #ddd; display: block; }
-        .option-label { display: block; margin-bottom: 8px; padding: 11px 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.15s, border-color 0.15s; }
+        .soal-box { margin-bottom: 14px; border-bottom: 1px solid #dee2e6; padding-bottom: 12px; user-select: none; }
+        .soal-box p { font-size: 14.5px; line-height: 1.45; font-weight: bold; margin-top: 0; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 6px; padding: 9px 11px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 13.5px; transition: background 0.15s, border-color 0.15s; }
         .option-label:hover { background: #f0f8f8; border-color: #008080; }
         .option-label.selected-opt { background: #e6f4f4; border-color: #008080; }
-        .option-label input { margin-right: 10px; }
+        .option-label input { margin-right: 8px; }
 
         /* NAVIGASI BEFORE / NEXT DI BAWAH MATA PELAJARAN */
         .soal-nav-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            gap: 8px;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 8px 12px;
+            padding: 7px 10px;
             border-radius: 4px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .btn-nav-soal {
             width: auto;
-            min-width: 105px;
-            padding: 8px 14px;
-            font-size: 13px;
+            min-width: 96px;
+            padding: 7px 12px;
+            font-size: 12.5px;
             background: #008080;
             color: #fff;
             border-radius: 4px;
@@ -117,40 +177,40 @@
         }
         .soal-progress-info {
             text-align: center;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: bold;
             color: #0056b3;
             flex: 1;
         }
         .soal-progress-sub {
             display: block;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: normal;
             color: #555;
-            margin-top: 2px;
+            margin-top: 1px;
         }
         
-        .row-flex { display: flex; gap: 10px; flex-wrap: wrap; }
-        .row-flex > div { flex: 1; min-width: 180px; }
-        .row-flex > div.jp-col { flex: 0 0 130px; min-width: 120px; max-width: 135px; }
+        .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row-flex > div { flex: 1; min-width: 160px; }
+        .row-flex > div.jp-col { flex: 0 0 120px; min-width: 110px; max-width: 130px; }
 
         /* GRID MATRIKS KHUSUS DAFTAR KELAS & DAFTAR MAPEL */
         .master-matrix-grid {
             display: grid;
-            gap: 6px 14px;
-            margin-top: 8px;
+            gap: 4px 10px;
+            margin-top: 6px;
             overflow-x: auto;
         }
         .master-matrix-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
-            padding: 4px 8px;
+            gap: 6px;
+            padding: 3px 7px;
             background: #ffffff;
             border: 1px solid #e3e8e8;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 12px;
             white-space: nowrap;
         }
         .master-matrix-item .item-label {
@@ -166,7 +226,7 @@
         /* 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI */
         .jadwal-time-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: flex-end;
             flex-wrap: nowrap;
         }
@@ -175,16 +235,16 @@
             min-width: 0;
         }
         .jadwal-time-row .jp-inline-col {
-            flex: 0 0 88px;
-            min-width: 82px;
+            flex: 0 0 82px;
+            min-width: 76px;
         }
         .jadwal-time-row input[type="datetime-local"] {
-            padding: 8px 6px;
-            font-size: 12px;
+            padding: 5px 5px;
+            font-size: 11px;
         }
         .jadwal-time-row input[type="number"] {
-            padding: 8px 8px;
-            font-size: 13px;
+            padding: 5px 6px;
+            font-size: 11.5px;
         }
         @media (max-width: 640px) {
             .jadwal-time-row {
@@ -201,7 +261,7 @@
         /* DUA KOLOM TAB DAFTAR UJIAN */
         .ujian-two-col {
             display: flex;
-            gap: 15px;
+            gap: 8px;
             align-items: flex-start;
         }
         .ujian-col-left {
@@ -230,13 +290,13 @@
             width: 100%;
             min-width: 100%;
             table-layout: fixed;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .table-jadwal-aktif th,
         .table-jadwal-aktif td {
-            padding: 5px 5px;
-            font-size: 11px;
-            line-height: 1.25;
+            padding: 4px 4px;
+            font-size: 10.5px;
+            line-height: 1.2;
             vertical-align: middle;
         }
         .table-jadwal-aktif .col-mapel {
@@ -256,45 +316,45 @@
         .table-jadwal-aktif .col-waktu {
             width: 16%;
             font-size: 10px;
-            line-height: 1.2;
-            padding-left: 3px;
-            padding-right: 3px;
+            line-height: 1.15;
+            padding-left: 2px;
+            padding-right: 2px;
         }
         .table-jadwal-aktif .col-aksi {
             width: 13%;
-            padding: 4px 3px;
+            padding: 3px 2px;
         }
         .jadwal-aksi-stack {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 2px;
         }
         .jadwal-aksi-top-row {
             display: flex;
-            gap: 3px;
+            gap: 2px;
         }
         .jadwal-aksi-top-row .btn-jadwal-act {
             flex: 1;
             min-width: 0;
             margin: 0;
-            padding: 3px 2px;
+            padding: 2.5px 2px;
             font-size: 9.5px;
-            line-height: 1.15;
+            line-height: 1.1;
             text-align: center;
         }
         .jadwal-aksi-stack .btn-jadwal-full {
             width: 100%;
             margin: 0;
-            padding: 3px 2px;
+            padding: 2.5px 2px;
             font-size: 9.5px;
-            line-height: 1.15;
+            line-height: 1.1;
             text-align: center;
         }
 
         /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA (TAMBAH SISWA & UPLOAD DATA SISWA) */
         .siswa-top-two-col {
             display: flex;
-            gap: 15px;
+            gap: 8px;
             align-items: stretch;
         }
         .siswa-top-two-col > .admin-card {
@@ -310,18 +370,19 @@
             }
         }
         
-        .error-msg { color: red; font-size: 13px; margin-top: 8px; text-align: center; display: none; }
+        .error-msg { color: red; font-size: 12px; margin-top: 6px; text-align: center; display: none; }
         .section-view, .admin-view { display: none; }
         .section-view.active, .admin-view.active { display: block; }
-        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; border-radius: 6px; margin-bottom: 15px; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; }
+        .admin-card h4 { font-size: 12.5px; }
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 520px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; min-width: 520px; }
+        th, td { border: 1px solid #ddd; padding: 4.5px 6px; text-align: left; font-size: 11.5px; }
         th { background-color: #008080; color: white; }
         
-        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; border-radius: 3px; margin-right: 4px; margin-bottom: 2px; }
+        .btn-sm { padding: 3px 7px; font-size: 10.5px; width: auto; border-radius: 3px; margin-right: 3px; margin-bottom: 1px; }
         .btn-success { background: #28a745; color: white; }
         .btn-success:hover { background: #218838; }
         .btn-warning { background: #ffc107; color: #212529; }
@@ -335,10 +396,10 @@
         .checkbox-grid {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            max-height: 150px;
+            gap: 3px;
+            max-height: 116px;
             overflow-y: auto;
-            padding: 7px 8px;
+            padding: 4px 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
             background: #fff;
@@ -346,16 +407,16 @@
         .kelas-row-line {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
-            gap: 4px 6px;
+            gap: 3px 5px;
             align-items: center;
         }
         .kelas-row-line label {
             font-weight: normal;
-            font-size: 11.5px;
+            font-size: 10.5px;
             margin-bottom: 0;
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 2px;
             cursor: pointer;
             white-space: nowrap;
             overflow: hidden;
@@ -367,9 +428,9 @@
         }
         .btn-pilih-baris {
             width: auto;
-            padding: 2px 6px;
-            font-size: 10px;
-            line-height: 1.2;
+            padding: 1.5px 5px;
+            font-size: 9.5px;
+            line-height: 1.15;
             border-radius: 3px;
             background: #e9ecef;
             color: #333;
@@ -394,25 +455,25 @@
         }
 
         .pass-display-box {
-            display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px;
-            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px; background: #fff; padding: 5px 10px;
+            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;
         }
-        .pass-display-box span { flex: 1; font-family: monospace; font-size: 14px; font-weight: bold; color: #0056b3; }
+        .pass-display-box span { flex: 1; font-family: monospace; font-size: 13px; font-weight: bold; color: #0056b3; }
 
         /* BADGE PILL RIWAYAT STATUS UJIAN */
         .status-pill-wrap {
             display: inline-flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 3px;
             align-items: center;
         }
         .status-pill {
             display: inline-block;
-            padding: 4px 9px;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
-            line-height: 1.25;
+            line-height: 1.2;
             white-space: nowrap;
         }
         .status-pill-curang {
@@ -441,10 +502,10 @@
             background: #fff3cd;
             border: 1px solid #ffeeba;
             color: #856404;
-            padding: 10px 12px;
+            padding: 8px 10px;
             border-radius: 4px;
-            font-size: 12px;
-            margin-bottom: 12px;
+            font-size: 11.5px;
+            margin-bottom: 10px;
             text-align: center;
             font-weight: bold;
         }
@@ -453,10 +514,10 @@
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.65); z-index: 9998;
-            display: none; justify-content: center; align-items: center; padding: 15px;
+            display: none; justify-content: center; align-items: center; padding: 12px;
         }
         .modal-box {
-            background: #fff; width: 100%; max-width: 780px; max-height: 88vh;
+            background: #fff; width: 100%; max-width: 1180px; max-height: 90vh;
             border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
         }
@@ -464,22 +525,22 @@
             max-width: 440px;
         }
         .modal-header {
-            background: #008080; color: #fff; padding: 12px 16px;
+            background: #008080; color: #fff; padding: 9px 13px;
             display: flex; justify-content: space-between; align-items: center;
         }
         .modal-body {
-            padding: 16px; overflow-y: auto; flex: 1; background: #f9fbfb;
+            padding: 12px; overflow-y: auto; flex: 1; background: #f9fbfb;
         }
         .modal-footer {
-            padding: 10px 16px; background: #eee; border-top: 1px solid #ddd;
+            padding: 8px 13px; background: #eee; border-top: 1px solid #ddd;
             display: flex; justify-content: flex-end; gap: 8px;
         }
         .preview-item {
             background: #fff; border: 1px solid #dce4e4; border-radius: 6px;
-            padding: 12px; margin-bottom: 12px;
+            padding: 10px 12px; margin-bottom: 10px;
         }
         .preview-opt {
-            padding: 5px 8px; margin: 3px 0; border-radius: 4px; font-size: 13px; background: #f8f9fa;
+            padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 12.5px; background: #f8f9fa;
         }
         .preview-opt.is-kunci {
             background: #d4edda; border: 1px solid #28a745; font-weight: bold; color: #155724;
@@ -487,8 +548,137 @@
         .export-kelas-btn-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        /* KARTU SISWA RINGKAS TINGGI 3 CM — 1 BARIS 4 SISWA, USER & PASS 2X LIPAT & BOLD */
+        .kartu-siswa-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 5px;
+        }
+        .kartu-siswa-3cm {
+            height: 3cm;
+            min-height: 3cm;
+            max-height: 3cm;
+            border: 1px solid #222;
+            border-radius: 4px;
+            background: #ffffff;
+            padding: 3px 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .kartu-3cm-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #008080;
+            padding-bottom: 1.5px;
+            font-size: 8px;
+            font-weight: bold;
+            color: #0056b3;
+            line-height: 1.05;
+        }
+        .kartu-3cm-nama {
+            font-size: 10px;
+            font-weight: bold;
+            color: #111;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.1;
+        }
+        .kartu-3cm-cred {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            background: #f4f8f8;
+            padding: 2px 4px;
+            border-radius: 3px;
+            line-height: 1.05;
+        }
+        .kartu-3cm-row {
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .kartu-3cm-label {
+            font-size: 9px;
+            font-weight: bold;
+            color: #444;
+        }
+        /* Ukuran sebelumnya ~9px -> diperbesar 2x lipat menjadi 18px & BOLD */
+        .kartu-3cm-val {
+            font-size: 18px;
+            font-weight: 900;
+            color: #000;
+            letter-spacing: 0.2px;
+        }
+        @media (max-width: 960px) {
+            .kartu-siswa-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        /* AREA CETAK KHUSUS PRINT */
+        #printKartuArea {
+            display: none;
+        }
+        @media print {
+            @page {
+                size: landscape;
+                margin: 4mm;
+            }
+            body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #mainContainer, #loadingOverlay, .modal-overlay {
+                display: none !important;
+            }
+            #printKartuArea {
+                display: block !important;
+                width: 100%;
+                padding: 0;
+            }
+            .kartu-siswa-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 2.5mm !important;
+            }
+            .kartu-siswa-3cm {
+                height: 3cm !important;
+                min-height: 3cm !important;
+                max-height: 3cm !important;
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .kartu-3cm-val {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+            }
+        }
+
+        /* BOX INFO LIMIT GIST */
+        .gist-limit-box {
+            background: #eef7f7;
+            border: 1px solid #b8dede;
+            border-radius: 5px;
+            padding: 8px 10px;
+            font-size: 11.5px;
+            line-height: 1.45;
+            margin-top: 6px;
         }
 
         /* LOADING OVERLAY KUNCI LAYAR TOTAL */
@@ -506,12 +696,12 @@
             pointer-events: all;
         }
         .spinner {
-            width: 55px; height: 55px;
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #008080;
+            width: 50px; height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #008080;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -520,26 +710,29 @@
     </style>
 </head>
 <body>
+<!-- AREA CETAK KARTU SISWA (TINGGI 3 CM) -->
+<div id="printKartuArea"></div>
+
 <!-- LOADING OVERLAY -->
 <div id="loadingOverlay">
     <div class="spinner"></div>
     <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
-    <p style="font-size: 13px; color: #ddd; margin-top: 5px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
+    <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
 </div>
 
 <!-- MODAL LIHAT SOAL UPLOAD -->
 <div id="modalLihatSoal" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 780px;">
         <div class="modal-header">
-            <b id="modalSoalTitle" style="font-size: 15px;">Daftar Soal Terupload</b>
-            <button onclick="tutupModalSoal()" style="width:auto; padding:4px 10px; background:#dc3545; font-size:12px;">Tutup ✕</button>
+            <b id="modalSoalTitle" style="font-size: 14px;">Daftar Soal Terupload</b>
+            <button onclick="tutupModalSoal()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
         </div>
         <div class="modal-body" id="modalSoalBody">
             Memuat soal...
         </div>
         <div class="modal-footer">
-            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:8px 14px; font-size:12px;">Hapus Paket Soal Ini dari Gist</button>
-            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:8px 14px; font-size:12px;">Tutup</button>
+            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:6px 12px; font-size:11.5px;">Hapus Paket Soal Ini dari Gist</button>
+            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
         </div>
     </div>
 </div>
@@ -548,22 +741,47 @@
 <div id="modalExportHasil" class="modal-overlay">
     <div class="modal-box modal-sm">
         <div class="modal-header">
-            <b id="modalExportTitle" style="font-size: 15px;">Export Hasil Ujian (.xlsx)</b>
-            <button onclick="tutupModalExport()" style="width:auto; padding:4px 10px; background:#dc3545; font-size:12px;">Tutup ✕</button>
+            <b id="modalExportTitle" style="font-size: 14px;">Export Hasil Ujian (.xlsx)</b>
+            <button onclick="tutupModalExport()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
         </div>
         <div class="modal-body" id="modalExportBody">
             Pilih kelas untuk mengunduh rekap nilai Excel:
         </div>
         <div class="modal-footer">
-            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:8px 14px; font-size:12px;">Tutup</button>
+            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PREVIEW & CETAK KARTU SISWA (TINGGI 3 CM, 4 PER BARIS) -->
+<div id="modalCetakKartu" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <b id="modalKartuTitle" style="font-size: 14px;">Kartu Login Siswa (Tinggi 3 cm • 4 Kartu/Baris)</b>
+            <button onclick="tutupModalKartu()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalKartuBody"></div>
+        <div class="modal-footer">
+            <button type="button" onclick="eksekusiCetakKartu()" style="width:auto; background:#28a745; padding:6px 14px; font-size:12px;">🖨️ Cetak Sekarang</button>
+            <button type="button" onclick="tutupModalKartu()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:12px;">Tutup</button>
         </div>
     </div>
 </div>
 
 <div class="container login-compact" id="mainContainer">
-    <div class="header-box">
-        <h2>SMANTAS-CBT</h2>
-        <h3>Portal Ujian Online Terintegrasi</h3>
+    <div class="header-box centered-header" id="mainHeaderBox">
+        <div class="header-brand">
+            <h2>SMANTAS-CBT</h2>
+            <h3>Portal Ujian Online Terintegrasi</h3>
+        </div>
+        <div class="header-admin-inline" id="headerAdminInline">
+            <span class="header-admin-title">Dashboard Admin CBT</span>
+            <div class="header-admin-actions">
+                <button onclick="cekLimitGistApiDanRaw()" style="width: auto; padding: 5px 9px; background: #0056b3; font-size: 11px;">Cek Limit Gist</button>
+                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 5px 9px; background: #17a2b8; font-size: 11px;">Refresh Data</button>
+                <button onclick="logoutAdmin()" style="width: auto; padding: 5px 9px; background: #dc3545; font-size: 11px;">Logout</button>
+            </div>
+        </div>
     </div>
 
     <!-- 1 TOMBOL TOGGLE ROLE DI ATAS -->
@@ -586,9 +804,9 @@
 
     <!-- 1B. VIEW PILIH UJIAN SISWA (Setelah Berhasil Login) -->
     <div id="viewPilihUjianSiswa" class="section-view">
-        <div style="background: #e9ecef; padding: 12px; border-radius: 4px; margin-bottom: 15px; text-align: center;">
-            <b id="salamSiswa" style="color: #008080; font-size: 15px;">Selamat Datang, Siswa</b><br>
-            <span id="infoKelasSiswa" style="font-size: 13px; color: #555;">Kelas: -</span>
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center;">
+            <b id="salamSiswa" style="color: #008080; font-size: 14px;">Selamat Datang, Siswa</b><br>
+            <span id="infoKelasSiswa" style="font-size: 12.5px; color: #555;">Kelas: -</span>
         </div>
         <div class="form-group">
             <label>Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
@@ -596,11 +814,11 @@
                 <option value="">-- Pilih Mata Pelajaran --</option>
             </select>
         </div>
-        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:10px; border-radius:4px; font-size:12px; margin-bottom:12px;">
+        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 10px; border-radius:4px; font-size:11.5px; margin-bottom:10px;">
             <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan ujian langsung dikumpulkan!
         </div>
         <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN (FULL SCREEN)</button>
-        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 10px;">Logout / Ganti Perangkat</button>
+        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 8px;">Logout / Ganti Perangkat</button>
     </div>
 
     <!-- 2. VIEW LOGIN ADMIN -->
@@ -618,7 +836,7 @@
         <div class="exam-security-bar">
             MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!
         </div>
-        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 14px;" id="infoUjianText">
+        <div style="background: #e9ecef; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; text-align: center; font-weight: bold; font-size: 13px;" id="infoUjianText">
             Mata Pelajaran: Memuat...
         </div>
 
@@ -640,14 +858,6 @@
 
     <!-- 4. VIEW PANEL ADMIN MASTER -->
     <div id="viewPanelAdmin" class="section-view">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <b style="font-size: 15px; color: #008080;">Dashboard Admin CBT</b>
-            <div>
-                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 6px 12px; background: #17a2b8; font-size: 12px; margin-right: 5px;">Refresh Data</button>
-                <button onclick="logoutAdmin()" style="width: auto; padding: 6px 12px; background: #dc3545; font-size: 12px;">Logout</button>
-            </div>
-        </div>
-
         <!-- TAB MENU ADMIN -->
         <div class="admin-tab-menu">
             <button class="admin-tab-btn active" onclick="switchAdminTab('monitoring')">Monitoring Akun</button>
@@ -661,16 +871,16 @@
         <div id="adminTabMonitoring" class="admin-view active">
             <!-- TABEL KONTROL SESI & RESET LOGIN SISWA (GAS) -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Login Siswa (GAS)</h4>
-                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 190px; padding: 5px 8px; font-size: 12px;">
-                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #008080;">Cari</button>
-                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 5px 8px; font-size: 11px; background: #6c757d;">Reset</button>
-                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 170px; padding: 4px 7px; font-size: 11.5px;">
+                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
                     </div>
                 </div>
-                <p style="font-size: 12px; color: #555; margin-top: 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
+                <p style="font-size: 10.5px; color: #555; margin: 0 0 5px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script agar hemat kuota Gist.</p>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -680,7 +890,7 @@
                                 <th>Kelas</th>
                                 <th>Status Sesi</th>
                                 <th>Perangkat</th>
-                                <th style="width: 150px;">Aksi Reset</th>
+                                <th style="width: 145px;">Aksi Reset</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySesiAktif">
@@ -692,10 +902,10 @@
 
             <!-- TABEL LOG SPREADSHEET -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 5px 10px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -722,7 +932,7 @@
             <div class="ujian-two-col">
                 <!-- KOLOM KIRI: BUAT JADWAL -->
                 <div class="admin-card ujian-col-left">
-                    <h4 style="margin: 0 0 10px 0; color: #008080;">Buat Jadwal</h4>
+                    <h4 style="margin: 0 0 6px 0; color: #008080;">Buat Jadwal</h4>
                     <div class="form-group">
                         <label>Pilih Mata Pelajaran:</label>
                         <select id="jadwalMapel">
@@ -753,15 +963,15 @@
                     <div class="form-group">
                         <label>Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
                         <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
-                        <textarea id="soalBatchText" rows="5" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
+                        <textarea id="soalBatchText" rows="3" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
                     </div>
                     <button onclick="simpanJadwalDanSoal()" style="background: #28a745;">Simpan Jadwal & Upload Soal</button>
                 </div>
 
                 <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
                 <div class="admin-card ujian-col-right">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <h4 style="margin: 0; color: #008080; font-size: 14px;">Daftar Ujian Aktif</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+                        <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
                         <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0; padding:3px 8px; font-size:10px;">Lihat Semua Bank Soal (Gist)</button>
                     </div>
                     <div class="table-jadwal-wrap">
@@ -786,28 +996,32 @@
         <!-- TAB 3: KELOLA KELAS & MAPEL -->
         <div id="adminTabMaster" class="admin-view">
             <div class="admin-card">
-                <h4 style="margin: 0 0 10px 0; color: #008080;">Kelola Kelas & Mata Pelajaran</h4>
+                <h4 style="margin: 0 0 6px 0; color: #008080;">Kelola Kelas & Mata Pelajaran</h4>
                 <div class="row-flex">
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom:4px;">
                         <label>Tambah Kelas Baru:</label>
-                        <input type="text" id="inputKelasBaru" placeholder="Contoh: XI-IPA-2">
-                        <button onclick="tambahKelas()" style="margin-top:6px; background:#008080; padding:10px;">Tambah Kelas</button>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="inputKelasBaru" placeholder="Contoh: XI-IPA-2">
+                            <button onclick="tambahKelas()" style="width:auto; background:#008080; padding:6px 12px; white-space:nowrap;">Tambah</button>
+                        </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom:4px;">
                         <label>Tambah Mapel Baru:</label>
-                        <input type="text" id="inputMapelBaru" placeholder="Contoh: Sejarah Indonesia">
-                        <button onclick="tambahMapel()" style="margin-top:6px; background:#008080; padding:10px;">Tambah Mapel</button>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="inputMapelBaru" placeholder="Contoh: Sejarah Indonesia">
+                            <button onclick="tambahMapel()" style="width:auto; background:#008080; padding:6px 12px; white-space:nowrap;">Tambah</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="row-flex">
                 <div class="admin-card" style="flex:1;">
-                    <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Kelas</h4>
+                    <h4 style="margin: 0 0 5px 0; color: #008080;">Daftar Kelas</h4>
                     <div id="listKelas" class="master-matrix-grid"></div>
                 </div>
                 <div class="admin-card" style="flex:1;">
-                    <h4 style="margin: 0 0 10px 0; color: #008080;">Daftar Mata Pelajaran</h4>
+                    <h4 style="margin: 0 0 5px 0; color: #008080;">Daftar Mata Pelajaran</h4>
                     <div id="listMapel" class="master-matrix-grid"></div>
                 </div>
             </div>
@@ -820,7 +1034,7 @@
                 <!-- KIRI: TAMBAH SISWA -->
                 <div class="admin-card">
                     <div>
-                        <h4 id="judulFormSiswaSatuan" style="margin: 0 0 10px 0; color: #008080;">Tambah Siswa</h4>
+                        <h4 id="judulFormSiswaSatuan" style="margin: 0 0 6px 0; color: #008080;">Tambah Siswa</h4>
                         <input type="hidden" id="editSiswaIndex" value="-1">
                         <div class="row-flex">
                             <div class="form-group">
@@ -845,7 +1059,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row-flex" style="margin-top: 4px;">
+                    <div class="row-flex" style="margin-top: 2px;">
                         <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa</button>
                         <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
                     </div>
@@ -854,24 +1068,28 @@
                 <!-- KANAN: UPLOAD DATA SISWA -->
                 <div class="admin-card">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: #008080;">Upload Data Siswa</h4>
-                        <div class="form-group" style="margin-bottom: 8px;">
+                        <h4 style="margin: 0 0 6px 0; color: #008080;">Upload Data Siswa</h4>
+                        <div class="form-group" style="margin-bottom: 6px;">
                             <label>Pilih File Excel (.xlsx / .xls):</label>
                             <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
                         </div>
                     </div>
-                    <small style="color: #666;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
+                    <small style="color: #666; font-size:11px;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
                 </div>
             </div>
 
-            <!-- TABEL DAFTAR SISWA + CARI NAMA -->
+            <!-- TABEL DAFTAR SISWA + CARI NAMA + CETAK KARTU 3 CM -->
             <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Daftar Siswa</h4>
-                    <div style="display: flex; gap: 6px; align-items: center; flex: 1; max-width: 340px; min-width: 220px;">
-                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="padding: 7px 10px; font-size: 13px;">
-                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 7px 12px; font-size: 12px; background: #008080;">Cari</button>
-                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 7px 10px; font-size: 12px; background: #6c757d;">Reset</button>
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <select id="filterKelasKartu" onchange="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 7px; font-size: 11px;">
+                            <option value="">Semua Kelas</option>
+                        </select>
+                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="width: 165px; padding: 4px 7px; font-size: 11px;">
+                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #28a745;">🖨️ Cetak Kartu (3 cm • 4/Baris)</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -882,7 +1100,7 @@
                                 <th>Kelas</th>
                                 <th>Username</th>
                                 <th>Password</th>
-                                <th style="width: 120px;">Aksi</th>
+                                <th style="width: 155px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyDaftarSiswa">
@@ -893,50 +1111,64 @@
             </div>
         </div>
 
-        <!-- TAB 5: PENGATURAN (2 BARIS: BARIS 1 DURASI & PASSWORD, BARIS 2 BACKUP & RESET DB) -->
+        <!-- TAB 5: PENGATURAN (DURASI JP, PASSWORD ADMIN, CEK LIMIT GIST, BACKUP & RESET DB) -->
         <div id="adminTabSettings" class="admin-view">
             <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
             <div class="siswa-top-two-col">
                 <!-- KOLOM KIRI: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
+                        <h4 style="margin: 0 0 6px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
                         <div class="form-group">
                             <label>Durasi 1 JP (dalam Menit):</label>
                             <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
-                            <small style="color: #666; display: block; margin-top: 4px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                            <small style="color: #666; display: block; margin-top: 3px; font-size:11px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
                         </div>
                     </div>
-                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 10px;">Simpan Pengaturan JP</button>
+                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 6px 10px;">Simpan Pengaturan JP</button>
                 </div>
 
                 <!-- KOLOM KANAN: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: #008080;">Manajemen Password Admin</h4>
+                        <h4 style="margin: 0 0 6px 0; color: #008080;">Manajemen Password Admin</h4>
                         <label>Password Admin Saat Ini:</label>
                         <div class="pass-display-box">
                             <span id="currentAdminPassDisplay">••••••••</span>
                             <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
                         </div>
-                        <div class="form-group" style="margin-bottom: 10px;">
+                        <div class="form-group" style="margin-bottom: 6px;">
                             <label>Ubah Password Admin Baru:</label>
                             <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
                         </div>
                     </div>
-                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 10px;">Simpan Password Baru</button>
+                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 6px 10px;">Simpan Password Baru</button>
                 </div>
             </div>
 
-            <!-- BARIS 2: BACKUP/RESTORE & RESET DB -->
+            <!-- BARIS 2: CEK LIMIT GIST API TOKEN & RAW -->
+            <div class="admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div>
+                        <h4 style="margin: 0; color: #008080;">Cek Sisa Limit Gist API Token & Status Gist RAW</h4>
+                        <small style="color: #555; font-size: 11px;">Cek API Token memotong 1 kuota REST API; akses Gist RAW tidak memotong kuota REST API.</small>
+                    </div>
+                    <button type="button" onclick="cekLimitGistApiDanRaw()" style="width: auto; padding: 5px 12px; font-size: 11.5px; background: #0056b3;">Cek Limit Sekarang</button>
+                </div>
+                <div id="gistLimitResultBox" class="gist-limit-box">
+                    Klik <b>Cek Limit Sekarang</b> untuk melihat sisa limit Gist API Token dan status Gist RAW.
+                </div>
+            </div>
+
+            <!-- BARIS 3: BACKUP/RESTORE & RESET DB -->
             <div class="siswa-top-two-col">
                 <!-- KOLOM KIRI: BACKUP & RESTORE DB -->
                 <div class="admin-card">
                     <div>
-                        <h4 style="margin: 0 0 10px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                        <h4 style="margin: 0 0 6px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
                         <div class="form-group">
                             <label>Backup Seluruh Database ke File JSON:</label>
-                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 10px;">Download Backup DB (.json)</button>
+                            <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 6px 10px;">Download Backup DB (.json)</button>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Restore Database dari File Backup (.json):</label>
@@ -948,10 +1180,10 @@
                 <!-- KOLOM KANAN: HAPUS / RESET DB -->
                 <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
                     <div>
-                        <h4 style="margin: 0 0 8px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
-                        <p style="font-size: 13px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
+                        <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 11.5px; color: #555; margin-top: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
                     </div>
-                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 10px;">Hapus Seluruh Database (Reset DB)</button>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 6px 10px;">Hapus Seluruh Database (Reset DB)</button>
                 </div>
             </div>
         </div>
@@ -974,6 +1206,146 @@ const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
 // ======================================================
 
+// ================= HEADER SEJAJAR ADMIN =================
+function sinkronkanHeaderAdmin() {
+    const headerBox = document.getElementById('mainHeaderBox');
+    const adminInline = document.getElementById('headerAdminInline');
+    const isAdminActive = document.getElementById('viewPanelAdmin')?.classList.contains('active');
+
+    if (isAdminActive) {
+        headerBox?.classList.remove('centered-header');
+        adminInline?.classList.add('active');
+    } else {
+        headerBox?.classList.add('centered-header');
+        adminInline?.classList.remove('active');
+    }
+}
+// =====================================================
+
+// ================= CEK LIMIT GIST API TOKEN & RAW =================
+function formatEpochKeWib(epochSec) {
+    if (!epochSec || isNaN(epochSec)) return "-";
+    const dt = new Date(Number(epochSec) * 1000);
+    return dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) + " WIB";
+}
+
+async function cekLimitGistApiDanRaw() {
+    const box = document.getElementById('gistLimitResultBox');
+    if (box) {
+        box.innerHTML = `Memeriksa sisa limit Gist API Token & status Gist RAW...`;
+    }
+
+    let apiSummary = "";
+    try {
+        const res = await axios.get(`https://api.github.com/rate_limit?t=${Date.now()}`, {
+            headers: { "Authorization": `token ${GIST_TOKEN}` }
+        });
+        const core = res.data?.resources?.core || {};
+        const remaining = core.remaining ?? res.headers?.["x-ratelimit-remaining"] ?? "-";
+        const limit = core.limit ?? res.headers?.["x-ratelimit-limit"] ?? "-";
+        const used = core.used ?? "-";
+        const resetTime = formatEpochKeWib(core.reset ?? res.headers?.["x-ratelimit-reset"]);
+        apiSummary = `
+            <div><b>1. Gist API Token (REST API — Mengurangi Kuota 1x saat dicek):</b><br>
+            Sisa Limit: <b style="color:#008080;">${remaining}</b> / ${limit} (Terpakai: ${used}) | Reset: <b>${resetTime}</b></div>
+        `;
+    } catch (err) {
+        apiSummary = `
+            <div><b>1. Gist API Token:</b> <span style="color:#dc3545;">Gagal cek limit (${err.message})</span></div>
+        `;
+    }
+
+    let rawSummary = "";
+    try {
+        const t0 = performance.now();
+        const rawRes = await axios.get(`${GIST_RAW_URL}?t=${Date.now()}`, { responseType: "text" });
+        const ms = Math.round(performance.now() - t0);
+        const bytes = new Blob([String(rawRes.data || "")]).size;
+        rawSummary = `
+            <div style="margin-top:4px;"><b>2. Gist RAW (Tanpa Kuota API Token):</b> <span style="color:#28a745; font-weight:bold;">Aktif (HTTP ${rawRes.status})</span> — Ukuran: <b>${(bytes / 1024).toFixed(1)} KB</b> (${ms} ms)</div>
+        `;
+    } catch (rawErr) {
+        rawSummary = `
+            <div style="margin-top:4px;"><b>2. Gist RAW:</b> <span style="color:#dc3545;">Gagal diakses (${rawErr.message})</span></div>
+        `;
+    }
+
+    if (box) {
+        box.innerHTML = apiSummary + rawSummary;
+    } else {
+        alert("Cek Limit Gist selesai. Buka tab Pengaturan untuk melihat detail lengkap.");
+    }
+}
+// =================================================================
+
+// ================= CETAK KARTU SISWA RINGKAS (TINGGI 3 CM, 4/BARIS) =================
+function buatHtmlKartuSiswa(daftar) {
+    return daftar.map(s => `
+        <div class="kartu-siswa-3cm">
+            <div class="kartu-3cm-top">
+                <span>KARTU CBT • SMANTAS</span>
+                <span>${s.kelas || '-'}</span>
+            </div>
+            <div class="kartu-3cm-nama" title="${s.nama || '-'}">${s.nama || '-'}</div>
+            <div class="kartu-3cm-cred">
+                <div class="kartu-3cm-row">
+                    <span class="kartu-3cm-label">User:</span>
+                    <span class="kartu-3cm-val">${s.username || '-'}</span>
+                </div>
+                <div class="kartu-3cm-row">
+                    <span class="kartu-3cm-label">Pass:</span>
+                    <span class="kartu-3cm-val">${s.password || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `).join("");
+}
+
+function getSiswaTersaringSaatIni() {
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
+
+    return databaseSiswa.filter(s => {
+        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
+        const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
+        return cocokNama && cocokKelas;
+    });
+}
+
+function bukaModalCetakKartu(singleIdx = null) {
+    let targetList = [];
+    let judul = "Kartu Login Siswa (Tinggi 3 cm • 4 Kartu/Baris)";
+
+    if (typeof singleIdx === "number" && databaseSiswa[singleIdx]) {
+        targetList = [databaseSiswa[singleIdx]];
+        judul = `Kartu Siswa: ${databaseSiswa[singleIdx].nama} (Tinggi 3 cm)`;
+    } else {
+        targetList = getSiswaTersaringSaatIni();
+        const kelasFilter = document.getElementById('filterKelasKartu')?.value;
+        judul = `Kartu Siswa ${kelasFilter ? "Kelas " + kelasFilter : "Semua"} (${targetList.length} Kartu • Tinggi 3 cm • 4/Baris)`;
+    }
+
+    if (targetList.length === 0) {
+        alert("Tidak ada data siswa yang cocok untuk dicetak.");
+        return;
+    }
+
+    const gridHtml = `<div class="kartu-siswa-grid">${buatHtmlKartuSiswa(targetList)}</div>`;
+    document.getElementById('modalKartuTitle').innerText = judul;
+    document.getElementById('modalKartuBody').innerHTML = gridHtml;
+    document.getElementById('printKartuArea').innerHTML = gridHtml;
+    document.getElementById('modalCetakKartu').style.display = 'flex';
+}
+
+function tutupModalKartu() {
+    document.getElementById('modalCetakKartu').style.display = 'none';
+}
+
+function eksekusiCetakKartu() {
+    window.print();
+}
+// =================================================================================
+
 // ================= FORMAT SOAL.JSON: 1 MAPEL = 1 BARIS =================
 function normalisasiKeBarisPerMapel(rawItems) {
     const arr = Array.isArray(rawItems) ? rawItems : [];
@@ -994,7 +1366,6 @@ function normalisasiKeBarisPerMapel(rawItems) {
     arr.forEach(entry => {
         if (!entry || typeof entry !== "object") return;
 
-        // Bentuk baru: 1 mapel = 1 baris -> { mapel, kelas: [...], soal: [...] }
         if (Array.isArray(entry.soal)) {
             const grp = getOrCreateGroup(entry.mapel);
             if (Array.isArray(entry.kelas)) {
@@ -1016,7 +1387,6 @@ function normalisasiKeBarisPerMapel(rawItems) {
             return;
         }
 
-        // Kompatibilitas bentuk lama: tiap item adalah 1 butir soal -> { id, mapel, kelas, soal, options, kunci }
         const grp = getOrCreateGroup(entry.mapel);
         if (Array.isArray(entry.kelas)) {
             entry.kelas.forEach(k => {
@@ -1074,7 +1444,6 @@ function parseSoalJsonFlexible(rawContent) {
         }
     }
 
-    // Ratakan ke daftar butir soal lengkap dengan mapel & kelas agar kompatibel dengan seluruh logika aplikasi
     const mapelRows = normalisasiKeBarisPerMapel(rawItems);
     const flatSoal = [];
     mapelRows.forEach(row => {
@@ -1133,7 +1502,6 @@ let currentSiswaObj = null;
 let isExamInProgress = false;
 let isSubmittingExam = false;
 
-// ID Perangkat Unik per Browser
 function getOrCreateDeviceId() {
     let devId = localStorage.getItem("smantas_cbt_device_id");
     if (!devId) {
@@ -1150,6 +1518,7 @@ function setCompactMode(isCompact) {
     } else {
         container.classList.remove('login-compact');
     }
+    sinkronkanHeaderAdmin();
 }
 
 function toggleRoleLogin() {
@@ -1166,6 +1535,7 @@ function toggleRoleLogin() {
             setCompactMode(false);
             document.getElementById('viewPanelAdmin').classList.add('active');
             document.getElementById('tabMenu').style.display = 'none';
+            sinkronkanHeaderAdmin();
             switchAdminTab('monitoring');
         } else {
             setCompactMode(true);
@@ -1183,6 +1553,7 @@ function toggleRoleLogin() {
             document.getElementById('viewLoginSiswa').classList.add('active');
         }
     }
+    sinkronkanHeaderAdmin();
 }
 
 function getAdminPasswordPlain() {
@@ -1268,7 +1639,7 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-// ================= DATABASE MASTER GIST (HEMAT KUOTA GIST - TANPA db_sesi) =================
+// ================= DATABASE MASTER GIST =================
 async function fetchCbtDatabase(forceRefresh = false) {
     if (isDataLoadedOnce && !forceRefresh) {
         return;
@@ -1680,7 +2051,7 @@ function renderTabelSesiAktif() {
             <td>${s.nama || '-'}</td>
             <td>${s.kelas || '-'}</td>
             <td>${statusBadge}</td>
-            <td style="font-family:monospace; font-size:11px;">${s.deviceId || '-'}</td>
+            <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
             <td>
                 <button onclick="resetLoginSiswaAdmin('${username}')" class="btn-sm btn-warning">Reset Login / Ujian</button>
             </td>
@@ -1821,6 +2192,7 @@ function initDropdowns() {
     let jdMp = document.getElementById('jadwalMapel');
     let checkboxContainer = document.getElementById('checkboxKelasContainer');
     let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
+    let selFilterKartu = document.getElementById('filterKelasKartu');
 
     if(jdMp) {
         jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
@@ -1832,6 +2204,13 @@ function initDropdowns() {
         selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
         daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
         if(prevVal) selKelasSatuan.value = prevVal;
+    }
+
+    if(selFilterKartu) {
+        const prevFilter = selFilterKartu.value;
+        selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>';
+        daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${k}">${k}</option>`);
+        if(prevFilter) selFilterKartu.value = prevFilter;
     }
 
     if(checkboxContainer) {
@@ -1911,7 +2290,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
     if (total === 0) {
         containerEl.style.gridTemplateColumns = "1fr";
         containerEl.style.gridAutoFlow = "row";
-        containerEl.innerHTML = `<div style="color:#777; font-size:13px; padding:4px 0;">Belum ada data.</div>`;
+        containerEl.innerHTML = `<div style="color:#777; font-size:12px; padding:4px 0;">Belum ada data.</div>`;
         return;
     }
 
@@ -1931,7 +2310,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         numRows = maxRowsPerCol + extraRows;
     }
 
-    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(135px, 1fr))`;
+    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(130px, 1fr))`;
     containerEl.style.gridTemplateRows = `repeat(${numRows}, auto)`;
     containerEl.style.gridAutoFlow = "column";
 
@@ -1940,7 +2319,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         div.className = "master-matrix-item";
         div.innerHTML = `
             <span class="item-label" title="${labelText}">${labelText}</span>
-            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
+            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1.5px 5px; font-size:10px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
         `;
         containerEl.appendChild(div);
     });
@@ -2121,6 +2500,8 @@ async function importDataSiswaToGist(event) {
 function resetCariNamaSiswa() {
     const inp = document.getElementById('inputCariNamaSiswa');
     if (inp) inp.value = "";
+    const sel = document.getElementById('filterKelasKartu');
+    if (sel) sel.value = "";
     renderTabelDaftarSiswa();
 }
 
@@ -2134,10 +2515,13 @@ function renderTabelDaftarSiswa() {
     }
 
     const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
     let tampilCount = 0;
 
     databaseSiswa.forEach((s, idx) => {
-        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
+        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
+        const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
+        if (!cocokNama || !cocokKelas) {
             return;
         }
         tampilCount++;
@@ -2147,6 +2531,7 @@ function renderTabelDaftarSiswa() {
             <td>${s.username}</td>
             <td>${s.password}</td>
             <td>
+                <button onclick="bukaModalCetakKartu(${idx})" class="btn-sm btn-info" title="Cetak Kartu 3 cm">Kartu</button>
                 <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
                 <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
             </td>
@@ -2154,7 +2539,7 @@ function renderTabelDaftarSiswa() {
     });
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data siswa tidak ditemukan untuk filter saat ini.</td></tr>`;
     }
 }
 
@@ -2549,7 +2934,6 @@ function getGroupedJadwalList() {
         }
     });
 
-    // Urutkan jadwal terbaru (berdasarkan tanggal/waktu mulai, lalu selesai) di paling atas
     groups.sort((a, b) => {
         const timeA = new Date(a.mulai || 0).getTime() || 0;
         const timeB = new Date(b.mulai || 0).getTime() || 0;
@@ -2619,25 +3003,25 @@ async function bukaModalExportHasil(mapelEnc, kelasJson) {
     document.getElementById('modalExportTitle').innerText = `Export Hasil: ${mapel}`;
     const body = document.getElementById('modalExportBody');
 
-    let html = `<p style="font-size:13px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p>`;
+    let html = `<p style="font-size:12.5px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p>`;
     html += `<div class="export-kelas-btn-list">`;
 
     kelasList.forEach(kls => {
         const klsEnc = encodeURIComponent(kls);
-        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:10px 14px;">
+        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">
             📥 Download Hasil Kelas <b>${kls}</b> (.xlsx)
         </button>`;
     });
 
     if (kelasList.length > 1) {
         html += `<hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:4px 0;">`;
-        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:10px 14px;">
+        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">
             📊 Download Gabungan Semua Kelas (${kelasList.join(', ')}) (.xlsx)
         </button>`;
     }
 
     html += `</div>`;
-    html += `<p style="font-size:11px; color:#666; margin-bottom:0; margin-top:12px;">*File mencakup seluruh daftar siswa di kelas tersebut beserta status & nilai (otomatis mengisi "-" jika siswa belum mengerjakan).</p>`;
+    html += `<p style="font-size:11px; color:#666; margin-bottom:0; margin-top:10px;">*File mencakup seluruh daftar siswa di kelas tersebut beserta status & nilai (otomatis mengisi "-" jika siswa belum mengerjakan).</p>`;
 
     body.innerHTML = html;
     document.getElementById('modalExportHasil').style.display = 'flex';
@@ -2814,11 +3198,11 @@ function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarge
             const infoKelas = Array.isArray(item.kelas) ? item.kelas.join(', ') : (item.namaUjian || '-');
 
             html += `<div class="preview-item">
-                <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:6px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#666; margin-bottom:5px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
                     <span><b>No. ${idx + 1}</b> | Mapel: <b>${item.mapel || '-'}</b> | Kelas: <b>${infoKelas}</b></span>
                     <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
                 </div>
-                <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">${item.soal}</div>`;
+                <div style="font-size:13.5px; font-weight:bold; margin-bottom:6px;">${item.soal}</div>`;
 
             if(item.gambar) {
                 html += `<img src="${item.gambar}" class="img-soal">`;
@@ -3002,6 +3386,7 @@ async function autentikasiSiswa() {
     document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewLoginSiswa').classList.remove('active');
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
+    sinkronkanHeaderAdmin();
 }
 
 async function logoutSiswa() {
@@ -3150,6 +3535,7 @@ async function loadSoalUjian() {
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewPilihUjianSiswa').classList.remove('active');
         document.getElementById('viewUjianSiswa').classList.add('active');
+        sinkronkanHeaderAdmin();
         renderSoalSiswa();
 
         isExamInProgress = true;
@@ -3239,7 +3625,7 @@ function renderSoalSiswa() {
     if (item.gambar) {
         html += `<img src="${item.gambar}" class="img-soal">`;
     }
-    html += `<div style="margin-top: 12px;">`;
+    html += `<div style="margin-top: 10px;">`;
     ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
         if (item.options && item.options[opt]) {
             const isChecked = (jawabanTersimpan === opt);
@@ -3413,6 +3799,7 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
 function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
+    sinkronkanHeaderAdmin();
 
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
@@ -3449,6 +3836,7 @@ function prosesLoginAdmin() {
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
+        sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
     } else {
         document.getElementById('errorAdmin').style.display = 'block';
@@ -3480,9 +3868,11 @@ window.onload = async function() {
         document.getElementById('viewLoginSiswa').classList.remove('active');
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
+        sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
     } else {
         setCompactMode(true);
+        sinkronkanHeaderAdmin();
     }
 }
 </script>
