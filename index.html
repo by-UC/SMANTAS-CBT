@@ -1112,6 +1112,7 @@
                         <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #008080;">Cari</button>
                         <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
                         <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #28a745;">🖨️ Cetak Kartu (3 cm)</button>
+                        <button type="button" onclick="hapusSemuaSiswa()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #dc3545;">🗑️ Hapus Semua Siswa</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -2789,6 +2790,59 @@ function batalEditSiswa() {
     document.getElementById('btnBatalEditSiswa').style.display = "none";
 }
 
+async function hapusSemuaSiswa() {
+    if (!Array.isArray(databaseSiswa) || databaseSiswa.length === 0) {
+        alert("Tidak ada data siswa untuk dihapus.");
+        return;
+    }
+
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim();
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim();
+
+    // Jika sedang difilter per kelas/nama, tawarkan opsi hapus sesuai filter atau seluruh database siswa
+    let targetSiswa = databaseSiswa;
+    let labelScope = `SELURUH data siswa (${databaseSiswa.length} siswa)`;
+
+    if (kelasFilter || keyword) {
+        const filtered = getSiswaTersaringSaatIni();
+        if (filtered.length === 0) {
+            alert("Tidak ada data siswa yang cocok dengan filter saat ini.");
+            return;
+        }
+        const descFilter = [kelasFilter ? `Kelas ${kelasFilter}` : "", keyword ? `Nama "${keyword}"` : ""].filter(Boolean).join(" & ");
+        const pilihFiltered = confirm(
+            `Sedang aktif filter: ${descFilter} (${filtered.length} siswa).\n\n` +
+            `Klik OK untuk menghapus HANYA siswa yang tampil sesuai filter (${filtered.length} siswa).\n` +
+            `Klik Cancel jika ingin memilih / membatalkan.`
+        );
+        if (!pilihFiltered) return;
+        targetSiswa = filtered;
+        labelScope = `${filtered.length} siswa (${descFilter})`;
+    } else {
+        if (!confirm(`PERINGATAN! Yakin ingin menghapus ${labelScope}?\nTindakan ini akan menghapus data siswa dari database Gist.`)) return;
+        if (!confirm(`Konfirmasi terakhir: Hapus permanen ${labelScope}?`)) return;
+    }
+
+    showLoading(`Menghapus ${targetSiswa.length} data siswa & menyinkronkan ke Gist...`);
+
+    const targetSet = new Set(targetSiswa);
+    const usernamesDihapus = targetSiswa.map(s => String(s.username || "").trim()).filter(Boolean);
+
+    databaseSiswa = databaseSiswa.filter(s => !targetSet.has(s));
+
+    // Bersihkan sesi lokal terkait username yang dihapus
+    usernamesDihapus.forEach(uname => {
+        delete sesiLoginSiswa[uname];
+    });
+
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    renderTabelSesiAktif();
+    batalEditSiswa();
+    hideLoading();
+    alert(`Berhasil menghapus ${labelScope}!`);
+}
+
 async function hapusSiswa(idx) {
     const s = databaseSiswa[idx];
     if(!s) return;
@@ -4097,6 +4151,125 @@ async function mulaiUjianPilihan() {
     await loadSoalUjian();
 }
 
+// ================= CADANGAN JAWABAN LOKAL & ANTREAN KIRIM ULANG (RETRY) =================
+const EXAM_BACKUP_STORAGE_KEY = "smantas_cbt_exam_backup_v1";
+const PENDING_SUBMIT_STORAGE_KEY = "smantas_cbt_pending_submit_v1";
+
+function simpanCadanganJawabanLokal() {
+    try {
+        if (!currentSiswaObj || !mapelSiswaLogin || !Array.isArray(listSoal) || listSoal.length === 0) return;
+        const backupObj = {
+            username: String(currentSiswaObj.username || ""),
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapelSiswaLogin,
+            namaUjian: namaUjianAktif,
+            currentSoalIndex: currentSoalIndex,
+            listSoal: listSoal,
+            jawabanSiswa: jawabanSiswa,
+            savedAt: Date.now()
+        };
+        localStorage.setItem(EXAM_BACKUP_STORAGE_KEY, JSON.stringify(backupObj));
+    } catch (e) {
+        console.warn("Gagal menyimpan cadangan jawaban lokal:", e);
+    }
+}
+
+function bacaCadanganJawabanLokal(username, mapel, kelas) {
+    try {
+        const raw = localStorage.getItem(EXAM_BACKUP_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.listSoal) || parsed.listSoal.length === 0) return null;
+        if (String(parsed.username || "") !== String(username || "")) return null;
+        if (normStr(parsed.mapel) !== normStr(mapel)) return null;
+        if (normStr(parsed.kelas) !== normStr(kelas)) return null;
+        // Berlaku maksimal 12 jam
+        if (parsed.savedAt && (Date.now() - parsed.savedAt > 12 * 60 * 60 * 1000)) {
+            hapusCadanganJawabanLokal();
+            return null;
+        }
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusCadanganJawabanLokal() {
+    try {
+        localStorage.removeItem(EXAM_BACKUP_STORAGE_KEY);
+    } catch (e) {}
+}
+
+function simpanAntreanSubmitLokal(itemObj) {
+    try {
+        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(itemObj));
+    } catch (e) {}
+}
+
+function bacaAntreanSubmitLokal() {
+    try {
+        const raw = localStorage.getItem(PENDING_SUBMIT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusAntreanSubmitLokal() {
+    try {
+        localStorage.removeItem(PENDING_SUBMIT_STORAGE_KEY);
+    } catch (e) {}
+}
+
+async function kirimDenganRetry(fnAsync, maxPercobaan = 3, delayAwalMs = 1500, labelStatus = "") {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxPercobaan; attempt++) {
+        try {
+            if (labelStatus && attempt > 1) {
+                showLoading(`${labelStatus} (Percobaan ${attempt}/${maxPercobaan})...`);
+            }
+            return await fnAsync();
+        } catch (err) {
+            lastErr = err;
+            if (attempt < maxPercobaan) {
+                const jeda = delayAwalMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 400);
+                await new Promise(resolve => setTimeout(resolve, jeda));
+            }
+        }
+    }
+    throw lastErr;
+}
+
+async function prosesAntreanSubmitTertunda(silent = false) {
+    const pending = bacaAntreanSubmitLokal();
+    if (!pending || !pending.payload) return false;
+
+    try {
+        if (!silent) {
+            showLoading(`Mengirim ulang hasil ujian tertunda (${pending.payload.nama || pending.payload.nis})...`);
+        }
+        if (pending.sesiData) {
+            await setSesiToGAS(pending.sesiData);
+        }
+        if (pending.logData) {
+            await axios.post(GAS_URL, JSON.stringify(pending.logData));
+        }
+        await axios.post(GAS_URL, JSON.stringify(pending.payload));
+        hapusAntreanSubmitLokal();
+        hapusCadanganJawabanLokal();
+        if (!silent) {
+            hideLoading();
+            alert(`Hasil ujian yang sebelumnya tertunda untuk ${pending.payload.nama || pending.payload.nis} berhasil dikirim ke server!`);
+        }
+        return true;
+    } catch (err) {
+        if (!silent) hideLoading();
+        console.warn("Pengiriman ulang antrean tertunda belum berhasil:", err);
+        return false;
+    }
+}
+
 async function loadSoalUjian() {
     showLoading("Memuat soal ujian...");
     try {
@@ -4121,8 +4294,21 @@ async function loadSoalUjian() {
             return; 
         }
 
-        currentSoalIndex = 0;
-        jawabanSiswa = {};
+        const cadanganLokal = currentSiswaObj
+            ? bacaCadanganJawabanLokal(currentSiswaObj.username, mapelSiswaLogin, kelasTrim)
+            : null;
+        if (cadanganLokal && cadanganLokal.listSoal.length === listSoal.length) {
+            listSoal = cadanganLokal.listSoal;
+            jawabanSiswa = cadanganLokal.jawabanSiswa || {};
+            currentSoalIndex = Math.min(
+                Math.max(0, Number(cadanganLokal.currentSoalIndex || 0)),
+                listSoal.length - 1
+            );
+        } else {
+            currentSoalIndex = 0;
+            jawabanSiswa = {};
+            simpanCadanganJawabanLokal();
+        }
 
         setCompactMode(false);
         document.getElementById('infoUjianText').innerText = `Mata Pelajaran: ${mapelSiswaLogin} (${kelasTrim})`;
@@ -4191,6 +4377,7 @@ function siapkanSoalDanOpsiAcak(rawSoalList) {
 
 function pilihJawabanSiswa(index, opt) {
     jawabanSiswa[index] = opt;
+    simpanCadanganJawabanLokal();
     renderSoalSiswa();
 }
 
@@ -4198,6 +4385,7 @@ function navigasiSoal(step) {
     const nextIdx = currentSoalIndex + step;
     if (nextIdx >= 0 && nextIdx < listSoal.length) {
         currentSoalIndex = nextIdx;
+        simpanCadanganJawabanLokal();
         renderSoalSiswa();
     }
 }
@@ -4329,34 +4517,24 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         statusFinal = gabungRiwayatStatus(statusSebelum, "Selesai");
     }
 
-    if(currentSiswaObj) {
-        try {
-            await setSesiToGAS({
-                username: currentSiswaObj.username,
-                deviceId: getOrCreateDeviceId(),
-                status: statusFinal,
-                nama: namaSiswaLogin,
-                kelas: kelasSiswaLogin,
-                mapel: mapelSiswaLogin,
-                updatedAt: getLocalIsoNow()
-            });
-        } catch(e) {
-            console.error("Gagal mengunci status sesi di GAS:", e);
-        }
-    }
+    const sesiData = currentSiswaObj ? {
+        username: currentSiswaObj.username,
+        deviceId: getOrCreateDeviceId(),
+        status: statusFinal,
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        updatedAt: getLocalIsoNow()
+    } : null;
 
-    try {
-        await axios.post(GAS_URL, JSON.stringify({
-            action: "logLogin",
-            nama: namaSiswaLogin,
-            kelas: kelasSiswaLogin,
-            mapel: mapelSiswaLogin,
-            status: statusFinal,
-            nilai: nilaiAkhir
-        }));
-    } catch(e) {
-        console.error("Gagal memperbarui log selesai:", e);
-    }
+    const logData = {
+        action: "logLogin",
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        status: statusFinal,
+        nilai: nilaiAkhir
+    };
 
     let payload = {
         action: "submitResult", namaUjian: namaUjianAktif,
@@ -4364,8 +4542,38 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         nilai: nilaiAkhir, jawaban: jawabanSiswa, status: statusFinal
     };
 
+    // Simpan cadangan lengkap sebelum kirim ke server agar jawaban tidak hilang jika internet putus
+    simpanCadanganJawabanLokal();
+    simpanAntreanSubmitLokal({
+        sesiData: sesiData,
+        logData: logData,
+        payload: payload,
+        createdAt: Date.now()
+    });
+
+    if (sesiData) {
+        try {
+            await kirimDenganRetry(() => setSesiToGAS(sesiData), 2, 1000);
+        } catch(e) {
+            console.error("Gagal mengunci status sesi di GAS:", e);
+        }
+    }
+
     try {
-        let res = await axios.post(GAS_URL, JSON.stringify(payload));
+        await kirimDenganRetry(() => axios.post(GAS_URL, JSON.stringify(logData)), 2, 1000);
+    } catch(e) {
+        console.error("Gagal memperbarui log selesai:", e);
+    }
+
+    try {
+        let res = await kirimDenganRetry(
+            () => axios.post(GAS_URL, JSON.stringify(payload)),
+            3,
+            1500,
+            "Koneksi lambat, mencoba mengirim ulang jawaban"
+        );
+        hapusAntreanSubmitLokal();
+        hapusCadanganJawabanLokal();
         hideLoading();
         bersihkanCacheSoal();
         if (isCurrentlyFullscreen() && document.exitFullscreen) {
@@ -4379,13 +4587,16 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
             alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}`);
         }
         location.reload();
-    } catch(err) { 
-        bersihkanCacheSoal();
+    } catch(err) {
         hideLoading();
-        alert(isCurang 
-            ? `UJIAN DIHENTIKAN (${alasanCurang})! Nilai: ${nilaiAkhir}. Akun terkunci, hubungi Admin untuk reset.` 
-            : "Koneksi gagal saat submit, silakan hubungi pengawas."); 
-        location.reload(); 
+        isSubmittingExam = false;
+        if (isCurrentlyFullscreen() && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+        alert(isCurang
+            ? `UJIAN DIHENTIKAN (${alasanCurang})! Nilai: ${nilaiAkhir}.\nKoneksi sedang terputus, tetapi jawaban Anda AMAN tersimpan di perangkat ini. Jangan hapus data browser dan segera hubungkan internet lalu klik "Selesaikan & Kirim Ujian" atau muat ulang halaman.`
+            : `Koneksi gagal setelah 3x percobaan!\nJangan khawatir, seluruh jawaban Anda (Nilai: ${nilaiAkhir}) AMAN tersimpan di perangkat ini.\n\nPeriksa koneksi internet Anda lalu klik tombol "Selesaikan & Kirim Ujian" lagi (atau muat ulang halaman agar terkirim otomatis).`
+        );
     }
 }
 
@@ -4454,9 +4665,14 @@ function hideLoading() {
     document.getElementById('loadingOverlay').style.display = 'none';
 }
 
+window.addEventListener("online", () => {
+    prosesAntreanSubmitTertunda(false);
+});
+
 window.onload = async function() {
     showLoading("Memuat data sistem...");
-    await fetchCbtDatabase(true);
+    await prosesAntreanSubmitTertunda(false);
+    await fetchCbtDatabase(false);
     await fetchTokenDariDrive(true);
     hideLoading();
 
