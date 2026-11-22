@@ -4,12 +4,931 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Portal CBT - SMA Negeri 1 Tanjungsari</title>
-    <link rel="stylesheet" href="style.css">
     <!-- Axios & CryptoJS & SheetJS & Mammoth -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 6px; background: #f4f7f6; color: #333; }
+        
+        /* Container default (lebar untuk ujian & admin dashboard) */
+        .container { 
+            background: white; 
+            padding: 12px 14px; 
+            border-radius: 8px; 
+            max-width: 1180px; 
+            margin: 6px auto; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            transition: max-width 0.25s ease;
+        }
+        /* Mode diperkecil khusus halaman login */
+        .container.login-compact {
+            max-width: 420px;
+            margin-top: 24px;
+            padding: 16px;
+        }
+
+        h2, h3 { text-align: center; color: #0056b3; }
+        .header-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            text-align: left;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #008080;
+            padding-bottom: 6px;
+        }
+        .header-box.centered-header {
+            display: block;
+            text-align: center;
+        }
+        .header-brand h2 {
+            margin: 0 0 2px 0;
+            font-size: 18px;
+            text-align: inherit;
+        }
+        .header-brand h3 {
+            color: #008080;
+            margin: 0;
+            font-size: 12px;
+            font-weight: normal;
+            text-align: inherit;
+        }
+        .header-admin-inline {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .header-admin-inline.active {
+            display: flex;
+        }
+        .header-admin-title {
+            font-size: 13.5px;
+            font-weight: bold;
+            color: #008080;
+            white-space: nowrap;
+        }
+        .header-admin-actions {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        @media (max-width: 720px) {
+            .header-box:not(.centered-header) {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .header-admin-inline {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .form-group { margin-bottom: 8px; }
+        label { display: block; font-weight: bold; margin-bottom: 3px; color: #444; font-size: 12px; }
+        input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select { 
+            width: 100%; padding: 7px 9px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; 
+        }
+        input[type="file"] { font-size: 12px; padding: 3px 0; }
+        textarea { resize: vertical; }
+        
+        /* Style kolom input terkunci (readonly) */
+        input.locked-input {
+            background-color: #e9ecef;
+            color: #495057;
+            pointer-events: none;
+            cursor: not-allowed;
+            user-select: none;
+        }
+
+        button { background: #008080; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; width: 100%; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #006666; }
+        button:disabled { background: #b0bec5; cursor: not-allowed; opacity: 0.75; }
+        
+        /* Tombol Toggle Tunggal Login Siswa / Login Admin */
+        .single-role-bar { margin-bottom: 12px; }
+        .btn-role-toggle {
+            background: #008080;
+            color: #ffffff;
+            padding: 9px;
+            font-size: 13px;
+            border-radius: 4px;
+            width: 100%;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-role-toggle:hover { background: #006666; }
+        .btn-role-toggle.admin-mode {
+            background: #6c757d;
+            color: #ffffff;
+        }
+        .btn-role-toggle.admin-mode:hover {
+            background: #5a6268;
+        }
+
+        /* Tab Navigation Admin */
+        .admin-tab-menu { display: flex; margin-bottom: 8px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
+        .admin-tab-btn { flex: 1; padding: 6px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 85px; border-radius: 4px 4px 0 0; }
+        .admin-tab-btn.active { background: #008080; color: white; }
+
+        /* MONITORING TOP ROW: TOKEN KIRI + KONTROL SESI KANAN */
+        .monitoring-top-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            margin-bottom: 8px;
+        }
+        .monitoring-token-col {
+            flex: 0 0 285px;
+            min-width: 255px;
+            margin-bottom: 0 !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .monitoring-sesi-col {
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-bottom: 0 !important;
+        }
+        @media (max-width: 880px) {
+            .monitoring-top-row {
+                flex-direction: column;
+            }
+            .monitoring-token-col {
+                flex: 1 1 auto;
+                width: 100%;
+            }
+        }
+
+        /* TABEL RAPAT KHUSUS MONITORING AKUN */
+        .compact-monitoring-table th,
+        .compact-monitoring-table td {
+            padding: 2.5px 5px;
+            font-size: 11.5px;
+            line-height: 1.2;
+        }
+        
+        .soal-box { margin-bottom: 12px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; user-select: none; }
+        .soal-box p { font-size: 14.5px; line-height: 1.45; font-weight: bold; margin-top: 0; word-break: break-word; }
+        img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; border: 1px solid #ddd; display: block; }
+        .option-label { display: block; margin-bottom: 6px; padding: 10px 11px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 5px; cursor: pointer; font-size: 13.5px; transition: background 0.15s, border-color 0.15s; word-break: break-word; }
+        .option-label:hover { background: #f0f8f8; border-color: #008080; }
+        .option-label.selected-opt { background: #e6f4f4; border-color: #008080; }
+        .option-label input { margin-right: 8px; transform: scale(1.1); }
+
+        /* INFO UJIAN + TIMER HITUNG MUNDUR */
+        .exam-header-info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            background: #e9ecef;
+            padding: 7px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 12.5px;
+        }
+        .exam-timer-badge {
+            background: #0056b3;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        .exam-timer-badge.timer-warning {
+            background: #dc3545;
+            animation: pulseTimer 1s infinite;
+        }
+        @keyframes pulseTimer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.72; }
+        }
+
+        /* NAVIGASI BEFORE / NEXT DI BAWAH MATA PELAJARAN */
+        .soal-nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            flex-wrap: wrap;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 7px 9px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .soal-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn-nav-soal {
+            width: auto;
+            min-width: 82px;
+            padding: 7px 10px;
+            font-size: 12.5px;
+            background: #008080;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .btn-selesai-top {
+            width: auto;
+            padding: 7px 12px;
+            font-size: 12.5px;
+            background: #28a745;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .btn-selesai-top:hover {
+            background: #218838;
+        }
+        .btn-nav-soal.btn-before {
+            background: #6c757d;
+        }
+        .btn-nav-soal.btn-before:hover:not(:disabled) {
+            background: #5a6268;
+        }
+        .soal-progress-info {
+            text-align: center;
+            font-size: 12.5px;
+            font-weight: bold;
+            color: #0056b3;
+            flex: 1;
+            min-width: 110px;
+        }
+        .soal-progress-sub {
+            display: block;
+            font-size: 10.5px;
+            font-weight: normal;
+            color: #555;
+            margin-top: 1px;
+        }
+        @media (max-width: 560px) {
+            .soal-nav-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .soal-nav-left {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+            .btn-nav-soal, .btn-selesai-top {
+                width: 100%;
+            }
+        }
+        
+        .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row-flex > div { flex: 1; min-width: 140px; }
+        .row-flex > div.jp-col { flex: 0 0 120px; min-width: 110px; max-width: 130px; }
+
+        /* GRID MATRIKS KHUSUS DAFTAR KELAS & DAFTAR MAPEL */
+        .master-matrix-grid {
+            display: grid;
+            gap: 4px 10px;
+            margin-top: 6px;
+            overflow-x: auto;
+        }
+        .master-matrix-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 3px 7px;
+            background: #ffffff;
+            border: 1px solid #e3e8e8;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .master-matrix-item .item-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .master-matrix-item .item-label::before {
+            content: "• ";
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI */
+        .jadwal-time-row {
+            display: flex;
+            gap: 6px;
+            align-items: flex-end;
+            flex-wrap: nowrap;
+        }
+        .jadwal-time-row .time-col {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .jadwal-time-row .jp-inline-col {
+            flex: 0 0 82px;
+            min-width: 76px;
+        }
+        .jadwal-time-row input[type="datetime-local"] {
+            padding: 6px 5px;
+            font-size: 11.5px;
+        }
+        .jadwal-time-row input[type="number"] {
+            padding: 6px 7px;
+            font-size: 12px;
+        }
+        @media (max-width: 640px) {
+            .jadwal-time-row {
+                flex-wrap: wrap;
+            }
+            .jadwal-time-row .time-col {
+                flex: 1 1 100%;
+            }
+            .jadwal-time-row .jp-inline-col {
+                flex: 1 1 100%;
+            }
+        }
+
+        /* DUA KOLOM TAB DAFTAR UJIAN */
+        .ujian-two-col {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .ujian-col-left {
+            flex: 1.05;
+            min-width: 0;
+        }
+        .ujian-col-right {
+            flex: 1.3;
+            min-width: 0;
+        }
+        @media (max-width: 900px) {
+            .ujian-two-col {
+                flex-direction: column;
+            }
+            .ujian-col-left, .ujian-col-right {
+                width: 100%;
+            }
+        }
+
+        /* TABEL DAFTAR UJIAN AKTIF PAS LEBAR TANPA SCROLLBAR HORIZONTAL */
+        .table-jadwal-wrap {
+            width: 100%;
+            overflow-x: visible;
+        }
+        .table-jadwal-aktif {
+            width: 100%;
+            min-width: 100%;
+            table-layout: fixed;
+            margin-top: 4px;
+        }
+        .table-jadwal-aktif th,
+        .table-jadwal-aktif td {
+            padding: 4px 4px;
+            font-size: 11px;
+            line-height: 1.2;
+            vertical-align: middle;
+        }
+        .table-jadwal-aktif .col-mapel {
+            width: 17%;
+            overflow-wrap: anywhere;
+        }
+        .table-jadwal-aktif .col-kelas {
+            width: 31%;
+            overflow-wrap: anywhere;
+        }
+        .table-jadwal-aktif .col-jp {
+            width: 7%;
+            text-align: center;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        .table-jadwal-aktif .col-waktu {
+            width: 16%;
+            font-size: 10px;
+            line-height: 1.15;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        .table-jadwal-aktif .col-aksi {
+            width: 13%;
+            padding: 3px 2px;
+        }
+        .jadwal-aksi-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .jadwal-aksi-top-row {
+            display: flex;
+            gap: 2px;
+        }
+        .jadwal-aksi-top-row .btn-jadwal-act {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            padding: 2.5px 2px;
+            font-size: 9.5px;
+            line-height: 1.1;
+            text-align: center;
+        }
+        .jadwal-aksi-stack .btn-jadwal-full {
+            width: 100%;
+            margin: 0;
+            padding: 2.5px 2px;
+            font-size: 9.5px;
+            line-height: 1.1;
+            text-align: center;
+        }
+
+        /* DUA KOLOM SEJAJAR KIRI-KANAN PADA TAB DATA SISWA */
+        .siswa-top-two-col {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .siswa-top-two-col > .admin-card {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 820px) {
+            .siswa-top-two-col {
+                flex-direction: column;
+            }
+        }
+
+        /* PENGATURAN: TOKEN DRIVE, DURASI JP, & PASSWORD ADMIN */
+        .settings-top-three-col {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .settings-top-three-col > .admin-card {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 960px) {
+            .settings-top-three-col {
+                flex-direction: column;
+            }
+        }
+
+        /* PENGATURAN BARIS 2: BACKUP/RESTORE (KIRI) & ZONA BERBAHAYA (KANAN) */
+        .settings-backup-danger-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .settings-backup-danger-row > .admin-card {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 880px) {
+            .settings-backup-danger-row {
+                flex-direction: column;
+            }
+        }
+        
+        .error-msg { color: red; font-size: 12px; margin-top: 6px; text-align: center; display: none; }
+        .section-view, .admin-view { display: none; }
+        .section-view.active, .admin-view.active { display: block; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 9px 11px; border-radius: 6px; margin-bottom: 8px; }
+        .admin-card h4 { font-size: 13px; }
+        
+        /* Table Responsive */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 3px; min-width: 520px; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 12px; }
+        th { background-color: #008080; color: white; }
+        
+        .btn-sm { padding: 3px 7px; font-size: 10.5px; width: auto; border-radius: 3px; margin-right: 3px; margin-bottom: 1px; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+
+        /* TOMBOL RESET MAPEL & RESET PERANGKAT */
+        .reset-aksi-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: center;
+        }
+        .btn-reset-mapel {
+            width: auto;
+            padding: 2px 5px;
+            font-size: 9.5px;
+            line-height: 1.1;
+            border-radius: 3px;
+            background: #ffc107;
+            color: #212529;
+            font-weight: bold;
+        }
+        .btn-reset-mapel:hover {
+            background: #e0a800;
+        }
+        .btn-reset-perangkat {
+            width: auto;
+            padding: 2px 5px;
+            font-size: 9.5px;
+            line-height: 1.1;
+            border-radius: 3px;
+            background: #fd7e14;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .btn-reset-perangkat:hover {
+            background: #e36a08;
+        }
+
+        /* PILIH KELAS 7 KOLOM + PILIH SEMUA PER BARIS */
+        .checkbox-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 124px;
+            overflow-y: auto;
+            padding: 5px 7px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .kelas-row-line {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
+            gap: 3px 5px;
+            align-items: center;
+        }
+        .kelas-row-line label {
+            font-weight: normal;
+            font-size: 11px;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .kelas-row-line input[type="checkbox"] {
+            margin: 0;
+            flex-shrink: 0;
+        }
+        .btn-pilih-baris {
+            width: auto;
+            padding: 1.5px 5px;
+            font-size: 9.5px;
+            line-height: 1.15;
+            border-radius: 3px;
+            background: #e9ecef;
+            color: #333;
+            border: 1px solid #bbb;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-pilih-baris:hover {
+            background: #008080;
+            color: #fff;
+            border-color: #008080;
+        }
+        .btn-pilih-baris.active-all {
+            background: #008080;
+            color: #fff;
+            border-color: #008080;
+        }
+        @media (max-width: 600px) {
+            .kelas-row-line {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+            }
+        }
+
+        .pass-display-box {
+            display: flex; align-items: center; gap: 6px; background: #fff; padding: 5px 10px;
+            border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;
+        }
+        .pass-display-box span { flex: 1; font-family: monospace; font-size: 13px; font-weight: bold; color: #0056b3; }
+
+        /* Token Box Admin (tersimpan di Google Drive token_cbt.xlsx) */
+        .token-live-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            background: #e6f4f4;
+            border: 1px solid #008080;
+            border-radius: 5px;
+            padding: 6px 8px;
+            margin-bottom: 0;
+        }
+        .token-live-code {
+            font-family: monospace;
+            font-size: 19px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: #0056b3;
+        }
+        .token-live-timer {
+            font-size: 10.5px;
+            color: #006666;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        /* BADGE PILL RIWAYAT STATUS UJIAN */
+        .status-pill-wrap {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: center;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 1.5px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+        .status-pill-curang {
+            background-color: #dc3545;
+            color: #ffffff;
+        }
+        .status-pill-selesai {
+            background-color: #28a745;
+            color: #000000;
+        }
+        .status-pill-reset {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .status-pill-ujian {
+            background-color: #fd7e14;
+            color: #ffffff;
+        }
+        .status-pill-login {
+            background-color: #008080;
+            color: #ffffff;
+        }
+
+        /* BANNER PERINGATAN FULLSCREEN */
+        .exam-security-bar {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-bottom: 7px;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* OVERLAY PAKSA FULLSCREEN MOBILE / DESKTOP JIKA KELUAR */
+        #fullscreenGuardOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.94);
+            z-index: 99990;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 18px;
+            text-align: center;
+            color: #fff;
+        }
+        .fs-guard-box {
+            background: #ffffff;
+            color: #222;
+            max-width: 380px;
+            width: 100%;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+
+        /* MODAL PREVIEW SOAL ADMIN & MODAL EXPORT PER KELAS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.65); z-index: 9998;
+            display: none; justify-content: center; align-items: center; padding: 15px;
+        }
+        .modal-box {
+            background: #fff; width: 100%; max-width: 780px; max-height: 88vh;
+            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        .modal-box.modal-sm {
+            max-width: 440px;
+        }
+        .modal-header {
+            background: #008080; color: #fff; padding: 10px 14px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body {
+            padding: 14px; overflow-y: auto; flex: 1; background: #f9fbfb;
+        }
+        .modal-footer {
+            padding: 8px 14px; background: #eee; border-top: 1px solid #ddd;
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .preview-item {
+            background: #fff; border: 1px solid #dce4e4; border-radius: 6px;
+            padding: 10px 12px; margin-bottom: 10px;
+        }
+        .preview-opt {
+            padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 12.5px; background: #f8f9fa;
+        }
+        .preview-opt.is-kunci {
+            background: #d4edda; border: 1px solid #28a745; font-weight: bold; color: #155724;
+        }
+        .export-kelas-btn-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        /* KARTU SISWA RINGKAS TINGGI 3 CM (1 BARIS 4 USER) */
+        .kartu-siswa-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 5px;
+        }
+        @media (max-width: 760px) {
+            .kartu-siswa-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .kartu-siswa-3cm {
+            height: 3cm;
+            min-height: 3cm;
+            max-height: 3cm;
+            border: 1px solid #222;
+            border-radius: 4px;
+            background: #ffffff;
+            padding: 3px 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .kartu-3cm-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #008080;
+            padding-bottom: 1px;
+            font-size: 7.5px;
+            font-weight: bold;
+            color: #0056b3;
+            line-height: 1.1;
+        }
+        .kartu-3cm-nama {
+            font-size: 9.5px;
+            font-weight: bold;
+            color: #111;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.15;
+        }
+        .kartu-3cm-cred {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            font-size: 8px;
+            line-height: 1.15;
+            background: #f6f9f9;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .kartu-3cm-cred-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .kartu-3cm-cred-label {
+            font-size: 8px;
+            color: #444;
+            flex-shrink: 0;
+        }
+        .kartu-3cm-cred-val {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            line-height: 1.05;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* AREA CETAK KHUSUS PRINT */
+        #printKartuArea {
+            display: none;
+        }
+        @media print {
+            body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #mainContainer, #loadingOverlay, .modal-overlay, #fullscreenGuardOverlay {
+                display: none !important;
+            }
+            #printKartuArea {
+                display: block !important;
+                width: 100%;
+                padding: 3mm;
+            }
+            .kartu-siswa-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 2mm !important;
+            }
+            .kartu-siswa-3cm {
+                height: 3cm !important;
+                min-height: 3cm !important;
+                max-height: 3cm !important;
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .kartu-3cm-cred-val {
+                font-size: 16px !important;
+                font-weight: bold !important;
+            }
+        }
+
+        /* LOADING OVERLAY KUNCI LAYAR TOTAL */
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: all;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #008080;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
 <!-- AREA CETAK KARTU SISWA (TINGGI 3 CM) -->
@@ -19,7 +938,7 @@
 <div id="loadingOverlay">
     <div class="spinner"></div>
     <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
-    <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang memproses data.</p>
+    <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
 </div>
 
 <!-- OVERLAY PAKSA FULLSCREEN UNTUK MOBILE / BROWSER -->
@@ -152,7 +1071,7 @@
         <div id="errorAdmin" class="error-msg">Password admin salah!</div>
     </div>
 
-    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA (TAMPILAN PER SOAL + BEFORE / NEXT + TIMER) -->
     <div id="viewUjianSiswa" class="section-view">
         <div class="exam-security-bar">
             <span>MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!</span>
@@ -163,6 +1082,7 @@
             <span id="examCountdownTimer" class="exam-timer-badge" title="Sisa waktu ujian">⏱ --:--:--</span>
         </div>
 
+        <!-- TOMBOL BEFORE, NEXT & SELESAIKAN UJIAN DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
         <div class="soal-nav-bar">
             <div class="soal-nav-left">
                 <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
@@ -175,11 +1095,13 @@
             <button type="button" id="btnSelesaiUjian" class="btn-selesai-top" onclick="selesaiUjian(false)">Selesaikan & Kirim Ujian</button>
         </div>
 
+        <!-- KONTAINER 1 SOAL AKTIF -->
         <div id="soalContainer"></div>
     </div>
 
     <!-- 4. VIEW PANEL ADMIN MASTER -->
     <div id="viewPanelAdmin" class="section-view">
+        <!-- TAB MENU ADMIN -->
         <div class="admin-tab-menu">
             <button class="admin-tab-btn active" onclick="switchAdminTab('monitoring')">Monitoring Akun</button>
             <button class="admin-tab-btn" onclick="switchAdminTab('ujian')">Daftar Ujian</button>
@@ -188,9 +1110,11 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING -->
+        <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
+            <!-- BARIS ATAS SEJAJAR: KIRI TOKEN AKTIF, KANAN KONTROL SESI PERANGKAT -->
             <div class="monitoring-top-row">
+                <!-- TOKEN UJIAN OTOMATIS (GOOGLE DRIVE) -->
                 <div class="admin-card monitoring-token-col">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px; flex-wrap:wrap;">
                         <h4 style="margin: 0; color: #008080; font-size: 12.5px;">Token Ujian Otomatis (Google Drive)</h4>
@@ -211,6 +1135,7 @@
                     </div>
                 </div>
 
+                <!-- TABEL KONTROL SESI & RESET MAPEL / PERANGKAT SISWA (GAS) -->
                 <div class="admin-card monitoring-sesi-col">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
                         <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
@@ -241,6 +1166,7 @@
                 </div>
             </div>
 
+            <!-- TABEL LOG SPREADSHEET (DB_Log_login_CBT) -->
             <div class="admin-card" style="margin-bottom:0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (DB_Log_login_CBT)</h4>
@@ -270,9 +1196,10 @@
             </div>
         </div>
 
-        <!-- TAB 2: DAFTAR UJIAN -->
+        <!-- TAB 2: DAFTAR UJIAN (DUA KOLOM: KIRI BUAT JADWAL, KANAN DAFTAR UJIAN AKTIF) -->
         <div id="adminTabUjian" class="admin-view">
             <div class="ujian-two-col">
+                <!-- KOLOM KIRI: BUAT / EDIT JADWAL -->
                 <div class="admin-card ujian-col-left" id="cardFormJadwal">
                     <h4 id="judulFormJadwal" style="margin: 0 0 8px 0; color: #008080;">Buat Jadwal</h4>
                     <input type="hidden" id="editJadwalOrigIndices" value="">
@@ -289,6 +1216,7 @@
                         <div class="checkbox-grid" id="checkboxKelasContainer"></div>
                     </div>
 
+                    <!-- 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI -->
                     <div class="jadwal-time-row form-group">
                         <div class="time-col">
                             <label>Waktu Mulai Ujian:</label>
@@ -315,6 +1243,7 @@
                     </div>
                 </div>
 
+                <!-- KOLOM KANAN: DAFTAR UJIAN AKTIF -->
                 <div class="admin-card ujian-col-right">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
                         <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
@@ -375,7 +1304,9 @@
 
         <!-- TAB 4: DATA SISWA & UPLOAD -->
         <div id="adminTabSiswa" class="admin-view">
+            <!-- SEJAJAR KIRI-KANAN: TAMBAH SISWA & UPLOAD DATA SISWA -->
             <div class="siswa-top-two-col">
+                <!-- KIRI: TAMBAH SISWA -->
                 <div class="admin-card">
                     <div>
                         <h4 id="judulFormSiswaSatuan" style="margin: 0 0 8px 0; color: #008080;">Tambah Siswa</h4>
@@ -409,6 +1340,7 @@
                     </div>
                 </div>
 
+                <!-- KANAN: UPLOAD DATA SISWA -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Upload Data Siswa</h4>
@@ -421,6 +1353,7 @@
                 </div>
             </div>
 
+            <!-- TABEL DAFTAR SISWA + CARI NAMA + CETAK KARTU 3 CM -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
                     <h4 style="margin: 0; color: #008080;">Daftar Siswa</h4>
@@ -456,7 +1389,9 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
+            <!-- 1 BARIS: PENGATURAN TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
             <div class="settings-top-three-col">
+                <!-- KOLOM 1: PENGATURAN TOKEN GOOGLE DRIVE -->
                 <div class="admin-card">
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:6px; flex-wrap:wrap;">
@@ -481,6 +1416,7 @@
                     <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Token ke Drive</button>
                 </div>
 
+                <!-- KOLOM 2: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
@@ -493,6 +1429,7 @@
                     <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
                 </div>
 
+                <!-- KOLOM 3: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
@@ -510,7 +1447,9 @@
                 </div>
             </div>
 
+            <!-- BARIS 2 SEJAJAR: BACKUP/RESTORE DB & ZONA BERBAHAYA -->
             <div class="settings-backup-danger-row">
+                <!-- KIRI: BACKUP & RESTORE -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
@@ -527,6 +1466,7 @@
                     </div>
                 </div>
 
+                <!-- KANAN: ZONA BERBAHAYA -->
                 <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
                     <div>
                         <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
@@ -536,6 +1476,7 @@
                 </div>
             </div>
 
+            <!-- BARIS 3: CEK KUOTA / RATE LIMIT GITHUB GIST API -->
             <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd; margin-bottom:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
                     <div>
@@ -564,12 +1505,4018 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Urutan Script: 1. Core -> 2. Student -> 3. Admin -->
-<script src="js/app-core.js"></script>
-<script src="js/student.js"></script>
-<script src="js/admin.js"></script>
+    </div>
+
+</div>
+<script>
+// ================= KONFIGURASI SISTEM =================
+const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
+
+const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
+const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
+
+const GAS_URL = "https://script.google.com/macros/s/AKfycbySX2FnqpZeoMk7GLqFlpLUw4MwhdLPg9Somm0FR4Vcsp89kQRDcJOGLkg_8QYLIoxH/exec";
+
+const GIST_ID = "4b29a383e8a164f932396735ab60621b";
+const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
+const t2 = "V2eEWYvRV0AFFLJ";
+const GIST_TOKEN = t1 + t2;
+// ======================================================
+
+// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.xlsx) =================
+let tokenDriveState = {
+    token: "----",
+    intervalMenit: 5,
+    wajibToken: true,
+    expiresAt: 0,
+    serverOffsetMs: 0
+};
+let tokenCountdownTimerId = null;
+let isSyncingTokenFromDrive = false;
+
+function formatDetikKeMmSs(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+async function fetchTokenDariDrive(silent = true) {
+    if (isSyncingTokenFromDrive) return tokenDriveState;
+    isSyncingTokenFromDrive = true;
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getTokenConfig" }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            sinkronkanInputPengaturanToken();
+            sinkronkanTampilanInputTokenSiswa();
+        }
+    } catch (e) {
+        if (!silent) console.error("Gagal mengambil token_cbt.xlsx dari Google Drive:", e);
+    } finally {
+        isSyncingTokenFromDrive = false;
+    }
+    return tokenDriveState;
+}
+
+function updateTampilanTokenAdmin() {
+    const codeEl = document.getElementById("adminTokenAktifDisplay");
+    const timerEl = document.getElementById("adminTokenCountdown");
+    if (!codeEl || !timerEl) return;
+
+    codeEl.innerText = tokenDriveState.token || "----";
+
+    if (!tokenDriveState.expiresAt) {
+        timerEl.innerText = "--:--";
+        return;
+    }
+
+    const estServerNow = Date.now() + (tokenDriveState.serverOffsetMs || 0);
+    const remainingMs = tokenDriveState.expiresAt - estServerNow;
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    timerEl.innerText = formatDetikKeMmSs(remainingSec);
+
+    if (remainingMs <= 0 && !isSyncingTokenFromDrive) {
+        fetchTokenDariDrive(true);
+    }
+}
+
+function mulaiTimerTokenAdmin() {
+    if (tokenCountdownTimerId) clearInterval(tokenCountdownTimerId);
+    updateTampilanTokenAdmin();
+    tokenCountdownTimerId = setInterval(updateTampilanTokenAdmin, 1000);
+}
+
+function sinkronkanInputPengaturanToken() {
+    const inpInterval = document.getElementById("settingTokenIntervalMenit");
+    const selWajib = document.getElementById("settingWajibToken");
+    if (inpInterval) inpInterval.value = tokenDriveState.intervalMenit || 5;
+    if (selWajib) selWajib.value = tokenDriveState.wajibToken !== false ? "true" : "false";
+    updateTampilanTokenAdmin();
+}
+
+async function simpanPengaturanToken() {
+    const intervalVal = parseInt(document.getElementById("settingTokenIntervalMenit").value, 10);
+    const wajibVal = document.getElementById("settingWajibToken").value === "true";
+
+    if (isNaN(intervalVal) || intervalVal < 1) {
+        alert("Interval ganti token minimal 1 menit!");
+        return;
+    }
+
+    showLoading("Menyimpan pengaturan & file token_cbt.xlsx ke Google Drive...");
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "saveTokenConfig",
+            intervalMenit: intervalVal,
+            wajibToken: wajibVal,
+            regenerate: false
+        }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || intervalVal,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            sinkronkanInputPengaturanToken();
+            sinkronkanTampilanInputTokenSiswa();
+            hideLoading();
+            alert(`Berhasil! File token_cbt.xlsx di Google Drive diperbarui (interval ${intervalVal} menit).`);
+        } else {
+            hideLoading();
+            alert("Gagal menyimpan token ke Drive: " + (res.data?.message || "Unknown error"));
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal terhubung ke GAS saat menyimpan token: " + e.message);
+    }
+}
+
+async function acakUlangTokenDrive() {
+    if (!confirm("Acak ulang token 4 digit di file token_cbt.xlsx (Google Drive) sekarang?")) return;
+    showLoading("Mengacak ulang token_cbt.xlsx di Google Drive...");
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "saveTokenConfig",
+            intervalMenit: tokenDriveState.intervalMenit || 5,
+            wajibToken: tokenDriveState.wajibToken !== false,
+            regenerate: true
+        }));
+        if (res.data && res.data.status === "success" && res.data.data) {
+            const d = res.data.data;
+            const serverNow = Number(d.serverNow || Date.now());
+            tokenDriveState = {
+                token: String(d.token || "----"),
+                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
+                wajibToken: d.wajibToken !== false,
+                expiresAt: Number(d.expiresAt || 0),
+                serverOffsetMs: serverNow - Date.now()
+            };
+            updateTampilanTokenAdmin();
+        }
+    } catch (e) {
+        alert("Gagal mengacak token di Drive: " + e.message);
+    }
+    hideLoading();
+}
+
+async function salinTokenDrive() {
+    const tokenVal = String(tokenDriveState.token || "").trim();
+    if (!tokenVal || tokenVal === "----") {
+        alert("Token belum tersedia untuk disalin.");
+        return;
+    }
+    const teksSalin = `Token : ${tokenVal}`;
+    const btn = document.getElementById("btnSalinTokenDrive");
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(teksSalin);
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = teksSalin;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+        }
+        if (btn) {
+            const origText = btn.innerText;
+            btn.innerText = "✔ Tersalin!";
+            btn.style.background = "#28a745";
+            setTimeout(() => {
+                btn.innerText = origText;
+                btn.style.background = "";
+            }, 1600);
+        }
+    } catch (e) {
+        alert("Gagal menyalin token: " + e.message);
+    }
+}
+
+function sinkronkanTampilanInputTokenSiswa() {
+    const groupEl = document.getElementById("groupTokenUjianSiswa");
+    const inpEl = document.getElementById("inputTokenSiswa");
+    if (!groupEl) return;
+    if (tokenDriveState.wajibToken !== false) {
+        groupEl.style.display = "block";
+    } else {
+        groupEl.style.display = "none";
+        if (inpEl) inpEl.value = "";
+    }
+}
+// ==================================================================================
+
+// ================= HEADER SEJAJAR ADMIN =================
+function sinkronkanHeaderAdmin() {
+    const headerBox = document.getElementById('mainHeaderBox');
+    const adminInline = document.getElementById('headerAdminInline');
+    const isAdminActive = document.getElementById('viewPanelAdmin')?.classList.contains('active');
+
+    if (isAdminActive) {
+        headerBox?.classList.remove('centered-header');
+        adminInline?.classList.add('active');
+    } else {
+        headerBox?.classList.add('centered-header');
+        adminInline?.classList.remove('active');
+    }
+}
+// =====================================================
+
+// ================= CETAK KARTU SISWA RINGKAS (TINGGI 3 CM) =================
+function buatHtmlKartuSiswa(daftar) {
+    return daftar.map(s => `
+        <div class="kartu-siswa-3cm">
+            <div class="kartu-3cm-top">
+                <span>KARTU CBT</span>
+                <span>${s.kelas || '-'}</span>
+            </div>
+            <div class="kartu-3cm-nama" title="${s.nama || '-'}">${s.nama || '-'}</div>
+            <div class="kartu-3cm-cred">
+                <div class="kartu-3cm-cred-row">
+                    <span class="kartu-3cm-cred-label">User:</span>
+                    <span class="kartu-3cm-cred-val">${s.username || '-'}</span>
+                </div>
+                <div class="kartu-3cm-cred-row">
+                    <span class="kartu-3cm-cred-label">Pass:</span>
+                    <span class="kartu-3cm-cred-val">${s.password || '-'}</span>
+                </div>
+            </div>
+        </div>
+    `).join("");
+}
+
+function getSiswaTersaringSaatIni() {
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
+
+    return databaseSiswa.filter(s => {
+        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
+        const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
+        return cocokNama && cocokKelas;
+    });
+}
+
+function bukaModalCetakKartu(singleIdx = null) {
+    let targetList = [];
+    let judul = "Kartu Login Siswa (Tinggi 3 cm)";
+
+    if (typeof singleIdx === "number" && databaseSiswa[singleIdx]) {
+        targetList = [databaseSiswa[singleIdx]];
+        judul = `Kartu Siswa: ${databaseSiswa[singleIdx].nama} (Tinggi 3 cm)`;
+    } else {
+        targetList = getSiswaTersaringSaatIni();
+        const kelasFilter = document.getElementById('filterKelasKartu')?.value;
+        judul = `Kartu Siswa ${kelasFilter ? "Kelas " + kelasFilter : "Semua"} (${targetList.length} Kartu • Tinggi 3 cm)`;
+    }
+
+    if (targetList.length === 0) {
+        alert("Tidak ada data siswa yang cocok untuk dicetak.");
+        return;
+    }
+
+    const gridHtml = `<div class="kartu-siswa-grid">${buatHtmlKartuSiswa(targetList)}</div>`;
+    document.getElementById('modalKartuTitle').innerText = judul;
+    document.getElementById('modalKartuBody').innerHTML = gridHtml;
+    document.getElementById('printKartuArea').innerHTML = gridHtml;
+    document.getElementById('modalCetakKartu').style.display = 'flex';
+}
+
+function tutupModalKartu() {
+    document.getElementById('modalCetakKartu').style.display = 'none';
+}
+
+function eksekusiCetakKartu() {
+    window.print();
+}
+// =========================================================================
+
+// ================= FORMAT SOAL.JSON: 1 MAPEL = 1 BARIS =================
+function normalisasiKeBarisPerMapel(rawItems) {
+    const arr = Array.isArray(rawItems) ? rawItems : [];
+    const mapelMap = new Map();
+
+    const getOrCreateGroup = (mapelName) => {
+        const key = String(mapelName || "Umum").trim() || "Umum";
+        if (!mapelMap.has(key)) {
+            mapelMap.set(key, {
+                mapel: key,
+                kelas: [],
+                soal: []
+            });
+        }
+        return mapelMap.get(key);
+    };
+
+    arr.forEach(entry => {
+        if (!entry || typeof entry !== "object") return;
+
+        if (Array.isArray(entry.soal)) {
+            const grp = getOrCreateGroup(entry.mapel);
+            if (Array.isArray(entry.kelas)) {
+                entry.kelas.forEach(k => {
+                    if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
+                });
+            }
+            entry.soal.forEach(s => {
+                if (!s || typeof s !== "object") return;
+                const soalObj = {
+                    ...s,
+                    mapel: s.mapel || grp.mapel,
+                    kelas: Array.isArray(s.kelas) && s.kelas.length > 0 ? s.kelas : [...grp.kelas]
+                };
+                if (!grp.soal.some(existing => existing.id && soalObj.id && existing.id === soalObj.id)) {
+                    grp.soal.push(soalObj);
+                }
+            });
+            return;
+        }
+
+        const grp = getOrCreateGroup(entry.mapel);
+        if (Array.isArray(entry.kelas)) {
+            entry.kelas.forEach(k => {
+                if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
+            });
+        }
+        if (entry.soal !== undefined) {
+            if (!grp.soal.some(existing => existing.id && entry.id && existing.id === entry.id)) {
+                grp.soal.push({
+                    ...entry,
+                    mapel: grp.mapel,
+                    kelas: Array.isArray(entry.kelas) ? [...entry.kelas] : [...grp.kelas]
+                });
+            }
+        }
+    });
+
+    return Array.from(mapelMap.values());
+}
+
+function serializeSoalJsonOneMapelPerLine(soalArrayOrMapelRows) {
+    const mapelRows = normalisasiKeBarisPerMapel(soalArrayOrMapelRows);
+    if (mapelRows.length === 0) return "[]";
+    const lines = mapelRows.map(row => `  ${JSON.stringify(row)}`);
+    return `[\n${lines.join(",\n")}\n]`;
+}
+
+function parseSoalJsonFlexible(rawContent) {
+    if (!rawContent) return [];
+
+    let rawItems = [];
+    if (Array.isArray(rawContent)) {
+        rawItems = rawContent;
+    } else {
+        const text = String(rawContent).trim();
+        if (!text) return [];
+        try {
+            const parsed = JSON.parse(text);
+            rawItems = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? [parsed] : []);
+        } catch (_) {
+            const lines = text
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(l => l && l !== "[" && l !== "]")
+                .map(l => l.endsWith(",") ? l.slice(0, -1).trim() : l);
+
+            for (const line of lines) {
+                try {
+                    const obj = JSON.parse(line);
+                    if (obj && typeof obj === "object") rawItems.push(obj);
+                } catch (lineErr) {
+                    console.warn("Baris soal diabaikan karena tidak valid:", lineErr);
+                }
+            }
+        }
+    }
+
+    const mapelRows = normalisasiKeBarisPerMapel(rawItems);
+    const flatSoal = [];
+    mapelRows.forEach(row => {
+        row.soal.forEach(item => {
+            flatSoal.push({
+                ...item,
+                mapel: item.mapel || row.mapel,
+                kelas: Array.isArray(item.kelas) && item.kelas.length > 0 ? item.kelas : [...row.kelas]
+            });
+        });
+    });
+    return flatSoal;
+}
+// =====================================================================
+
+// ================= SANDI KUNCI JAWABAN (K=A, L=B, M=C, N=D, O=E) =================
+const MAP_OPT_TO_CIPHER = { 'A': 'K', 'B': 'L', 'C': 'M', 'D': 'N', 'E': 'O' };
+const MAP_CIPHER_TO_OPT = { 'K': 'A', 'L': 'B', 'M': 'C', 'N': 'D', 'O': 'E', 'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E' };
+
+function encodeKunciGist(opt) {
+    const up = String(opt || 'A').trim().toUpperCase();
+    return MAP_OPT_TO_CIPHER[up] || 'K';
+}
+
+function decodeKunciGist(cipher) {
+    const up = String(cipher || 'K').trim().toUpperCase();
+    return MAP_CIPHER_TO_OPT[up] || 'A';
+}
+// =================================================================================
+
+let currentLoginRole = 'siswa';
+
+let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
+let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
+let databaseSiswa = [];
+let daftarJadwalUjian = []; 
+let sesiLoginSiswa = {};
+let pengaturanCbt = {
+    menitPerJp: 40,
+    adminPasswordPlain: "admin123"
+};
+let logSiswaLogin = []; 
+let isAdminPassVisible = false;
+let isDataLoadedOnce = false;
+
+let listSoal = [];
+let currentSoalIndex = 0;
+let jawabanSiswa = {};
+let namaUjianAktif = "Ujian_CBT_Umum";
+let kelasSiswaLogin = "";
+let mapelSiswaLogin = "";
+let namaSiswaLogin = "";
+let currentSiswaObj = null;
+
+// Status keamanan ujian aktif & Timer ujian
+let isExamInProgress = false;
+let isSubmittingExam = false;
+let examCountdownIntervalId = null;
+let examEndTimestampMs = 0;
+
+// ================= FUNGSI BERSIHKAN CACHE LOCAL STORAGE LAMA =================
+function bersihkanCacheLokalLama(usernameOpsional = null) {
+    try {
+        localStorage.removeItem(CBT_DB_CACHE_KEY);
+        if (usernameOpsional) {
+            localStorage.removeItem(getLockedMapelStorageKey(usernameOpsional));
+            localStorage.removeItem(`smantas_cbt_unlocked_mapel_${String(usernameOpsional).trim()}`);
+        } else {
+            Object.keys(localStorage).forEach(k => {
+                if (
+                    k.startsWith("smantas_cbt_master_cache_") ||
+                    k.startsWith("smantas_cbt_locked_mapel_") ||
+                    k.startsWith("smantas_cbt_unlocked_mapel_")
+                ) {
+                    localStorage.removeItem(k);
+                }
+            });
+        }
+        bersihkanCacheSoal();
+    } catch (e) {
+        console.warn("Gagal membersihkan localStorage lama:", e);
+    }
+}
+
+// ================= SESI LOGIN SISWA LOKAL & KUNCI PER MAPEL =================
+const SISWA_SESSION_STORAGE_KEY = "smantas_cbt_siswa_session_v1";
+
+function simpanSesiSiswaLokal(sessionObj) {
+    try {
+        localStorage.setItem(SISWA_SESSION_STORAGE_KEY, JSON.stringify(sessionObj));
+    } catch (e) {}
+}
+
+function bacaSesiSiswaLokal() {
+    try {
+        const raw = localStorage.getItem(SISWA_SESSION_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusSesiSiswaLokal() {
+    try {
+        localStorage.removeItem(SISWA_SESSION_STORAGE_KEY);
+    } catch (e) {}
+}
+
+function getLockedMapelStorageKey(username) {
+    return `smantas_cbt_locked_mapel_${String(username || "").trim()}`;
+}
+
+function bacaLockedMapelLokal(username) {
+    try {
+        const raw = localStorage.getItem(getLockedMapelStorageKey(username));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.map(m => normStr(m)).filter(Boolean) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function simpanLockedMapelLokal(username, mapelArr) {
+    try {
+        const unique = [...new Set((mapelArr || []).map(m => normStr(m)).filter(Boolean))];
+        localStorage.setItem(getLockedMapelStorageKey(username), JSON.stringify(unique));
+    } catch (e) {}
+}
+
+function tandaiMapelTerkunciLokal(username, mapelName) {
+    if (!username || !mapelName) return;
+    const current = bacaLockedMapelLokal(username);
+    const mNorm = normStr(mapelName);
+    if (!current.includes(mNorm)) {
+        current.push(mNorm);
+        simpanLockedMapelLokal(username, current);
+    }
+}
+
+function bukaKunciMapelLokal(username, mapelName = null) {
+    if (!username) return;
+    if (!mapelName) {
+        try {
+            localStorage.removeItem(getLockedMapelStorageKey(username));
+        } catch (e) {}
+        return;
+    }
+    const target = normStr(mapelName);
+    const sisa = bacaLockedMapelLokal(username).filter(m => m !== target);
+    simpanLockedMapelLokal(username, sisa);
+}
+
+function getUnlockedMapelList(username) {
+    try {
+        const raw = localStorage.getItem(`smantas_cbt_unlocked_mapel_${String(username || "").trim()}`);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function tandaiMapelDiresetLokal(username, mapelName) {
+    if (!username || !mapelName) return;
+    bukaKunciMapelLokal(username, mapelName);
+    const list = getUnlockedMapelList(username);
+    const mNorm = normStr(mapelName);
+    const filtered = list.filter(item => normStr(item.mapel) !== mNorm);
+    filtered.push({ mapel: mapelName, unlockedAt: Date.now() });
+    try {
+        localStorage.setItem(`smantas_cbt_unlocked_mapel_${String(username || "").trim()}`, JSON.stringify(filtered));
+    } catch (e) {}
+}
+
+function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
+    const targetMapel = normStr(mapelName);
+    if (!targetMapel) return false;
+
+    const logs = Array.isArray(logSiswaLogin) ? logSiswaLogin : [];
+    const namaNorm = normStr(namaSiswa || "");
+    const kelasNorm = normStr(kelasSiswa || "");
+
+    const logMapelIni = logs.filter(l =>
+        normStr(l.mapel) === targetMapel &&
+        (!namaNorm || normStr(l.nama) === namaNorm) &&
+        (!kelasNorm || normStr(l.kelas) === kelasNorm)
+    );
+
+    if (logMapelIni.length > 0) {
+        const lastLog = logMapelIni[logMapelIni.length - 1];
+        const st = String(lastLog.status || "").trim();
+        if (st === "Direset" || st.toLowerCase().includes("reset")) {
+            bukaKunciMapelLokal(username, mapelName);
+            return false;
+        }
+        if (st.includes("Selesai") || st.toLowerCase().includes("curang")) {
+            return true;
+        }
+    }
+
+    const sess = sesiLoginSiswa[username];
+    const sessStatus = sess ? String(sess.status || "").trim() : "";
+    const sessMapelNorm = sess ? normStr(sess.mapel) : "";
+    if (sess && sessMapelNorm === targetMapel) {
+        if (sessStatus.endsWith("Direset") || sessStatus.toLowerCase().includes("reset")) {
+            bukaKunciMapelLokal(username, mapelName);
+            return false;
+        }
+        if (cekStatusTerkunci(sessStatus)) {
+            return true;
+        }
+    }
+
+    const unlockedList = getUnlockedMapelList(username);
+    if (unlockedList.some(item => normStr(item.mapel) === targetMapel)) {
+        return false;
+    }
+
+    const lockedLocal = bacaLockedMapelLokal(username);
+    if (lockedLocal.includes(targetMapel)) {
+        return true;
+    }
+
+    return false;
+}
+
+function parseJadwalDateTimeMs(isoLocalStr) {
+    if (!isoLocalStr) return NaN;
+    const d = new Date(isoLocalStr);
+    return d.getTime();
+}
+
+function renderOpsiMapelUntukSiswa(siswa) {
+    const selectMapel = document.getElementById('pilihMapelAktif');
+    if (!selectMapel || !siswa) return;
+
+    document.getElementById('salamSiswa').innerText = `Selamat Datang, ${siswa.nama}`;
+    document.getElementById('infoKelasSiswa').innerText = `Kelas: ${siswa.kelas}`;
+
+    selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
+
+    const nowMs = Date.now();
+    const kelasTrim = String(siswa.kelas || "").trim().toLowerCase();
+
+    // Hanya mapel yang sesuai kelas DAN sedang berada di rentang waktu ujian (mulai <= sekarang <= selesai)
+    const jadwalAktifKelas = daftarJadwalUjian.filter(j => {
+        const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
+        if (!kelasMatch) return false;
+        const startMs = parseJadwalDateTimeMs(j.mulai);
+        const endMs = parseJadwalDateTimeMs(j.selesai);
+        if (isNaN(startMs) || isNaN(endMs)) return false;
+        return nowMs >= startMs && nowMs <= endMs;
+    });
+
+    if (jadwalAktifKelas.length === 0) {
+        selectMapel.innerHTML = '<option value="">-- Tidak ada jadwal ujian aktif untuk kelas & waktu saat ini --</option>';
+        return;
+    }
+
+    jadwalAktifKelas.forEach(j => {
+        const terkunci = isMapelTerkunciUntukSiswa(siswa.username, siswa.nama, siswa.kelas, j.mapel);
+        if (terkunci) {
+            selectMapel.innerHTML += `<option value="${j.mapel}" disabled style="color:#999; background:#f1f1f1;">[TERKUNCI - Curang/Selesai] ${j.mapel}</option>`;
+        } else {
+            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (${j.jp ? j.jp + ' JP • ' : ''}Selesai: ${j.selesai.replace('T', ' ')})</option>`;
+        }
+    });
+}
+
+async function muatUlangDaftarMapelSiswa() {
+    if (!currentSiswaObj) return;
+    showLoading("Menghapus cache lokal & mengambil data terbaru dari GAS (DB_Log_login_CBT)...");
+    bersihkanCacheLokalLama(currentSiswaObj.username);
+    isDataLoadedOnce = false;
+    await fetchCbtDatabase(true);
+    await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
+    await fetchTokenDariDrive(true);
+    renderOpsiMapelUntukSiswa(currentSiswaObj);
+    sinkronkanTampilanInputTokenSiswa();
+    hideLoading();
+}
+
+async function tampilkanHalamanPilihUjianSiswa(siswa) {
+    currentSiswaObj = siswa;
+    namaSiswaLogin = siswa.nama;
+    kelasSiswaLogin = siswa.kelas;
+
+    simpanSesiSiswaLokal({
+        username: siswa.username,
+        nama: siswa.nama,
+        kelas: siswa.kelas,
+        deviceId: getOrCreateDeviceId()
+    });
+
+    await fetchLogLoginFromGAS();
+    renderOpsiMapelUntukSiswa(siswa);
+    sinkronkanTampilanInputTokenSiswa();
+
+    const inpToken = document.getElementById('inputTokenSiswa');
+    if (inpToken) inpToken.value = "";
+
+    currentLoginRole = 'siswa';
+    const btnToggle = document.getElementById('btnRoleToggle');
+    if (btnToggle) {
+        btnToggle.innerText = "Login Siswa";
+        btnToggle.classList.remove('admin-mode');
+    }
+
+    setCompactMode(true);
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('tabMenu').style.display = 'none';
+    document.getElementById('viewPilihUjianSiswa').classList.add('active');
+    sinkronkanHeaderAdmin();
+}
+// ====================================================================================
+
+function getOrCreateDeviceId() {
+    let devId = localStorage.getItem("smantas_cbt_device_id");
+    if (!devId) {
+        devId = "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase() + "-" + Date.now().toString(36).toUpperCase();
+        localStorage.setItem("smantas_cbt_device_id", devId);
+    }
+    return devId;
+}
+
+function setCompactMode(isCompact) {
+    const container = document.getElementById('mainContainer');
+    if (isCompact) {
+        container.classList.add('login-compact');
+    } else {
+        container.classList.remove('login-compact');
+    }
+    sinkronkanHeaderAdmin();
+}
+
+function toggleRoleLogin() {
+    const btn = document.getElementById('btnRoleToggle');
+    document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('errorAdmin').style.display = 'none';
+
+    if (currentLoginRole === 'siswa') {
+        currentLoginRole = 'admin';
+        btn.innerText = "Login Admin";
+        btn.classList.add('admin-mode');
+        
+        if (localStorage.getItem("isAdminLoggedIn") === "true") {
+            setCompactMode(false);
+            document.getElementById('viewPanelAdmin').classList.add('active');
+            document.getElementById('tabMenu').style.display = 'none';
+            sinkronkanHeaderAdmin();
+            switchAdminTab('monitoring');
+        } else {
+            setCompactMode(true);
+            document.getElementById('viewLoginAdmin').classList.add('active');
+        }
+    } else {
+        currentLoginRole = 'siswa';
+        btn.innerText = "Login Siswa";
+        btn.classList.remove('admin-mode');
+        setCompactMode(true);
+
+        if (currentSiswaObj) {
+            renderOpsiMapelUntukSiswa(currentSiswaObj);
+            sinkronkanTampilanInputTokenSiswa();
+            document.getElementById('viewPilihUjianSiswa').classList.add('active');
+        } else {
+            document.getElementById('viewLoginSiswa').classList.add('active');
+        }
+    }
+    sinkronkanHeaderAdmin();
+}
+
+function getAdminPasswordPlain() {
+    return localStorage.getItem("adminPasswordPlain") || pengaturanCbt.adminPasswordPlain || "admin123";
+}
+
+function getAdminPasswordHash() {
+    const plain = getAdminPasswordPlain();
+    return CryptoJS.SHA256(plain).toString();
+}
+
+function renderAdminPasswordDisplay() {
+    const span = document.getElementById('currentAdminPassDisplay');
+    const btn = document.getElementById('btnTogglePassAdmin');
+    if(!span || !btn) return;
+    const plain = getAdminPasswordPlain();
+    if(isAdminPassVisible) {
+        span.innerText = plain;
+        btn.innerText = "Sembunyikan";
+    } else {
+        span.innerText = "•".repeat(plain.length);
+        btn.innerText = "Lihat";
+    }
+}
+
+function toggleLihatPasswordAdmin() {
+    isAdminPassVisible = !isAdminPassVisible;
+    renderAdminPasswordDisplay();
+}
+
+async function ubahPasswordAdmin() {
+    const newPass = document.getElementById('newAdminPassword').value.trim();
+    if(!newPass) { alert("Password baru kosong!"); return; }
+    showLoading("Menyimpan password admin baru...");
+    localStorage.setItem("adminPasswordPlain", newPass);
+    localStorage.setItem("adminPasswordHash", CryptoJS.SHA256(newPass).toString());
+    pengaturanCbt.adminPasswordPlain = newPass;
+    await saveCbtDatabaseToGist();
+    hideLoading();
+    renderAdminPasswordDisplay();
+    alert("Password admin berhasil diubah!");
+    document.getElementById('newAdminPassword').value = "";
+}
+
+async function simpanPengaturanJp() {
+    const val = parseInt(document.getElementById('settingMenitPerJp').value, 10);
+    if(isNaN(val) || val < 1) {
+        alert("Masukkan durasi menit per JP yang valid (minimal 1 menit)!");
+        return;
+    }
+    showLoading("Menyimpan pengaturan JP ke Gist...");
+    pengaturanCbt.menitPerJp = val;
+    await saveCbtDatabaseToGist();
+    updateLabelJp();
+    hitungWaktuSelesaiOtomatis();
+    hideLoading();
+    alert(`Pengaturan berhasil disimpan! 1 JP = ${val} Menit.`);
+}
+
+function updateLabelJp() {
+    const m = pengaturanCbt.menitPerJp || 40;
+    const lbl = document.getElementById('labelJumlahJp');
+    if(lbl) lbl.innerText = `JP (${m}m):`;
+    const inp = document.getElementById('settingMenitPerJp');
+    if(inp) inp.value = m;
+}
+
+function hitungWaktuSelesaiOtomatis() {
+    const mulaiStr = document.getElementById('waktuMulai').value;
+    const jp = parseInt(document.getElementById('jumlahJp').value, 10);
+    const menitPerJp = parseInt(pengaturanCbt.menitPerJp, 10) || 40;
+
+    if(!mulaiStr || isNaN(jp) || jp < 1) return;
+
+    const startDate = new Date(mulaiStr);
+    if(isNaN(startDate.getTime())) return;
+
+    const totalMenit = jp * menitPerJp;
+    const endDate = new Date(startDate.getTime() + totalMenit * 60000);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const formattedEnd = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    document.getElementById('waktuSelesai').value = formattedEnd;
+}
+
+// ================= MONITOR RATE LIMIT GIST API =================
+async function cekRateLimitGistApi(silent = false) {
+    const remEl = document.getElementById('gistLimitRemaining');
+    const usedEl = document.getElementById('gistLimitUsed');
+    const resetEl = document.getElementById('gistLimitReset');
+    const statusEl = document.getElementById('gistLimitStatus');
+
+    if (!silent && remEl) remEl.innerText = "Memuat...";
+    try {
+        const res = await axios.get(`https://api.github.com/rate_limit?t=${Date.now()}`, {
+            headers: { "Authorization": `token ${GIST_TOKEN}` }
+        });
+        const core = res.data?.resources?.core || res.data?.rate || {};
+        const limit = Number(core.limit || 5000);
+        const remaining = Number(core.remaining ?? 0);
+        const used = Number(core.used ?? (limit - remaining));
+        const resetEpoch = Number(core.reset || 0);
+
+        let resetStr = "-";
+        if (resetEpoch > 0) {
+            const d = new Date(resetEpoch * 1000);
+            const pad = (n) => String(n).padStart(2, '0');
+            resetStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} WIB`;
+        }
+
+        if (remEl) {
+            remEl.innerText = `${remaining} / ${limit}`;
+            remEl.style.color = remaining > 500 ? "#28a745" : (remaining > 100 ? "#fd7e14" : "#dc3545");
+        }
+        if (usedEl) usedEl.innerText = `${used} req`;
+        if (resetEl) resetEl.innerText = resetStr;
+        if (statusEl) {
+            statusEl.innerText = remaining > 500 ? "Aman (Raw-First Aktif)" : "Waspada Kuota Menipis";
+            statusEl.style.color = remaining > 500 ? "#008080" : "#dc3545";
+        }
+    } catch (e) {
+        if (remEl) {
+            remEl.innerText = "Gagal cek";
+            remEl.style.color = "#dc3545";
+        }
+        if (statusEl) {
+            statusEl.innerText = "Error / Rate Limited";
+            statusEl.style.color = "#dc3545";
+        }
+        if (!silent) {
+            alert("Gagal mengecek limit GitHub Gist API: " + (e.response?.data?.message || e.message));
+        }
+    }
+}
+
+// ================= DATABASE MASTER GIST (HEMAT KUOTA: RAW-FIRST + DIRECT PATCH) =================
+const CBT_DB_CACHE_KEY = `smantas_cbt_master_cache_${CBT_GIST_ID}`;
+const CBT_DB_CACHE_TTL_MS = 2 * 60 * 1000;
+
+function terapkanDataCbtMaster(data) {
+    if (!data || typeof data !== 'object') return;
+    if (Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
+    if (Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
+    if (Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
+    if (Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
+    if (data.db_pengaturan && typeof data.db_pengaturan === 'object') {
+        pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
+        if (data.db_pengaturan.adminPasswordPlain) {
+            localStorage.setItem("adminPasswordPlain", data.db_pengaturan.adminPasswordPlain);
+        }
+    }
+}
+
+function simpanCacheCbtMaster(data) {
+    try {
+        localStorage.setItem(CBT_DB_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            data: data
+        }));
+    } catch (e) {}
+}
+
+function bacaCacheCbtMaster() {
+    try {
+        const raw = localStorage.getItem(CBT_DB_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data || !parsed.savedAt) return null;
+        if (Date.now() - parsed.savedAt > CBT_DB_CACHE_TTL_MS) return null;
+        return parsed.data;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function fetchCbtDatabase(forceRefresh = false, preferApi = false) {
+    if (isDataLoadedOnce && !forceRefresh) {
+        return;
+    }
+
+    if (!forceRefresh && !preferApi) {
+        const cached = bacaCacheCbtMaster();
+        if (cached) {
+            terapkanDataCbtMaster(cached);
+            isDataLoadedOnce = true;
+            initDropdowns();
+            renderTabelDaftarSiswa();
+            renderTabelJadwal();
+            updateLabelJp();
+            renderAdminPasswordDisplay();
+            return;
+        }
+    }
+
+    try {
+        let data = null;
+        if (preferApi) {
+            try {
+                let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
+                    headers: { "Authorization": `token ${GIST_TOKEN}` }
+                });
+                const files = apiRes.data.files || {};
+                const fname = files["db_cbt.json"] ? "db_cbt.json" : Object.keys(files)[0];
+                data = JSON.parse(files[fname].content);
+            } catch (apiErr) {
+                const bucket = Math.floor(Date.now() / 30000);
+                let res = await axios.get(`${CBT_GIST_RAW_URL}?t=${bucket}`);
+                data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+            }
+        } else {
+            try {
+                const bucket = forceRefresh ? Date.now() : Math.floor(Date.now() / 30000);
+                let res = await axios.get(`${CBT_GIST_RAW_URL}?t=${bucket}`);
+                data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+            } catch (rawErr) {
+                let apiRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, {
+                    headers: { "Authorization": `token ${GIST_TOKEN}` }
+                });
+                const files = apiRes.data.files || {};
+                const fname = files["db_cbt.json"] ? "db_cbt.json" : Object.keys(files)[0];
+                data = JSON.parse(files[fname].content);
+            }
+        }
+
+        if (data && typeof data === 'object') {
+            terapkanDataCbtMaster(data);
+            simpanCacheCbtMaster(data);
+        }
+        isDataLoadedOnce = true;
+    } catch (e) {
+        console.error("Gagal mengambil db_cbt.json dari Gist:", e);
+    }
+    initDropdowns();
+    renderTabelDaftarSiswa();
+    renderTabelJadwal();
+    updateLabelJp();
+    renderAdminPasswordDisplay();
+}
+
+async function saveCbtDatabaseToGist() {
+    let payloadData = {
+        db_kelas: daftarKelas,
+        db_mapel: daftarMapel,
+        db_siswa: databaseSiswa,
+        db_jadwal: daftarJadwalUjian,
+        db_pengaturan: pengaturanCbt
+    };
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const serialized = JSON.stringify(payloadData);
+    try {
+        await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
+            files: { "db_cbt.json": { content: serialized } }
+        }, githubHeaders);
+        simpanCacheCbtMaster(payloadData);
+        isDataLoadedOnce = true;
+    } catch (err) {
+        try {
+            let gistRes = await axios.get(`https://api.github.com/gists/${CBT_GIST_ID}?t=${Date.now()}`, githubHeaders);
+            let filename = Object.keys(gistRes.data.files)[0];
+            await axios.patch(`https://api.github.com/gists/${CBT_GIST_ID}`, {
+                files: { [filename]: { content: serialized } }
+            }, githubHeaders);
+            simpanCacheCbtMaster(payloadData);
+            isDataLoadedOnce = true;
+        } catch (err2) {
+            console.error("Gagal menyimpan ke Gist db_cbt.json:", err2);
+            alert("Gagal menyimpan ke Gist: " + err2.message);
+        }
+    }
+}
+
+// ================= MANAJEMEN SESI PERANGKAT & STATUS VIA GOOGLE APPS SCRIPT (GAS) =================
+function parseTokenCount(token) {
+    const m = String(token || "").trim().match(/^(.*?)(?:\s*\((\d+)x\))?$/i);
+    if (!m) return { base: String(token || "").trim(), count: 1 };
+    return {
+        base: m[1].trim(),
+        count: m[2] ? parseInt(m[2], 10) : 1
+    };
+}
+
+function formatTokenCount(base, count) {
+    return count > 1 ? `${base} (${count}x)` : base;
+}
+
+function gabungRiwayatStatus(statusLama, statusBaru) {
+    const baru = String(statusBaru || "").trim();
+    const lamaRaw = String(statusLama || "").trim();
+    if (!lamaRaw || lamaRaw === "-" || lamaRaw === "Login Aktif") {
+        return baru;
+    }
+
+    const daftarLama = lamaRaw.split(",").map(s => s.trim()).filter(Boolean);
+    if (!baru) return daftarLama.join(", ");
+
+    if (daftarLama[daftarLama.length - 1] === "Sedang Ujian" && baru !== "Sedang Ujian") {
+        daftarLama.pop();
+    }
+
+    if (daftarLama.length === 0) {
+        return baru;
+    }
+
+    if (baru.toLowerCase().startsWith("curang")) {
+        const parsedBaru = parseTokenCount(baru);
+        const existingIdx = daftarLama.findIndex(tok =>
+            parseTokenCount(tok).base.toLowerCase() === parsedBaru.base.toLowerCase()
+        );
+        if (existingIdx !== -1) {
+            const parsedLama = parseTokenCount(daftarLama[existingIdx]);
+            const totalCount = parsedLama.count + parsedBaru.count;
+            daftarLama[existingIdx] = formatTokenCount(parsedLama.base, totalCount);
+            return daftarLama.join(", ");
+        }
+    }
+
+    if (daftarLama[daftarLama.length - 1].toLowerCase() === baru.toLowerCase()) {
+        return daftarLama.join(", ");
+    }
+
+    daftarLama.push(baru);
+    return daftarLama.join(", ");
+}
+
+function cekStatusTerkunci(statusStr) {
+    const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
+    if (tokens.length === 0) return false;
+    const terakhir = tokens[tokens.length - 1];
+    if (terakhir === "Direset" || terakhir.endsWith("Direset") || terakhir.toLowerCase().includes("reset") || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
+        return false;
+    }
+    return terakhir === "Selesai" || terakhir.toLowerCase().startsWith("curang");
+}
+
+function formatPelanggaranRingkas(alasan) {
+    const low = String(alasan || "").toLowerCase();
+    if (low.includes("full screen") || low.includes("fullscreen")) {
+        return "Curang: Keluar dari mode Full Screen";
+    }
+    if (low.includes("tab") || low.includes("jendela") || low.includes("aplikasi") || low.includes("menyembunyikan")) {
+        return "Curang: Pindah Tab / Aplikasi";
+    }
+    if (low.includes("waktu")) {
+        return "Waktu Habis";
+    }
+    return alasan ? `Curang: ${alasan}` : "Curang";
+}
+
+function renderStatusBadgesHtml(statusStr) {
+    const raw = String(statusStr || "").trim();
+    if (!raw || raw === "-") {
+        return `<span class="status-pill status-pill-login">-</span>`;
+    }
+
+    const rawParts = raw.split(",").map(s => s.trim()).filter(Boolean);
+    const parts = [];
+    rawParts.forEach(part => {
+        const mGabung = part.match(/^Selesai\s*\((Curang[\s\S]*)\)$/i);
+        if (mGabung) {
+            parts.push("Selesai");
+            parts.push(mGabung[1].trim());
+        } else {
+            parts.push(part);
+        }
+    });
+
+    const pills = parts.map(part => {
+        const low = part.toLowerCase();
+        let cls = "status-pill-login";
+        if (low.startsWith("selesai")) {
+            cls = "status-pill-selesai";
+        } else if (low.includes("curang")) {
+            cls = "status-pill-curang";
+        } else if (low.includes("reset")) {
+            cls = "status-pill-reset";
+        } else if (low.includes("sedang")) {
+            cls = "status-pill-ujian";
+        }
+        return `<span class="status-pill ${cls}">${part}</span>`;
+    });
+
+    return `<div class="status-pill-wrap">${pills.join("")}</div>`;
+}
+
+function normalisasiSesiDariGAS(rawData) {
+    const map = {};
+    if (!rawData) return map;
+
+    if (Array.isArray(rawData)) {
+        rawData.forEach(item => {
+            if (!item) return;
+            const uname = String(item.username || item.nis || "").trim();
+            if (uname) {
+                map[uname] = {
+                    username: uname,
+                    deviceId: item.deviceId || item.perangkat || "",
+                    status: item.status || "Login Aktif",
+                    nama: item.nama || "",
+                    kelas: item.kelas || "",
+                    mapel: item.mapel || "-",
+                    updatedAt: item.updatedAt || ""
+                };
+            }
+        });
+    } else if (typeof rawData === 'object') {
+        Object.keys(rawData).forEach(key => {
+            const item = rawData[key];
+            if (item && typeof item === 'object') {
+                const uname = String(item.username || key || "").trim();
+                if (uname) {
+                    map[uname] = {
+                        username: uname,
+                        deviceId: item.deviceId || item.perangkat || "",
+                        status: item.status || "Login Aktif",
+                        nama: item.nama || "",
+                        kelas: item.kelas || "",
+                        mapel: item.mapel || "-",
+                        updatedAt: item.updatedAt || ""
+                    };
+                }
+            }
+        });
+    }
+    return map;
+}
+
+async function fetchSesiFromGAS(silent = false) {
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getSesi" }));
+        if (res.data && res.data.status === "success") {
+            sesiLoginSiswa = normalisasiSesiDariGAS(res.data.data);
+        }
+    } catch (e) {
+        if (!silent) console.error("Gagal mengambil data sesi dari GAS:", e);
+    }
+    renderTabelSesiAktif();
+    return sesiLoginSiswa;
+}
+
+async function setSesiToGAS(sesiObj) {
+    const uname = String(sesiObj.username || "").trim();
+    if (!uname) return null;
+
+    sesiLoginSiswa[uname] = {
+        username: uname,
+        deviceId: sesiObj.deviceId || "",
+        status: sesiObj.status || "Login Aktif",
+        nama: sesiObj.nama || "",
+        kelas: sesiObj.kelas || "",
+        mapel: sesiObj.mapel || "-",
+        updatedAt: sesiObj.updatedAt || getLocalIsoNow()
+    };
+
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "setSesi",
+            username: uname,
+            sesi: sesiLoginSiswa[uname]
+        }));
+        return res.data;
+    } catch (e) {
+        console.error("Gagal menyimpan sesi ke GAS:", e);
+        return null;
+    }
+}
+
+async function deleteSesiFromGAS(username) {
+    const uname = String(username || "").trim();
+    if (!uname) return null;
+
+    delete sesiLoginSiswa[uname];
+
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "resetSesi",
+            username: uname
+        }));
+        return res.data;
+    } catch (e) {
+        console.error("Gagal mereset sesi di GAS:", e);
+        return null;
+    }
+}
+
+// ================= CACHE SOAL UJIAN & PRIORITAS GIST_RAW_URL =================
+const SOAL_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function getSoalCacheKey(scope = "all") {
+    return `smantas_cbt_soal_cache_${GIST_ID}_${scope}`;
+}
+
+function bacaCacheSoal(scope = "all") {
+    try {
+        const raw = sessionStorage.getItem(getSoalCacheKey(scope));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data) || !parsed.savedAt) return null;
+        if (Date.now() - parsed.savedAt > SOAL_CACHE_TTL_MS) {
+            sessionStorage.removeItem(getSoalCacheKey(scope));
+            return null;
+        }
+        return parsed.data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function simpanCacheSoal(scope = "all", data = []) {
+    try {
+        sessionStorage.setItem(getSoalCacheKey(scope), JSON.stringify({
+            savedAt: Date.now(),
+            data: Array.isArray(data) ? data : []
+        }));
+    } catch (e) {
+        console.warn("Gagal menyimpan cache soal ke sessionStorage:", e);
+    }
+}
+
+function bersihkanCacheSoal() {
+    try {
+        Object.keys(sessionStorage).forEach(k => {
+            if (k.startsWith(`smantas_cbt_soal_cache_${GIST_ID}_`)) {
+                sessionStorage.removeItem(k);
+            }
+        });
+    } catch (e) {}
+}
+
+async function fetchAllSoalFromGist(options = {}) {
+    const preferRaw = options.preferRaw !== false;
+    const forceRefresh = options.forceRefresh === true;
+    const cacheScope = options.cacheScope || (preferRaw ? "raw_exam" : "admin_api");
+
+    if (!forceRefresh) {
+        const cached = bacaCacheSoal(cacheScope);
+        if (cached) return cached;
+    }
+
+    if (preferRaw) {
+        try {
+            const res = await axios.get(`${GIST_RAW_URL}?t=${Math.floor(Date.now() / 30000)}`);
+            const list = parseSoalJsonFlexible(res.data);
+            simpanCacheSoal(cacheScope, list);
+            return list;
+        } catch (rawErr) {
+            console.warn("Gagal baca GIST_RAW_URL, fallback ke Gist API:", rawErr);
+        }
+    }
+
+    try {
+        const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+            headers: { "Authorization": `token ${GIST_TOKEN}` }
+        });
+        const filename = Object.keys(gistRes.data.files)[0];
+        const rawContent = gistRes.data.files[filename].content;
+        const list = parseSoalJsonFlexible(rawContent);
+        simpanCacheSoal(cacheScope, list);
+        return list;
+    } catch (apiErr) {
+        if (!preferRaw) {
+            try {
+                const res = await axios.get(`${GIST_RAW_URL}?t=${Date.now()}`);
+                const list = parseSoalJsonFlexible(res.data);
+                simpanCacheSoal(cacheScope, list);
+                return list;
+            } catch (e2) {
+                console.error("Gagal mengambil soal dari Gist:", e2);
+            }
+        }
+        return [];
+    }
+}
+
+async function fetchLogLoginFromGAS() {
+    try {
+        let res = await axios.post(GAS_URL, JSON.stringify({
+            action: "getLogLogin",
+            sheetName: "DB_Log_login_CBT"
+        }));
+        if(res.data && res.data.status === "success") {
+            logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
+        }
+    } catch(e) {
+        console.error("Gagal mengambil log login dari GAS (DB_Log_login_CBT):", e);
+    }
+    renderTabelSiswaLogin();
+    renderTabelSesiAktif();
+}
+
+function isWaitLockError(errMsg) {
+    return String(errMsg || "").toLowerCase().includes("waitlock");
+}
+
+async function hapusBarisLogSpreadsheet(index) {
+    if (!Array.isArray(logSiswaLogin) || index < 0 || index >= logSiswaLogin.length) return;
+    const row = logSiswaLogin[index];
+    const infoLabel = `${row.nama || "-"} (${row.kelas || "-"} - ${row.mapel || "-"})`;
+
+    if (!confirm(`Hapus baris log untuk ${infoLabel}?`)) return;
+
+    showLoading("Menghapus baris log terpilih di Spreadsheet...");
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "deleteLogRow",
+            sheetName: "DB_Log_login_CBT",
+            index: index,
+            nama: row.nama || "",
+            kelas: row.kelas || "",
+            mapel: row.mapel || "",
+            status: row.status || ""
+        }));
+
+        const data = res && res.data;
+        if (data && data.status === "success") {
+            await fetchLogLoginFromGAS();
+            hideLoading();
+        } else {
+            const errMsg = data?.message || "Unknown error";
+            logSiswaLogin.splice(index, 1);
+            renderTabelSiswaLogin();
+            hideLoading();
+            if (isWaitLockError(errMsg)) {
+                alert(
+                    `Baris log dihapus dari tampilan, namun GAS mengembalikan error LockService (${errMsg}).\n\n` +
+                    `Pastikan di Google Apps Script (Code.gs) menggunakan helper lock yang aman (runWithScriptLock / runWithDocumentLock).`
+                );
+            } else {
+                alert("Gagal menghapus baris log di Spreadsheet: " + errMsg);
+            }
+        }
+    } catch (e) {
+        const errMsg = e.message || "";
+        logSiswaLogin.splice(index, 1);
+        renderTabelSiswaLogin();
+        hideLoading();
+        if (isWaitLockError(errMsg)) {
+            alert(
+                `Baris log dihapus dari tampilan, namun GAS mengalami error LockService (${errMsg}).\n` +
+                `Periksa penggunaan LockService di script Google Apps Script Anda.`
+            );
+        } else {
+            alert("Gagal menghapus baris log: " + errMsg);
+        }
+    }
+}
+
+async function hapusSemuaLogSpreadsheet() {
+    const jumlahLog = Array.isArray(logSiswaLogin) ? logSiswaLogin.length : 0;
+    if (jumlahLog === 0) {
+        alert("Tidak ada data log pengerjaan & nilai untuk dihapus.");
+        return;
+    }
+
+    if (!confirm(`PERINGATAN! Yakin ingin menghapus SEMUA data Log Pengerjaan & Nilai Siswa (${jumlahLog} baris) di Spreadsheet?`)) return;
+    if (!confirm("Konfirmasi terakhir: Seluruh log pengerjaan & nilai siswa di Spreadsheet akan dihapus permanen. Lanjutkan?")) return;
+
+    showLoading("Menghapus seluruh log pengerjaan & nilai di Spreadsheet...");
+    try {
+        const candidateActions = [
+            "clearLogLogin",
+            "resetLogLogin",
+            "deleteAllLogLogin",
+            "clearLog",
+            "deleteLog"
+        ];
+
+        let berhasilDiGas = false;
+        let lastGasMessage = "";
+
+        for (const actName of candidateActions) {
+            try {
+                const res = await axios.post(GAS_URL, JSON.stringify({
+                    action: actName,
+                    sheetName: "DB_Log_login_CBT"
+                }));
+                const data = res && res.data;
+
+                if (data && data.status === "success") {
+                    berhasilDiGas = true;
+                    break;
+                }
+
+                const msg = (data && data.message) ? String(data.message) : "";
+                lastGasMessage = msg || lastGasMessage;
+
+                if (!msg.toLowerCase().includes("invalid action") && !isWaitLockError(msg)) {
+                    break;
+                }
+            } catch (reqErr) {
+                lastGasMessage = reqErr.message || lastGasMessage;
+            }
+        }
+
+        logSiswaLogin = [];
+        renderTabelSiswaLogin();
+        hideLoading();
+
+        if (berhasilDiGas) {
+            await fetchLogLoginFromGAS();
+            alert("Seluruh log pengerjaan & nilai siswa di Spreadsheet berhasil dihapus!");
+        } else {
+            alert(
+                "Tampilan Log Pengerjaan & Nilai telah dibersihkan, namun respons GAS: " +
+                (lastGasMessage || "Invalid action") +
+                (isWaitLockError(lastGasMessage) ? "\n(Terdeteksi error LockService 'waitLock' di skrip Google Apps Script)." : "")
+            );
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal menghapus log di Spreadsheet: " + e.message);
+    }
+}
+
+// ================= KONTROL SESI, RESET MAPEL & RESET PERANGKAT ADMIN (GAS) =================
+function resetCariNamaSesi() {
+    const inp = document.getElementById('inputCariNamaSesi');
+    if (inp) inp.value = "";
+    renderTabelSesiAktif();
+}
+
+function kumpulkanMapelAktifSiswa(username, sesiObj) {
+    const mapelSet = new Map();
+    const addMapel = (m) => {
+        const clean = String(m || "").trim();
+        if (!clean || clean === "-") return;
+        const key = normStr(clean);
+        if (!mapelSet.has(key)) mapelSet.set(key, clean);
+    };
+
+    if (sesiObj && sesiObj.mapel) {
+        addMapel(sesiObj.mapel);
+    }
+
+    const lockedArr = bacaLockedMapelLokal(username);
+    lockedArr.forEach(mNorm => {
+        const matched = daftarMapel.find(dm => normStr(dm) === mNorm);
+        addMapel(matched || mNorm);
+    });
+
+    const namaNorm = normStr(sesiObj && sesiObj.nama ? sesiObj.nama : "");
+    const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
+    if (Array.isArray(logSiswaLogin) && (namaNorm || kelasNorm)) {
+        logSiswaLogin.forEach(l => {
+            const cocokNama = !namaNorm || normStr(l.nama) === namaNorm;
+            const cocokKelas = !kelasNorm || normStr(l.kelas) === kelasNorm;
+            if (cocokNama && cocokKelas && l.mapel) {
+                addMapel(l.mapel);
+            }
+        });
+    }
+
+    if (mapelSet.size === 0 && kelasNorm) {
+        daftarJadwalUjian.forEach(j => {
+            if (normStr(j.kelas) === kelasNorm && j.mapel) {
+                addMapel(j.mapel);
+            }
+        });
+    }
+
+    return Array.from(mapelSet.values());
+}
+
+function buatTombolResetAksiHtml(username, sesiObj) {
+    const mapelAktifList = kumpulkanMapelAktifSiswa(username, sesiObj);
+    const unameEnc = encodeURIComponent(username);
+    const btns = [];
+
+    mapelAktifList.forEach(mp => {
+        const mpEnc = encodeURIComponent(mp);
+        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${mp}</button>`);
+    });
+
+    btns.push(`<button type="button" onclick="resetPerangkatSiswaAdmin('${unameEnc}')" class="btn-reset-perangkat">Reset-Perangkat</button>`);
+
+    return `<div class="reset-aksi-group">${btns.join("")}</div>`;
+}
+
+function renderTabelSesiAktif() {
+    const tbody = document.getElementById('tbodySesiAktif');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    const keys = Object.keys(sesiLoginSiswa);
+    if(keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
+        return;
+    }
+
+    const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
+    let tampilCount = 0;
+
+    keys.forEach(username => {
+        const s = sesiLoginSiswa[username];
+        if(!s) return;
+        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        tampilCount++;
+        let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
+        const aksiHtml = buatTombolResetAksiHtml(username, s);
+
+        tbody.innerHTML += `<tr>
+            <td><b>${username}</b></td>
+            <td>${s.nama || '-'}</td>
+            <td>${s.kelas || '-'}</td>
+            <td>${statusBadge}</td>
+            <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
+            <td>${aksiHtml}</td>
+        </tr>`;
+    });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan pada sesi aktif.</td></tr>`;
+    }
+}
+
+async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
+    const username = decodeURIComponent(usernameEnc);
+    const mapel = decodeURIComponent(mapelEnc);
+
+    if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nKunci mapel & status pelanggaran/selesai untuk mapel ini akan dibuka agar siswa bisa mengerjakan ulang.`)) return;
+
+    showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
+    tandaiMapelDiresetLokal(username, mapel);
+
+    const sesiLama = sesiLoginSiswa[username] || {
+        username: username,
+        deviceId: "",
+        status: "Login Aktif",
+        nama: "",
+        kelas: "",
+        mapel: mapel
+    };
+
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "resetMapelSiswa",
+            sheetName: "DB_Log_login_CBT",
+            username: username,
+            nama: sesiLama.nama || "",
+            kelas: sesiLama.kelas || "",
+            mapel: mapel
+        }));
+    } catch (e) {
+        console.warn("Peringatan saat memanggil resetMapelSiswa ke GAS:", e);
+    }
+
+    await setSesiToGAS({
+        username: username,
+        deviceId: sesiLama.deviceId || "",
+        status: `Reset-${mapel} (Direset)`,
+        nama: sesiLama.nama || "",
+        kelas: sesiLama.kelas || "",
+        mapel: mapel,
+        updatedAt: getLocalIsoNow()
+    });
+
+    await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
+    hideLoading();
+    alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset dan tidak lagi terkunci!`);
+}
+
+async function resetPerangkatSiswaAdmin(usernameEnc) {
+    const username = decodeURIComponent(usernameEnc);
+    if(!confirm(`Reset kunci perangkat untuk akun "${username}"?\nPerangkat lama akan dilepas dan sesi direset agar bersih / dapat digunakan kembali.`)) return;
+
+    showLoading(`Mereset kunci perangkat untuk ${username}...`);
+    await deleteSesiFromGAS(username);
+    await fetchSesiFromGAS(true);
+    hideLoading();
+    alert(`Kunci perangkat untuk "${username}" berhasil di-reset!`);
+}
+
+async function refreshSemuaDataAdmin() {
+    showLoading("Menghapus cache lokal & mengambil data terbaru dari GAS (DB_Log_login_CBT)...");
+    bersihkanCacheLokalLama();
+    isDataLoadedOnce = false;
+    await fetchCbtDatabase(true, true);
+    await fetchTokenDariDrive(true);
+    await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
+    hideLoading();
+}
+
+function backupDatabaseJson() {
+    const backupObj = {
+        exportedAt: new Date().toISOString(),
+        db_kelas: daftarKelas,
+        db_mapel: daftarMapel,
+        db_siswa: databaseSiswa,
+        db_jadwal: daftarJadwalUjian,
+        db_sesi_gas: sesiLoginSiswa,
+        db_pengaturan: pengaturanCbt
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+    const a = document.createElement('a');
+    const tgl = new Date().toISOString().slice(0, 10);
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", `backup_smantas_cbt_${tgl}.json`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function restoreDatabaseJson(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    if(!confirm("Apakah Anda yakin ingin me-restore database dari file ini? Data saat ini di Gist akan ditimpa.")) {
+        event.target.value = "";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if(!parsed || typeof parsed !== 'object') {
+                throw new Error("Format JSON tidak valid.");
+            }
+            showLoading("Merestore database ke GitHub Gist...");
+            if(Array.isArray(parsed.db_kelas)) daftarKelas = parsed.db_kelas;
+            if(Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
+            if(Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
+            if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
+            if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
+                pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
+                if(parsed.db_pengaturan.adminPasswordPlain) {
+                    localStorage.setItem("adminPasswordPlain", parsed.db_pengaturan.adminPasswordPlain);
+                }
+            }
+
+            await saveCbtDatabaseToGist();
+            initDropdowns();
+            renderTabelDaftarSiswa();
+            renderTabelJadwal();
+            updateLabelJp();
+            renderAdminPasswordDisplay();
+            hideLoading();
+            alert("Database berhasil direstore dan disinkronkan ke Gist!");
+        } catch(err) {
+            hideLoading();
+            alert("Gagal restore database: " + err.message);
+        }
+        event.target.value = "";
+    };
+    reader.readAsText(file);
+}
+
+async function hapusDatabaseGist() {
+    if(!confirm("PERINGATAN! Semua data Siswa, Jadwal Ujian di Gist, Sesi & Log di GAS, file Hasil Ujian, serta gambar soal di Drive akan dihapus permanen. Lanjutkan?")) return;
+    if(!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database, log, hasil ujian, dan gambar soal di Drive?")) return;
+
+    showLoading("Menghapus database Gist, mereset sesi/log & membersihkan file Drive...");
+    databaseSiswa = [];
+    daftarJadwalUjian = [];
+    sesiLoginSiswa = {};
+    logSiswaLogin = [];
+
+    await saveCbtDatabaseToGist();
+
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "resetAllSesiAndLog",
+            includeDriveAssets: true
+        }));
+    } catch (e) {
+        console.error("Gagal mereset sesi, log & aset Drive di GAS:", e);
+    }
+
+    renderTabelDaftarSiswa();
+    renderTabelJadwal();
+    renderTabelSesiAktif();
+    renderTabelSiswaLogin();
+    hideLoading();
+    alert("Seluruh database, sesi, log, file hasil ujian, dan gambar soal di Drive berhasil dihapus/direset!");
+}
+
+function initDropdowns() {
+    let jdMp = document.getElementById('jadwalMapel');
+    let checkboxContainer = document.getElementById('checkboxKelasContainer');
+    let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
+    let selFilterKartu = document.getElementById('filterKelasKartu');
+
+    if(jdMp) {
+        jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${m}">${m}</option>`);
+    }
+
+    if(selKelasSatuan) {
+        const prevVal = selKelasSatuan.value;
+        selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+        daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
+        if(prevVal) selKelasSatuan.value = prevVal;
+    }
+
+    if(selFilterKartu) {
+        const prevFilter = selFilterKartu.value;
+        selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>';
+        daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${k}">${k}</option>`);
+        if(prevFilter) selFilterKartu.value = prevFilter;
+    }
+
+    if(checkboxContainer) {
+        renderCheckboxKelasPerBaris(checkboxContainer);
+    }
+
+    renderListMaster();
+}
+
+function renderCheckboxKelasPerBaris(container) {
+    container.innerHTML = "";
+    const colsPerRow = 7;
+
+    for (let i = 0; i < daftarKelas.length; i += colsPerRow) {
+        const rowChunk = daftarKelas.slice(i, i + colsPerRow);
+        const rowIndex = Math.floor(i / colsPerRow);
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "kelas-row-line";
+        rowDiv.setAttribute("data-row-idx", rowIndex);
+
+        rowChunk.forEach(k => {
+            const lbl = document.createElement("label");
+            lbl.title = k;
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.name = "kelasCheck";
+            cb.value = k;
+            cb.setAttribute("data-row-idx", rowIndex);
+            cb.onchange = () => sinkronkanTombolPilihBaris(rowIndex);
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(" " + k));
+            rowDiv.appendChild(lbl);
+        });
+
+        const btnAll = document.createElement("button");
+        btnAll.type = "button";
+        btnAll.className = "btn-pilih-baris";
+        btnAll.id = `btnPilihBaris_${rowIndex}`;
+        btnAll.title = "Pilih / Batal pilih semua kelas pada baris ini";
+        btnAll.innerText = "All";
+        btnAll.onclick = () => togglePilihBarisKelas(rowIndex);
+        rowDiv.appendChild(btnAll);
+
+        container.appendChild(rowDiv);
+    }
+}
+
+function togglePilihBarisKelas(rowIndex) {
+    const checkboxes = Array.from(document.querySelectorAll(`input[name="kelasCheck"][data-row-idx="${rowIndex}"]`));
+    if (checkboxes.length === 0) return;
+
+    const semuaSudahTercentang = checkboxes.every(cb => cb.checked);
+    checkboxes.forEach(cb => {
+        cb.checked = !semuaSudahTercentang;
+    });
+    sinkronkanTombolPilihBaris(rowIndex);
+}
+
+function sinkronkanTombolPilihBaris(rowIndex) {
+    const checkboxes = Array.from(document.querySelectorAll(`input[name="kelasCheck"][data-row-idx="${rowIndex}"]`));
+    const btn = document.getElementById(`btnPilihBaris_${rowIndex}`);
+    if (!btn || checkboxes.length === 0) return;
+
+    const semuaTercentang = checkboxes.every(cb => cb.checked);
+    if (semuaTercentang) {
+        btn.classList.add("active-all");
+    } else {
+        btn.classList.remove("active-all");
+    }
+}
+
+function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnName) {
+    if (!containerEl) return;
+    containerEl.innerHTML = "";
+
+    const total = items.length;
+    if (total === 0) {
+        containerEl.style.gridTemplateColumns = "1fr";
+        containerEl.style.gridAutoFlow = "row";
+        containerEl.innerHTML = `<div style="color:#777; font-size:12px; padding:4px 0;">Belum ada data.</div>`;
+        return;
+    }
+
+    const maxCols = 3;
+    const maxCap3Cols = maxRowsPerCol * maxCols;
+
+    let numCols;
+    let numRows;
+
+    if (total <= maxCap3Cols) {
+        numCols = Math.min(maxCols, Math.ceil(total / maxRowsPerCol));
+        numRows = Math.min(maxRowsPerCol, total);
+    } else {
+        numCols = maxCols;
+        const extraItems = total - maxCap3Cols;
+        const extraRows = Math.ceil(extraItems / maxCols);
+        numRows = maxRowsPerCol + extraRows;
+    }
+
+    containerEl.style.gridTemplateColumns = `repeat(${numCols}, minmax(130px, 1fr))`;
+    containerEl.style.gridTemplateRows = `repeat(${numRows}, auto)`;
+    containerEl.style.gridAutoFlow = "column";
+
+    items.forEach((labelText, idx) => {
+        const div = document.createElement("div");
+        div.className = "master-matrix-item";
+        div.innerHTML = `
+            <span class="item-label" title="${labelText}">${labelText}</span>
+            <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1.5px 5px; font-size:10px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
+        `;
+        containerEl.appendChild(div);
+    });
+}
+
+function renderListMaster() {
+    let divKelas = document.getElementById('listKelas');
+    let divMapel = document.getElementById('listMapel');
+
+    renderMatrixCategoryGrid(divKelas, daftarKelas, 7, "hapusKelas");
+    renderMatrixCategoryGrid(divMapel, daftarMapel, 10, "hapusMapel");
+}
+
+async function tambahKelas() {
+    let k = document.getElementById('inputKelasBaru').value.trim();
+    if(!k) return;
+    if(daftarKelas.includes(k)) { alert("Kelas sudah ada!"); return; }
+    showLoading("Menyimpan kelas...");
+    daftarKelas.push(k);
+    document.getElementById('inputKelasBaru').value = "";
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    hideLoading();
+    alert("Kelas berhasil ditambahkan ke Gist!");
+}
+
+async function hapusKelas(index) {
+    if(!confirm("Yakin ingin menghapus kelas ini?")) return;
+    showLoading("Menghapus kelas...");
+    daftarKelas.splice(index, 1);
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    hideLoading();
+}
+
+async function tambahMapel() {
+    let m = document.getElementById('inputMapelBaru').value.trim();
+    if(!m) return;
+    if(daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
+    showLoading("Menyimpan mata pelajaran...");
+    daftarMapel.push(m);
+    document.getElementById('inputMapelBaru').value = "";
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    hideLoading();
+    alert("Mapel berhasil ditambahkan ke Gist!");
+}
+
+async function hapusMapel(index) {
+    if(!confirm("Yakin ingin menghapus mata pelajaran ini?")) return;
+    showLoading("Menghapus mata pelajaran...");
+    daftarMapel.splice(index, 1);
+    await saveCbtDatabaseToGist();
+    initDropdowns();
+    hideLoading();
+}
+
+// ================= KELOLA SISWA SATUAN =================
+async function simpanSiswaSatuan() {
+    const nama = document.getElementById('inputNamaSiswa').value.trim();
+    const kelas = document.getElementById('selectKelasSiswaSatuan').value.trim();
+    const username = document.getElementById('inputUsernameSiswa').value.trim();
+    const password = document.getElementById('inputPasswordSiswa').value.trim();
+    const editIdx = parseInt(document.getElementById('editSiswaIndex').value, 10);
+
+    if(!nama || !kelas || !username || !password) {
+        alert("Semua kolom (Nama, Kelas, Username, Password) wajib diisi!");
+        return;
+    }
+
+    const duplikatIdx = databaseSiswa.findIndex((s, i) => s.username === username && i !== editIdx);
+    if(duplikatIdx !== -1) {
+        alert(`Username "${username}" sudah digunakan oleh siswa lain (${databaseSiswa[duplikatIdx].nama})!`);
+        return;
+    }
+
+    showLoading(editIdx >= 0 ? "Memperbarui data siswa..." : "Menambahkan siswa ke Gist...");
+
+    if(editIdx >= 0 && editIdx < databaseSiswa.length) {
+        databaseSiswa[editIdx] = { nama, kelas, username, password };
+    } else {
+        databaseSiswa.push({ nama, kelas, username, password });
+    }
+
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    batalEditSiswa();
+    hideLoading();
+    alert(editIdx >= 0 ? "Data siswa berhasil diperbarui!" : "Siswa berhasil ditambahkan ke Gist!");
+}
+
+function editSiswa(idx) {
+    const s = databaseSiswa[idx];
+    if(!s) return;
+
+    document.getElementById('editSiswaIndex').value = idx;
+    document.getElementById('inputNamaSiswa').value = s.nama;
+    
+    const selKelas = document.getElementById('selectKelasSiswaSatuan');
+    if(!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
+        selKelas.innerHTML += `<option value="${s.kelas}">${s.kelas}</option>`;
+    }
+    selKelas.value = s.kelas;
+    
+    document.getElementById('inputUsernameSiswa').value = s.username;
+    document.getElementById('inputPasswordSiswa').value = s.password;
+
+    document.getElementById('judulFormSiswaSatuan').innerText = `Edit Data Siswa: ${s.nama}`;
+    document.getElementById('btnSimpanSiswaSatuan').innerText = "Update Data Siswa";
+    document.getElementById('btnSimpanSiswaSatuan').style.background = "#28a745";
+    document.getElementById('btnBatalEditSiswa').style.display = "block";
+    
+    document.getElementById('adminTabSiswa').scrollIntoView({ behavior: 'smooth' });
+}
+
+function batalEditSiswa() {
+    document.getElementById('editSiswaIndex').value = "-1";
+    document.getElementById('inputNamaSiswa').value = "";
+    document.getElementById('selectKelasSiswaSatuan').value = "";
+    document.getElementById('inputUsernameSiswa').value = "";
+    document.getElementById('inputPasswordSiswa').value = "";
+
+    document.getElementById('judulFormSiswaSatuan').innerText = "Tambah Siswa";
+    document.getElementById('btnSimpanSiswaSatuan').innerText = "Simpan Siswa";
+    document.getElementById('btnSimpanSiswaSatuan').style.background = "#008080";
+    document.getElementById('btnBatalEditSiswa').style.display = "none";
+}
+
+async function hapusSemuaSiswa() {
+    if (!Array.isArray(databaseSiswa) || databaseSiswa.length === 0) {
+        alert("Tidak ada data siswa untuk dihapus.");
+        return;
+    }
+
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim();
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim();
+
+    let targetSiswa = databaseSiswa;
+    let labelScope = `SELURUH data siswa (${databaseSiswa.length} siswa)`;
+
+    if (kelasFilter || keyword) {
+        const filtered = getSiswaTersaringSaatIni();
+        if (filtered.length === 0) {
+            alert("Tidak ada data siswa yang cocok dengan filter saat ini.");
+            return;
+        }
+        const descFilter = [kelasFilter ? `Kelas ${kelasFilter}` : "", keyword ? `Nama "${keyword}"` : ""].filter(Boolean).join(" & ");
+        const pilihFiltered = confirm(
+            `Sedang aktif filter: ${descFilter} (${filtered.length} siswa).\n\n` +
+            `Klik OK untuk menghapus HANYA siswa yang tampil sesuai filter (${filtered.length} siswa).\n` +
+            `Klik Cancel jika ingin memilih / membatalkan.`
+        );
+        if (!pilihFiltered) return;
+        targetSiswa = filtered;
+        labelScope = `${filtered.length} siswa (${descFilter})`;
+    } else {
+        if (!confirm(`PERINGATAN! Yakin ingin menghapus ${labelScope}?\nTindakan ini akan menghapus data siswa dari database Gist.`)) return;
+        if (!confirm(`Konfirmasi terakhir: Hapus permanen ${labelScope}?`)) return;
+    }
+
+    showLoading(`Menghapus ${targetSiswa.length} data siswa & menyinkronkan ke Gist...`);
+
+    const targetSet = new Set(targetSiswa);
+    const usernamesDihapus = targetSiswa.map(s => String(s.username || "").trim()).filter(Boolean);
+
+    databaseSiswa = databaseSiswa.filter(s => !targetSet.has(s));
+
+    usernamesDihapus.forEach(uname => {
+        delete sesiLoginSiswa[uname];
+    });
+
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    renderTabelSesiAktif();
+    batalEditSiswa();
+    hideLoading();
+    alert(`Berhasil menghapus ${labelScope}!`);
+}
+
+async function hapusSiswa(idx) {
+    const s = databaseSiswa[idx];
+    if(!s) return;
+    if(!confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
+
+    showLoading("Menghapus data siswa & mereset sesi di GAS...");
+    await deleteSesiFromGAS(s.username);
+    databaseSiswa.splice(idx, 1);
+    await saveCbtDatabaseToGist();
+    renderTabelDaftarSiswa();
+    renderTabelSesiAktif();
+    if(parseInt(document.getElementById('editSiswaIndex').value, 10) === idx) {
+        batalEditSiswa();
+    }
+    hideLoading();
+}
+
+async function importDataSiswaToGist(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    showLoading("Membaca Excel & mengunggah data siswa ke Gist...");
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            
+            databaseSiswa = json.map(row => ({
+                nama: row.Nama || row.nama || "",
+                kelas: row.Kelas || row.kelas || "",
+                username: String(row.Username || row.username || ""),
+                password: String(row.Password || row.password || "")
+            }));
+            
+            await saveCbtDatabaseToGist();
+            renderTabelDaftarSiswa();
+            hideLoading();
+            alert(`Berhasil mengunggah dan menyimpan ${databaseSiswa.length} data siswa ke Gist!`);
+        } catch(err) {
+            hideLoading();
+            alert("Gagal membaca file Excel: " + err.message);
+        }
+        event.target.value = "";
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function resetCariNamaSiswa() {
+    const inp = document.getElementById('inputCariNamaSiswa');
+    if (inp) inp.value = "";
+    const sel = document.getElementById('filterKelasKartu');
+    if (sel) sel.value = "";
+    renderTabelDaftarSiswa();
+}
+
+function renderTabelDaftarSiswa() {
+    let tbody = document.getElementById('tbodyDaftarSiswa');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    if(databaseSiswa.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
+        return;
+    }
+
+    const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
+    const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
+    let tampilCount = 0;
+
+    databaseSiswa.forEach((s, idx) => {
+        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
+        const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
+        if (!cocokNama || !cocokKelas) {
+            return;
+        }
+        tampilCount++;
+        tbody.innerHTML += `<tr>
+            <td>${s.nama}</td>
+            <td>${s.kelas}</td>
+            <td>${s.username}</td>
+            <td>${s.password}</td>
+            <td>
+                <button onclick="bukaModalCetakKartu(${idx})" class="btn-sm btn-info" title="Cetak Kartu 3 cm">Kartu</button>
+                <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
+                <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
+            </td>
+        </tr>`;
+    });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data siswa tidak ditemukan untuk filter saat ini.</td></tr>`;
+    }
+}
+
+// ================= KOMPRESI GAMBAR SOAL (< 50 KB, TAJAM & TIDAK PECAH) =================
+const MAX_GAMBAR_SOAL_BYTES = 50 * 1024;
+const MAX_GAMBAR_SOAL_DIM = 1280;
+
+function estimasiUkuranBase64Bytes(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== "string") return 0;
+    const parts = dataUrl.split(",");
+    const base64Part = parts.length > 1 ? parts[1] : parts[0];
+    const clean = base64Part.replace(/\s+/g, "");
+    const padding = (clean.match(/=+$/) || [""])[0].length;
+    return Math.max(0, Math.floor((clean.length * 3) / 4) - padding);
+}
+
+function loadImageFromDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (err) => reject(err);
+        img.src = dataUrl;
+    });
+}
+
+function renderCanvasToDataUrl(img, width, height, mimeType, quality, fillWhiteBg = false) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    const ctx = canvas.getContext("2d", { alpha: !fillWhiteBg });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    if (fillWhiteBg) {
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL(mimeType, quality);
+}
+
+async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR_SOAL_BYTES) {
+    try {
+        const ukuranAwal = estimasiUkuranBase64Bytes(base64DataUrl);
+        if (ukuranAwal > 0 && ukuranAwal <= maxBytes) {
+            return { dataUrl: base64DataUrl, sizeBytes: ukuranAwal, compressed: false };
+        }
+
+        const img = await loadImageFromDataUrl(base64DataUrl);
+        let width = img.naturalWidth || img.width || 800;
+        let height = img.naturalHeight || img.height || 600;
+
+        const maxDimAwal = Math.max(width, height);
+        if (maxDimAwal > MAX_GAMBAR_SOAL_DIM) {
+            const scale = MAX_GAMBAR_SOAL_DIM / maxDimAwal;
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+        }
+
+        let bestDataUrl = null;
+        let bestSize = Infinity;
+
+        const qualities = [0.85, 0.78, 0.72, 0.65, 0.58, 0.50];
+        for (let step = 0; step < 5; step++) {
+            for (const q of qualities) {
+                const candidateWebp = renderCanvasToDataUrl(img, width, height, "image/webp", q, true);
+                const sizeWebp = estimasiUkuranBase64Bytes(candidateWebp);
+                if (sizeWebp < bestSize) {
+                    bestSize = sizeWebp;
+                    bestDataUrl = candidateWebp;
+                }
+                if (sizeWebp <= maxBytes) {
+                    return { dataUrl: candidateWebp, sizeBytes: sizeWebp, compressed: true };
+                }
+            }
+
+            for (const q of [0.82, 0.74, 0.66, 0.58, 0.50]) {
+                const candidateJpeg = renderCanvasToDataUrl(img, width, height, "image/jpeg", q, true);
+                const sizeJpeg = estimasiUkuranBase64Bytes(candidateJpeg);
+                if (sizeJpeg < bestSize) {
+                    bestSize = sizeJpeg;
+                    bestDataUrl = candidateJpeg;
+                }
+                if (sizeJpeg <= maxBytes) {
+                    return { dataUrl: candidateJpeg, sizeBytes: sizeJpeg, compressed: true };
+                }
+            }
+
+            width = Math.max(320, Math.round(width * 0.82));
+            height = Math.max(240, Math.round(height * 0.82));
+        }
+
+        let qFallback = 0.45;
+        while (bestSize > maxBytes && (qFallback >= 0.25 || width > 320)) {
+            const candidate = renderCanvasToDataUrl(img, width, height, "image/jpeg", Math.max(0.25, qFallback), true);
+            const sz = estimasiUkuranBase64Bytes(candidate);
+            if (sz < bestSize) {
+                bestSize = sz;
+                bestDataUrl = candidate;
+            }
+            if (sz <= maxBytes) break;
+
+            if (qFallback > 0.25) {
+                qFallback = Number((qFallback - 0.05).toFixed(2));
+            } else {
+                width = Math.max(260, Math.round(width * 0.85));
+                height = Math.max(180, Math.round(height * 0.85));
+            }
+        }
+
+        return {
+            dataUrl: bestDataUrl || base64DataUrl,
+            sizeBytes: bestSize < Infinity ? bestSize : ukuranAwal,
+            compressed: true
+        };
+    } catch (err) {
+        console.warn("Gagal mengompres gambar soal, memakai gambar asli:", err);
+        return {
+            dataUrl: base64DataUrl,
+            sizeBytes: estimasiUkuranBase64Bytes(base64DataUrl),
+            compressed: false
+        };
+    }
+}
+
+// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS + 1 MAPEL 1 BARIS) =================
+async function bacaFileSoalOtomatis(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    let ekstensi = file.name.split('.').pop().toLowerCase();
+    
+    if(ekstensi === 'txt') {
+        const reader = new FileReader();
+        reader.onload = function(e) { 
+            document.getElementById('soalBatchText').value = e.target.result; 
+        };
+        reader.readAsText(file);
+    } else if(ekstensi === 'docx') {
+        showLoading("Membaca file Word & mengunggah gambar ke Google Drive...");
+        
+        let imagesList = [];
+        let imageCounter = 0;
+
+        try {
+            let result = await mammoth.convertToHtml({arrayBuffer: await file.arrayBuffer()}, {
+                convertImage: mammoth.images.imgElement(function(image) {
+                    return image.read("base64").then(function(imageBuffer) {
+                        let base64Str = "data:" + image.contentType + ";base64," + imageBuffer;
+                        imageCounter++;
+                        let placeholderId = `IMG_DRIVE_${Date.now()}_${imageCounter}`;
+                        imagesList.push({ id: placeholderId, data: base64Str });
+                        return { src: placeholderId };
+                    });
+                })
+            });
+
+            let tempDiv = document.createElement("div");
+            tempDiv.innerHTML = result.value;
+            
+            let totalImg = imagesList.length;
+            let ringkasanKompresi = [];
+            for(let i = 0; i < totalImg; i++) {
+                let imgData = imagesList[i];
+                showLoading(`Mengompres & mengunggah gambar ${i + 1} dari ${totalImg} (< 50 KB)...`);
+
+                const hasilKompres = await kompresGambarSoalKeBawah50KB(imgData.data, MAX_GAMBAR_SOAL_BYTES);
+                const finalBase64 = hasilKompres.dataUrl;
+                const kbAkhir = (hasilKompres.sizeBytes / 1024).toFixed(1);
+                const isWebp = finalBase64.startsWith("data:image/webp");
+                const extFile = isWebp ? "webp" : "jpg";
+                ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
+                
+                try {
+                    let uploadRes = await axios.post(GAS_URL, JSON.stringify({
+                        action: "uploadImage",
+                        folderName: "Soal_CBT_Drive",
+                        fileData: finalBase64,
+                        fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
+                    }));
+
+                    if(uploadRes.data && uploadRes.data.status === "success") {
+                        let driveUrl = uploadRes.data.fileUrl;
+                        let targetImg = tempDiv.querySelector(`[src="${imgData.id}"]`);
+                        if(targetImg) {
+                            targetImg.setAttribute("src", driveUrl);
+                        }
+                    }
+                } catch(err) {
+                    console.error("Gagal mengunggah gambar ke Google Drive:", err);
+                }
+            }
+
+            let formattedText = konversiHtmlKeFormatCbtDenganLink(tempDiv);
+            document.getElementById('soalBatchText').value = formattedText;
+            hideLoading();
+            const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
+            alert(`File Word berhasil diproses! Gambar dikompres (< 50 KB), tersimpan di Google Drive, dan link disematkan otomatis.${infoUkuran}`);
+        } catch(err) {
+            hideLoading();
+            console.error(err);
+            alert("Gagal memproses file Word: " + err.message);
+            document.getElementById('soalBatchText').value = "";
+        }
+    }
+}
+
+function konversiHtmlKeFormatCbtDenganLink(element) {
+    let textOut = "";
+    let nodes = element.querySelectorAll('p, li, h1, h2, h3, h4');
+    
+    nodes.forEach(node => {
+        let text = node.innerText.trim();
+        let imgEl = node.querySelector('img');
+        
+        if(imgEl && imgEl.getAttribute('src')) {
+            let linkDrive = imgEl.getAttribute('src');
+            text += `<br><img src="${linkDrive}" class="img-soal">`;
+        }
+        
+        if(text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
+            textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
+        } else if(text.toLowerCase().startsWith("jawaban") || text === "0" || text === "1") {
+            textOut += text + "\n";
+        } else if(text.length > 0) {
+            textOut += text + "\n";
+        }
+    });
+    return textOut;
+}
+
+// ================= HELPER COCOK & HAPUS SOAL DI SOAL.JSON =================
+function normStr(val) {
+    return String(val || "").trim().toLowerCase();
+}
+
+function getItemMapelNorm(item) {
+    if (!item || typeof item !== "object") return "";
+    if (item.mapel) return normStr(item.mapel);
+    if (item.namaUjian) {
+        const parts = String(item.namaUjian).split("_");
+        if (parts.length > 1) return normStr(parts.slice(0, -1).join(" "));
+    }
+    return "";
+}
+
+function itemCocokMapel(item, mapelTarget) {
+    const targetNorm = normStr(mapelTarget);
+    if (!targetNorm) return false;
+    const itemMapel = getItemMapelNorm(item);
+    if (itemMapel === targetNorm) return true;
+    const slugTarget = targetNorm.replace(/\s+/g, "_");
+    const slugItem = itemMapel.replace(/\s+/g, "_");
+    if (slugItem === slugTarget) return true;
+    if (item.namaUjian && normStr(item.namaUjian).startsWith(slugTarget + "_")) return true;
+    return false;
+}
+
+function hapusKelasDariSoalList(contentSoal, mapel, kelasList) {
+    const targetKelasSet = new Set((kelasList || []).map(k => normStr(k)).filter(Boolean));
+    const oldFolderNames = new Set(
+        (kelasList || []).map(k => normStr(`${String(mapel || "").replace(/\s+/g, "_")}_${String(k || "").replace(/\s+/g, "_")}`))
+    );
+
+    const updated = [];
+    let dihapusCount = 0;
+
+    contentSoal.forEach(item => {
+        if (!item || typeof item !== "object") return;
+
+        if (itemCocokMapel(item, mapel)) {
+            if (Array.isArray(item.kelas) && item.kelas.length > 0) {
+                const sebelumLen = item.kelas.length;
+                const sisaKelas = item.kelas.filter(k => !targetKelasSet.has(normStr(k)));
+                if (sisaKelas.length < sebelumLen) {
+                    dihapusCount += (sebelumLen - sisaKelas.length);
+                }
+                if (sisaKelas.length > 0) {
+                    updated.push({ ...item, kelas: sisaKelas });
+                }
+                return;
+            }
+
+            if (item.namaUjian && oldFolderNames.has(normStr(item.namaUjian))) {
+                dihapusCount++;
+                return;
+            }
+
+            if (!Array.isArray(item.kelas) || item.kelas.length === 0) {
+                dihapusCount++;
+                return;
+            }
+        }
+
+        updated.push(item);
+    });
+
+    return { updated, dihapusCount };
+}
+
+async function eksekusiHapusSoalDiGist(mapel, kelasList) {
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const files = gistRes.data.files || {};
+    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    const contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
+
+    const resultHapus = hapusKelasDariSoalList(contentSoal, mapel, kelasList);
+    const serialized = serializeSoalJsonOneMapelPerLine(resultHapus.updated);
+
+    await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+        files: { [filename]: { content: serialized } }
+    }, githubHeaders);
+
+    bersihkanCacheSoal();
+    const parsedFresh = parseSoalJsonFlexible(serialized);
+    simpanCacheSoal("admin_api", parsedFresh);
+    simpanCacheSoal("raw_exam", parsedFresh);
+    return resultHapus.dihapusCount;
+}
+
+async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMapel, newKelasList) {
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const files = gistRes.data.files || {};
+    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
+
+    const oldKelasSet = new Set((oldKelasList || []).map(k => normStr(k)).filter(Boolean));
+    let berubah = false;
+
+    contentSoal = contentSoal.map(item => {
+        if (!itemCocokMapel(item, oldMapel)) return item;
+        const itemKelasArr = Array.isArray(item.kelas) ? item.kelas : [];
+        const adaKelasLama = itemKelasArr.some(k => oldKelasSet.has(normStr(k)));
+        if (!adaKelasLama && itemKelasArr.length > 0) return item;
+
+        const sisaKelas = itemKelasArr.filter(k => !oldKelasSet.has(normStr(k)));
+        newKelasList.forEach(nk => {
+            if (!sisaKelas.some(sk => normStr(sk) === normStr(nk))) {
+                sisaKelas.push(nk);
+            }
+        });
+        berubah = true;
+        return {
+            ...item,
+            mapel: newMapel,
+            kelas: sisaKelas
+        };
+    });
+
+    if (berubah) {
+        const serialized = serializeSoalJsonOneMapelPerLine(contentSoal);
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: { [filename]: { content: serialized } }
+        }, githubHeaders);
+        bersihkanCacheSoal();
+    }
+}
+
+async function simpanJadwalDanSoal() {
+    let mapel = document.getElementById('jadwalMapel').value;
+    let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
+    let mulai = document.getElementById('waktuMulai').value;
+    let jp = parseInt(document.getElementById('jumlahJp').value, 10) || 1;
+    let selesai = document.getElementById('waktuSelesai').value;
+    let rawText = document.getElementById('soalBatchText').value.trim();
+
+    const origIndicesStr = document.getElementById('editJadwalOrigIndices')?.value || "";
+    const origMapel = document.getElementById('editJadwalOrigMapel')?.value || "";
+    const origKelasStr = document.getElementById('editJadwalOrigKelas')?.value || "";
+    const isEditMode = origIndicesStr !== "";
+
+    if(!mapel) { alert("Pilih Mata Pelajaran!"); return; }
+    if(checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
+    if(!mulai || !selesai) { alert("Tentukan waktu mulai dan jumlah JP!"); return; }
+    if(mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
+
+    showLoading(isEditMode ? "Memperbarui jadwal ujian..." : "Menyiapkan jadwal & menyimpan soal...");
+
+    if (isEditMode) {
+        try {
+            const origIndices = JSON.parse(origIndicesStr);
+            origIndices.sort((a, b) => b - a).forEach(idx => {
+                if (idx >= 0 && idx < daftarJadwalUjian.length) {
+                    daftarJadwalUjian.splice(idx, 1);
+                }
+            });
+        } catch (e) {}
+    }
+
+    checkedKelas.forEach(kelas => {
+        daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
+        daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai });
+    });
+    
+    await saveCbtDatabaseToGist();
+
+    if(rawText) {
+        showLoading("Menyimpan soal (1 mapel 1 baris, hemat Gist)...");
+        let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
+
+        if(parsedSoal.length === 0) {
+            hideLoading();
+            alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... JAWABAN ... 0/1).");
+            return;
+        }
+
+        const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+        try {
+            let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+            const files = gistRes.data.files || {};
+            const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+            let rawContent = files[filename].content;
+            
+            let contentSoal = parseSoalJsonFlexible(rawContent);
+            if (isEditMode && origMapel && origKelasStr) {
+                try {
+                    const origKelasList = JSON.parse(origKelasStr);
+                    contentSoal = hapusKelasDariSoalList(contentSoal, origMapel, origKelasList).updated;
+                } catch (e) {}
+            }
+            const cleaned = hapusKelasDariSoalList(contentSoal, mapel, checkedKelas);
+            contentSoal = cleaned.updated;
+
+            parsedSoal.forEach(newItem => {
+                const existingIdentical = contentSoal.find(oldItem =>
+                    itemCocokMapel(oldItem, newItem.mapel) &&
+                    oldItem.soal === newItem.soal &&
+                    oldItem.kunci === newItem.kunci &&
+                    JSON.stringify(oldItem.options) === JSON.stringify(newItem.options)
+                );
+
+                if (existingIdentical && Array.isArray(existingIdentical.kelas)) {
+                    newItem.kelas.forEach(k => {
+                        if (!existingIdentical.kelas.some(ek => normStr(ek) === normStr(k))) {
+                            existingIdentical.kelas.push(k);
+                        }
+                    });
+                } else {
+                    contentSoal.push(newItem);
+                }
+            });
+
+            await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+                files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
+            }, githubHeaders);
+            bersihkanCacheSoal();
+        } catch(e) { 
+            hideLoading();
+            alert("Gagal upload soal ke Gist: " + e.message); 
+            return; 
+        }
+    } else if (isEditMode && origMapel && origKelasStr) {
+        try {
+            const origKelasList = JSON.parse(origKelasStr);
+            const mapelBerubah = normStr(origMapel) !== normStr(mapel);
+            const kelasBerubah = JSON.stringify([...origKelasList].sort()) !== JSON.stringify([...checkedKelas].sort());
+            if (mapelBerubah || kelasBerubah) {
+                showLoading("Menyesuaikan mapel/kelas pada bank soal di Gist...");
+                await sinkronkanKelasSoalSaatEditJadwal(origMapel, origKelasList, mapel, checkedKelas);
+            }
+        } catch (e) {
+            console.warn("Gagal sinkronisasi kelas soal saat edit jadwal:", e);
+        }
+    }
+
+    hideLoading();
+    batalEditJadwal();
+    renderTabelJadwal();
+    alert(isEditMode ? "Jadwal ujian berhasil diperbarui!" : "Jadwal ujian dan soal berhasil disimpan (1 mapel 1 baris, hemat Gist)!");
+}
+
+function parseSoalDariTeks(text, mapelName, kelasArray) {
+    let lines = text.split('\n');
+    let soalList = [];
+    let currentSoal = null;
+    let optionsMap = {};
+    let optionKeys = ['A', 'B', 'C', 'D', 'E'];
+    let optIdx = 0;
+
+    lines.forEach(line => {
+        let l = line.trim();
+        if(l.startsWith("SOAL")) {
+            if(currentSoal) {
+                currentSoal.options = optionsMap;
+                soalList.push(currentSoal);
+            }
+            currentSoal = {
+                id: Math.floor(Date.now() + Math.random() * 100000),
+                mapel: mapelName,
+                kelas: [...new Set(kelasArray)],
+                soal: "",
+                options: {},
+                kunci: "K"
+            };
+            optionsMap = {};
+            optIdx = 0;
+        } else if(l.startsWith("JAWABAN")) {
+            // skip header JAWABAN
+        } else if(currentSoal && !currentSoal.soal) {
+            currentSoal.soal = l;
+        } else if(currentSoal) {
+            if(l === "0" || l === "1") {
+                if(l === "1" && optionKeys[optIdx - 1]) {
+                    currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
+                }
+            } else if(l.length > 0 && optIdx < 5) {
+                optionsMap[optionKeys[optIdx]] = l;
+                optIdx++;
+            }
+        }
+    });
+    if(currentSoal) {
+        currentSoal.options = optionsMap;
+        soalList.push(currentSoal);
+    }
+    return soalList;
+}
+
+function getGroupedJadwalList() {
+    const groups = [];
+    daftarJadwalUjian.forEach((j, originalIdx) => {
+        const key = `${j.mapel}||${j.jp}||${j.mulai}||${j.selesai}`;
+        let existing = groups.find(g => g.key === key);
+        if(existing) {
+            if(!existing.kelasList.includes(j.kelas)) {
+                existing.kelasList.push(j.kelas);
+            }
+            existing.indices.push(originalIdx);
+        } else {
+            groups.push({
+                key: key,
+                mapel: j.mapel,
+                jp: j.jp,
+                mulai: j.mulai,
+                selesai: j.selesai,
+                kelasList: [j.kelas],
+                indices: [originalIdx]
+            });
+        }
+    });
+
+    groups.sort((a, b) => {
+        const timeA = new Date(a.mulai || 0).getTime() || 0;
+        const timeB = new Date(b.mulai || 0).getTime() || 0;
+        if (timeB !== timeA) return timeB - timeA;
+        const endA = new Date(a.selesai || 0).getTime() || 0;
+        const endB = new Date(b.selesai || 0).getTime() || 0;
+        return endB - endA;
+    });
+
+    return groups;
+}
+
+function formatWaktuRingkasTabel(isoStr) {
+    if (!isoStr) return "-";
+    const parts = String(isoStr).replace("T", " ").split(" ");
+    if (parts.length < 2) return isoStr;
+    return `${parts[0]}<br>${parts[1]}`;
+}
+
+function renderTabelJadwal() {
+    let tbody = document.getElementById('tbodyJadwal');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    const groupedList = getGroupedJadwalList();
+
+    if(groupedList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
+        return;
+    }
+
+    groupedList.forEach((g) => {
+        const kelasStr = g.kelasList.join(', ');
+        const kelasJson = encodeURIComponent(JSON.stringify(g.kelasList));
+        const indicesJson = encodeURIComponent(JSON.stringify(g.indices));
+        const mapelEnc = encodeURIComponent(g.mapel);
+        const groupPayloadEnc = encodeURIComponent(JSON.stringify({
+            mapel: g.mapel,
+            kelasList: g.kelasList,
+            jp: g.jp || 1,
+            mulai: g.mulai || "",
+            selesai: g.selesai || "",
+            indices: g.indices
+        }));
+
+        tbody.innerHTML += `<tr>
+            <td class="col-mapel"><b>${g.mapel}</b></td>
+            <td class="col-kelas">${kelasStr}</td>
+            <td class="col-jp">${g.jp ? g.jp + ' JP' : '-'}</td>
+            <td class="col-waktu">${formatWaktuRingkasTabel(g.mulai)}</td>
+            <td class="col-waktu">${formatWaktuRingkasTabel(g.selesai)}</td>
+            <td class="col-aksi">
+                <div class="jadwal-aksi-stack">
+                    <div class="jadwal-aksi-top-row">
+                        <button type="button" onclick="editJadwalGroup('${groupPayloadEnc}')" class="btn-warning btn-jadwal-act">Edit</button>
+                        <button type="button" onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-info btn-jadwal-act">Soal</button>
+                    </div>
+                    <div class="jadwal-aksi-top-row">
+                        <button type="button" onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-success btn-jadwal-act">Hasil</button>
+                        <button type="button" onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-danger btn-jadwal-act">Hapus</button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    });
+}
+
+function editJadwalGroup(groupPayloadEnc) {
+    const g = JSON.parse(decodeURIComponent(groupPayloadEnc));
+    if (!g) return;
+
+    document.getElementById('editJadwalOrigIndices').value = JSON.stringify(g.indices || []);
+    document.getElementById('editJadwalOrigMapel').value = g.mapel || "";
+    document.getElementById('editJadwalOrigKelas').value = JSON.stringify(g.kelasList || []);
+
+    const selMapel = document.getElementById('jadwalMapel');
+    if (selMapel) {
+        if (!Array.from(selMapel.options).some(opt => opt.value === g.mapel)) {
+            selMapel.innerHTML += `<option value="${g.mapel}">${g.mapel}</option>`;
+        }
+        selMapel.value = g.mapel;
+    }
+
+    const kelasSet = new Set((g.kelasList || []).map(k => normStr(k)));
+    const rowSet = new Set();
+    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
+        cb.checked = kelasSet.has(normStr(cb.value));
+        const rIdx = cb.getAttribute('data-row-idx');
+        if (rIdx !== null) rowSet.add(Number(rIdx));
+    });
+    rowSet.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
+
+    document.getElementById('waktuMulai').value = g.mulai || "";
+    document.getElementById('jumlahJp').value = g.jp || 1;
+    if (g.selesai) {
+        document.getElementById('waktuSelesai').value = g.selesai;
+    } else {
+        hitungWaktuSelesaiOtomatis();
+    }
+
+    document.getElementById('soalBatchText').value = "";
+    document.getElementById('fileSoalAny').value = "";
+
+    document.getElementById('judulFormJadwal').innerText = `Edit Jadwal: ${g.mapel}`;
+    document.getElementById('labelSoalUploadJadwal').innerText = "Ganti/Upload Soal Baru (Opsional — kosongkan jika soal tetap):";
+    document.getElementById('btnSimpanJadwal').innerText = "Update Jadwal";
+    document.getElementById('btnSimpanJadwal').style.background = "#008080";
+    document.getElementById('btnBatalEditJadwal').style.display = "block";
+
+    document.getElementById('cardFormJadwal')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function batalEditJadwal() {
+    document.getElementById('editJadwalOrigIndices').value = "";
+    document.getElementById('editJadwalOrigMapel').value = "";
+    document.getElementById('editJadwalOrigKelas').value = "";
+
+    document.getElementById('jadwalMapel').value = "";
+    const rowSet = new Set();
+    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
+        cb.checked = false;
+        const rIdx = cb.getAttribute('data-row-idx');
+        if (rIdx !== null) rowSet.add(Number(rIdx));
+    });
+    rowSet.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
+
+    document.getElementById('waktuMulai').value = "";
+    document.getElementById('jumlahJp').value = "1";
+    document.getElementById('waktuSelesai').value = "";
+    document.getElementById('soalBatchText').value = "";
+    document.getElementById('fileSoalAny').value = "";
+
+    document.getElementById('judulFormJadwal').innerText = "Buat Jadwal";
+    document.getElementById('labelSoalUploadJadwal').innerText = "Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:";
+    document.getElementById('btnSimpanJadwal').innerText = "Simpan Jadwal & Upload Soal";
+    document.getElementById('btnSimpanJadwal').style.background = "#28a745";
+    document.getElementById('btnBatalEditJadwal').style.display = "none";
+}
+
+// ================= FITUR EXPORT HASIL UJIAN PER KELAS (.XLSX) =================
+async function bukaModalExportHasil(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+        showLoading("Mengambil data nilai dari Spreadsheet...");
+        await fetchLogLoginFromGAS();
+        hideLoading();
+    }
+
+    document.getElementById('modalExportTitle').innerText = `Export Hasil: ${mapel}`;
+    const body = document.getElementById('modalExportBody');
+
+    let html = `<p style="font-size:12.5px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p>`;
+    html += `<div class="export-kelas-btn-list">`;
+
+    kelasList.forEach(kls => {
+        const klsEnc = encodeURIComponent(kls);
+        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">
+            📥 Download Hasil Kelas <b>${kls}</b> (.xlsx)
+        </button>`;
+    });
+
+    if (kelasList.length > 1) {
+        html += `<hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:4px 0;">`;
+        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">
+            📊 Download Gabungan Semua Kelas (${kelasList.join(', ')}) (.xlsx)
+        </button>`;
+    }
+
+    html += `</div>`;
+    html += `<p style="font-size:11px; color:#666; margin-bottom:0; margin-top:10px;">*File mencakup seluruh daftar siswa di kelas tersebut beserta status & nilai (otomatis mengisi "-" jika siswa belum mengerjakan).</p>`;
+
+    body.innerHTML = html;
+    document.getElementById('modalExportHasil').style.display = 'flex';
+}
+
+function tutupModalExport() {
+    document.getElementById('modalExportHasil').style.display = 'none';
+}
+
+function susunBarisRekapKelas(mapel, kelasTarget) {
+    const klsNorm = String(kelasTarget || "").trim().toLowerCase();
+    const mapelNorm = String(mapel || "").trim().toLowerCase();
+
+    const siswaDiKelas = databaseSiswa.filter(s => String(s.kelas || "").trim().toLowerCase() === klsNorm);
+
+    const logMatch = (Array.isArray(logSiswaLogin) ? logSiswaLogin : []).filter(l =>
+        String(l.kelas || "").trim().toLowerCase() === klsNorm &&
+        String(l.mapel || "").trim().toLowerCase() === mapelNorm
+    );
+
+    const rows = [];
+    const namaSudahMasuk = new Set();
+
+    siswaDiKelas.forEach((s, idx) => {
+        const namaNorm = String(s.nama || "").trim().toLowerCase();
+        namaSudahMasuk.add(namaNorm);
+
+        const entries = logMatch.filter(l => String(l.nama || "").trim().toLowerCase() === namaNorm);
+        const latest = entries.length > 0 ? entries[entries.length - 1] : null;
+
+        rows.push({
+            "No": idx + 1,
+            "NIS / Username": s.username || "-",
+            "Nama Siswa": s.nama || "-",
+            "Kelas": s.kelas || kelasTarget,
+            "Mata Pelajaran": mapel,
+            "Status": latest ? (latest.status || "-") : "Belum Mengerjakan",
+            "Nilai": (latest && latest.nilai !== null && latest.nilai !== undefined && latest.nilai !== "") ? Number(latest.nilai) : "-"
+        });
+    });
+
+    logMatch.forEach(l => {
+        const namaNorm = String(l.nama || "").trim().toLowerCase();
+        if (!namaSudahMasuk.has(namaNorm)) {
+            namaSudahMasuk.add(namaNorm);
+            rows.push({
+                "No": rows.length + 1,
+                "NIS / Username": "-",
+                "Nama Siswa": l.nama || "-",
+                "Kelas": l.kelas || kelasTarget,
+                "Mata Pelajaran": mapel,
+                "Status": l.status || "-",
+                "Nilai": (l.nilai !== null && l.nilai !== undefined && l.nilai !== "") ? Number(l.nilai) : "-"
+            });
+        }
+    });
+
+    return rows;
+}
+
+function prosesExportHasilXlsx(mapelEnc, kelasEnc) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasTarget = decodeURIComponent(kelasEnc);
+
+    const rows = susunBarisRekapKelas(mapel, kelasTarget);
+    if (rows.length === 0) {
+        alert(`Belum ada data siswa maupun hasil ujian untuk kelas ${kelasTarget}.`);
+        return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+        { wch: 5 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 10 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    const safeSheetName = kelasTarget.replace(/[\\/?*[\]:]/g, "_").slice(0, 31) || "Hasil";
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+
+    const safeMapel = mapel.replace(/\s+/g, '_');
+    const safeKelas = kelasTarget.replace(/\s+/g, '_');
+    const tgl = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Hasil_${safeMapel}_${safeKelas}_${tgl}.xlsx`);
+    tutupModalExport();
+}
+
+function prosesExportHasilMultiKelasXlsx(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    const workbook = XLSX.utils.book_new();
+    let totalAdaData = 0;
+
+    kelasList.forEach(kls => {
+        const rows = susunBarisRekapKelas(mapel, kls);
+        if (rows.length > 0) {
+            totalAdaData += rows.length;
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 10 }
+            ];
+            const safeSheetName = kls.replace(/[\\/?*[\]:]/g, "_").slice(0, 31);
+            XLSX.utils.book_append_sheet(workbook, ws, safeSheetName);
+        }
+    });
+
+    if (totalAdaData === 0) {
+        alert("Belum ada data siswa maupun hasil ujian pada kelas-kelas yang dipilih.");
+        return;
+    }
+
+    const safeMapel = mapel.replace(/\s+/g, '_');
+    const safeKelasGroup = kelasList.map(k => String(k || '').trim().replace(/\s+/g, '_')).filter(Boolean).join(',');
+    const kelasTag = safeKelasGroup ? `_(${safeKelasGroup})` : '';
+    const tgl = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Hasil_${safeMapel}_Semua_Kelas${kelasTag}_${tgl}.xlsx`);
+    tutupModalExport();
+}
+
+// ================= FITUR TAMPILKAN SOAL YANG SUDAH DIUPLOAD =================
+function cekSoalCocokKelas(item, mapel, kelasTarget) {
+    if (!itemCocokMapel(item, mapel)) return false;
+    const targetNorm = normStr(kelasTarget);
+    if (Array.isArray(item.kelas) && item.kelas.length > 0) {
+        return item.kelas.some(k => normStr(k) === targetNorm);
+    }
+    const legacyName = normStr(`${String(mapel || "").replace(/\s+/g, '_')}_${String(kelasTarget || "").replace(/\s+/g, '_')}`);
+    return normStr(item.namaUjian) === legacyName;
+}
+
+async function lihatSoalJadwal(mapelEnc, kelasJson) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    showLoading("Mengambil daftar soal dari Gist...");
+    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
+    hideLoading();
+
+    const seenIds = new Set();
+    const matchedSoal = [];
+    allSoal.forEach((item, idx) => {
+        const cocok = kelasList.some(k => cekSoalCocokKelas(item, mapel, k));
+        const keyId = item.id !== undefined && item.id !== null ? String(item.id) : `idx_${idx}`;
+        if(cocok && !seenIds.has(keyId)) {
+            seenIds.add(keyId);
+            matchedSoal.push(item);
+        }
+    });
+
+    tampilkanModalPreviewSoal(`Soal: ${mapel} (${kelasList.join(', ')})`, matchedSoal, mapel, kelasList);
+}
+
+async function lihatSemuaSoalGist() {
+    showLoading("Mengambil seluruh bank soal dari Gist...");
+    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
+    hideLoading();
+    tampilkanModalPreviewSoal(`Seluruh Bank Soal di Gist (${allSoal.length} Butir)`, allSoal, null, null);
+}
+
+function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarget) {
+    document.getElementById('modalSoalTitle').innerText = `${judul} — Total: ${soalArray.length} Soal`;
+    const body = document.getElementById('modalSoalBody');
+    const btnHapus = document.getElementById('btnHapusSoalPaket');
+
+    if(mapelTarget && kelasListTarget && soalArray.length > 0) {
+        btnHapus.style.display = "inline-block";
+        btnHapus.onclick = () => hapusSoalUntukKelas(mapelTarget, kelasListTarget);
+    } else {
+        btnHapus.style.display = "none";
+    }
+
+    if(soalArray.length === 0) {
+        body.innerHTML = `<div style="text-align:center; padding:30px; color:#666;">Belum ada soal yang tersimpan di Gist untuk ujian/kelas ini.</div>`;
+    } else {
+        let html = "";
+        soalArray.forEach((item, idx) => {
+            const kunciPlain = decodeKunciGist(item.kunci);
+            const kunciCipher = encodeKunciGist(kunciPlain);
+            const infoKelas = Array.isArray(item.kelas) ? item.kelas.join(', ') : (item.namaUjian || '-');
+
+            html += `<div class="preview-item">
+                <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#666; margin-bottom:5px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
+                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${item.mapel || '-'}</b> | Kelas: <b>${infoKelas}</b></span>
+                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
+                </div>
+                <div style="font-size:13.5px; font-weight:bold; margin-bottom:6px;">${item.soal}</div>`;
+
+            if(item.gambar) {
+                html += `<img src="${item.gambar}" class="img-soal">`;
+            }
+
+            ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                if(item.options && item.options[opt]) {
+                    const isBenar = (opt === kunciPlain);
+                    html += `<div class="preview-opt ${isBenar ? 'is-kunci' : ''}">
+                        <b>${opt}.</b> ${item.options[opt]} ${isBenar ? ' ✔' : ''}
+                    </div>`;
+                }
+            });
+
+            html += `</div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    document.getElementById('modalLihatSoal').style.display = 'flex';
+}
+
+function tutupModalSoal() {
+    document.getElementById('modalLihatSoal').style.display = 'none';
+}
+
+async function hapusSoalUntukKelas(mapel, kelasList) {
+    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari soal.json di Gist?`)) return;
+    showLoading("Menghapus soal dari soal.json di Gist...");
+
+    try {
+        await eksekusiHapusSoalDiGist(mapel, kelasList);
+        hideLoading();
+        tutupModalSoal();
+        alert(`Soal untuk ${mapel} (${kelasList.join(', ')}) berhasil dihapus dari soal.json!`);
+    } catch(err) {
+        hideLoading();
+        alert("Gagal menghapus soal dari soal.json: " + err.message);
+    }
+}
+
+async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
+    const indices = JSON.parse(decodeURIComponent(indicesJson));
+    const mapel = decodeURIComponent(mapelEnc);
+    const kelasList = JSON.parse(decodeURIComponent(kelasJson));
+
+    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus menghapus soalnya di soal.json?`)) return;
+    showLoading("Menghapus jadwal & membersihkan soal di soal.json...");
+
+    indices.sort((a, b) => b - a).forEach(idx => {
+        daftarJadwalUjian.splice(idx, 1);
+    });
+
+    await saveCbtDatabaseToGist();
+
+    try {
+        await eksekusiHapusSoalDiGist(mapel, kelasList);
+    } catch (err) {
+        console.error("Gagal membersihkan soal di soal.json saat hapus jadwal:", err);
+    }
+
+    renderTabelJadwal();
+    hideLoading();
+    alert(`Jadwal dan soal "${mapel}" (${kelasList.join(', ')}) berhasil dihapus!`);
+}
+
+function renderTabelSiswaLogin() {
+    let tbody = document.getElementById('tbodySiswaLogin');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
+
+    if(!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
+        return;
+    }
+
+    let tampilCount = 0;
+    logSiswaLogin.forEach((l, idx) => {
+        if (!l) return;
+        if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        tampilCount++;
+        let badgeStatus = renderStatusBadgesHtml(l.status);
+        tbody.innerHTML += `<tr>
+            <td>${l.nama}</td>
+            <td>${l.kelas}</td>
+            <td>${l.mapel}</td>
+            <td>${badgeStatus}</td>
+            <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+            <td>
+                <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
+            </td>
+        </tr>`;
+    });
+
+    if (tampilCount === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+    }
+}
+
+// ================= AUTENTIKASI & UJIAN SISWA (SESI DI GAS + 1 PERANGKAT + KUNCI PER MAPEL) =================
+async function autentikasiSiswa() {
+    let username = document.getElementById('nis').value.trim();
+    let pass = document.getElementById('passSiswa').value.trim();
+
+    if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
+
+    showLoading("Memverifikasi akun, sesi & konfigurasi token...");
+    await fetchCbtDatabase(false);
+    await fetchSesiFromGAS(true);
+    await fetchTokenDariDrive(true);
+
+    let siswa = databaseSiswa.find(s => s.username === username);
+    if(!siswa) { 
+        hideLoading();
+        alert("Username tidak ditemukan dalam database!"); 
+        return; 
+    }
+
+    if(siswa.password !== pass) {
+        hideLoading();
+        alert("Password salah!");
+        return;
+    }
+
+    const myDeviceId = getOrCreateDeviceId();
+    const existingSession = sesiLoginSiswa[username];
+
+    if(existingSession && existingSession.deviceId && existingSession.deviceId !== myDeviceId) {
+        hideLoading();
+        alert("AKSES DITOLAK!\nAkun Anda sedang aktif login di perangkat lain.\nUntuk pindah perangkat, silakan logout dari perangkat sebelumnya atau minta Admin melakukan Reset-Perangkat.");
+        return;
+    }
+
+    const statusSetelahLogin = existingSession && existingSession.status
+        ? existingSession.status
+        : "Login Aktif";
+
+    await setSesiToGAS({
+        username: username,
+        deviceId: myDeviceId,
+        status: statusSetelahLogin,
+        nama: siswa.nama,
+        kelas: siswa.kelas,
+        mapel: existingSession ? existingSession.mapel : "-",
+        updatedAt: getLocalIsoNow()
+    });
+    hideLoading();
+
+    await tampilkanHalamanPilihUjianSiswa(siswa);
+}
+
+async function logoutSiswa() {
+    hentikanTimerUjian();
+    bersihkanCacheSoal();
+    hapusSesiSiswaLokal();
+    if(currentSiswaObj) {
+        showLoading("Melepaskan sesi perangkat di GAS...");
+        await fetchSesiFromGAS(true);
+        const sess = sesiLoginSiswa[currentSiswaObj.username];
+        if(sess && sess.deviceId === getOrCreateDeviceId() && !cekStatusTerkunci(sess.status)) {
+            if (sess.status && sess.status !== "Login Aktif") {
+                await setSesiToGAS({
+                    ...sess,
+                    deviceId: "",
+                    updatedAt: getLocalIsoNow()
+                });
+            } else {
+                await deleteSesiFromGAS(currentSiswaObj.username);
+            }
+        }
+        hideLoading();
+    }
+    currentSiswaObj = null;
+    document.getElementById('nis').value = "";
+    document.getElementById('passSiswa').value = "";
+    document.getElementById('tabMenu').style.display = 'block';
+    document.getElementById('viewPilihUjianSiswa').classList.remove('active');
+    document.getElementById('viewLoginSiswa').classList.add('active');
+    setCompactMode(true);
+}
+
+function getLocalIsoNow() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+async function masukFullscreenWajib() {
+    const elem = document.documentElement;
+    try {
+        if (elem.requestFullscreen) {
+            await elem.requestFullscreen({ navigationUI: "hide" }).catch(() => elem.requestFullscreen());
+        } else if (elem.webkitRequestFullscreen) {
+            await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            await elem.msRequestFullscreen();
+        }
+        const guard = document.getElementById('fullscreenGuardOverlay');
+        if (guard && isCurrentlyFullscreen()) guard.style.display = 'none';
+    } catch (e) {
+        console.warn("Fullscreen request warning:", e);
+    }
+}
+
+function aktifkanFullscreenDariOverlay() {
+    masukFullscreenWajib();
+}
+
+function isCurrentlyFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
+
+// ================= TIMER HITUNG MUNDUR UJIAN (BERDASARKAN JP / WAKTU SELESAI) =================
+function formatDurasiDetikKeHhMmSs(totalSec) {
+    const sec = Math.max(0, Math.floor(totalSec));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function hentikanTimerUjian() {
+    if (examCountdownIntervalId) {
+        clearInterval(examCountdownIntervalId);
+        examCountdownIntervalId = null;
+    }
+    const timerEl = document.getElementById('examCountdownTimer');
+    if (timerEl) {
+        timerEl.classList.remove('timer-warning');
+        timerEl.innerText = "⏱ --:--:--";
+    }
+}
+
+function mulaiTimerUjian(jadwalMatch) {
+    hentikanTimerUjian();
+    const timerEl = document.getElementById('examCountdownTimer');
+
+    let endMs = parseJadwalDateTimeMs(jadwalMatch?.selesai);
+    if (isNaN(endMs)) {
+        const jp = parseInt(jadwalMatch?.jp, 10) || 1;
+        const menitPerJp = parseInt(pengaturanCbt.menitPerJp, 10) || 40;
+        endMs = Date.now() + (jp * menitPerJp * 60 * 1000);
+    }
+    examEndTimestampMs = endMs;
+
+    const tick = () => {
+        const sisaMs = examEndTimestampMs - Date.now();
+        const sisaSec = Math.max(0, Math.ceil(sisaMs / 1000));
+
+        if (timerEl) {
+            timerEl.innerText = `⏱ ${formatDurasiDetikKeHhMmSs(sisaSec)}`;
+            if (sisaSec <= 300) {
+                timerEl.classList.add('timer-warning');
+            } else {
+                timerEl.classList.remove('timer-warning');
+            }
+        }
+
+        if (sisaMs <= 0) {
+            hentikanTimerUjian();
+            if (isExamInProgress && !isSubmittingExam) {
+                isExamInProgress = false;
+                lepasPengawasAntiCurang();
+                selesaiUjian(false, "", true);
+            }
+        }
+    };
+
+    tick();
+    examCountdownIntervalId = setInterval(tick, 1000);
+}
+
+async function mulaiUjianPilihan() {
+    let mapel = document.getElementById('pilihMapelAktif').value;
+    if(!mapel) { alert("Pilih mata pelajaran ujian yang tersedia terlebih dahulu!"); return; }
+
+    if(currentSiswaObj && isMapelTerkunciUntukSiswa(currentSiswaObj.username, namaSiswaLogin, kelasSiswaLogin, mapel)) {
+        alert(`Mata pelajaran "${mapel}" sudah selesai / terkunci dan harus direset oleh Admin.\nSilakan pilih mata pelajaran lain yang tersedia.`);
+        renderOpsiMapelUntukSiswa(currentSiswaObj);
+        return;
+    }
+
+    const tokenInput = String(document.getElementById('inputTokenSiswa')?.value || "").trim();
+    if (tokenDriveState.wajibToken !== false && !tokenInput) {
+        alert("Masukkan 4 digit token ujian terlebih dahulu!");
+        return;
+    }
+
+    // Paksa fullscreen langsung pada gestur klik pertama pengguna agar didukung semua browser mobile & desktop
+    await masukFullscreenWajib();
+
+    showLoading("Memverifikasi token ujian dari Google Drive...");
+    try {
+        const verRes = await axios.post(GAS_URL, JSON.stringify({
+            action: "verifyToken",
+            token: tokenInput
+        }));
+        hideLoading();
+        if (!verRes.data || verRes.data.status !== "success" || verRes.data.valid !== true) {
+            alert("Token 4 digit salah atau sudah berganti! Minta token terbaru kepada pengawas.");
+            return;
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal memverifikasi token ujian: " + e.message);
+        return;
+    }
+
+    await masukFullscreenWajib();
+
+    const nowMs = Date.now();
+    const kelasTrim = kelasSiswaLogin.trim().toLowerCase();
+    let jadwalMatch = daftarJadwalUjian.find(j => 
+        j.mapel === mapel && String(j.kelas || "").trim().toLowerCase() === kelasTrim
+    );
+
+    if(!jadwalMatch) {
+        alert("Jadwal ujian tidak ditemukan untuk kelas Anda!");
+        return;
+    }
+
+    const startMs = parseJadwalDateTimeMs(jadwalMatch.mulai);
+    const endMs = parseJadwalDateTimeMs(jadwalMatch.selesai);
+
+    if(!isNaN(startMs) && nowMs < startMs) {
+        alert(`Ujian belum dimulai!\nJadwal mulai: ${jadwalMatch.mulai.replace('T', ' ')}`);
+        return;
+    }
+
+    if(!isNaN(endMs) && nowMs > endMs) {
+        alert(`Ujian sudah berakhir!\nJadwal selesai: ${jadwalMatch.selesai.replace('T', ' ')}`);
+        return;
+    }
+
+    mapelSiswaLogin = mapel;
+
+    let riwayatStatusSaatIni = "Sedang Ujian";
+    if(currentSiswaObj) {
+        const prevSess = sesiLoginSiswa[currentSiswaObj.username];
+        riwayatStatusSaatIni = gabungRiwayatStatus(prevSess ? prevSess.status : "", "Sedang Ujian");
+        await setSesiToGAS({
+            username: currentSiswaObj.username,
+            deviceId: getOrCreateDeviceId(),
+            status: riwayatStatusSaatIni,
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapel,
+            updatedAt: getLocalIsoNow()
+        });
+    }
+
+    try {
+        axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            sheetName: "DB_Log_login_CBT",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapel,
+            status: riwayatStatusSaatIni,
+            nilai: null
+        }));
+    } catch(e) {
+        console.error("Gagal mengirim log login ke server:", e);
+    }
+
+    namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
+    await loadSoalUjian(jadwalMatch);
+}
+
+// ================= CADANGAN JAWABAN LOKAL & ANTREAN KIRIM ULANG (RETRY) =================
+const EXAM_BACKUP_STORAGE_KEY = "smantas_cbt_exam_backup_v1";
+const PENDING_SUBMIT_STORAGE_KEY = "smantas_cbt_pending_submit_v1";
+
+function simpanCadanganJawabanLokal() {
+    try {
+        if (!currentSiswaObj || !mapelSiswaLogin || !Array.isArray(listSoal) || listSoal.length === 0) return;
+        const backupObj = {
+            username: String(currentSiswaObj.username || ""),
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapelSiswaLogin,
+            namaUjian: namaUjianAktif,
+            currentSoalIndex: currentSoalIndex,
+            listSoal: listSoal,
+            jawabanSiswa: jawabanSiswa,
+            savedAt: Date.now()
+        };
+        localStorage.setItem(EXAM_BACKUP_STORAGE_KEY, JSON.stringify(backupObj));
+    } catch (e) {
+        console.warn("Gagal menyimpan cadangan jawaban lokal:", e);
+    }
+}
+
+function bacaCadanganJawabanLokal(username, mapel, kelas) {
+    try {
+        const raw = localStorage.getItem(EXAM_BACKUP_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.listSoal) || parsed.listSoal.length === 0) return null;
+        if (String(parsed.username || "") !== String(username || "")) return null;
+        if (normStr(parsed.mapel) !== normStr(mapel)) return null;
+        if (normStr(parsed.kelas) !== normStr(kelas)) return null;
+        if (parsed.savedAt && (Date.now() - parsed.savedAt > 12 * 60 * 60 * 1000)) {
+            hapusCadanganJawabanLokal();
+            return null;
+        }
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusCadanganJawabanLokal() {
+    try {
+        localStorage.removeItem(EXAM_BACKUP_STORAGE_KEY);
+    } catch (e) {}
+}
+
+function simpanAntreanSubmitLokal(itemObj) {
+    try {
+        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(itemObj));
+    } catch (e) {}
+}
+
+function bacaAntreanSubmitLokal() {
+    try {
+        const raw = localStorage.getItem(PENDING_SUBMIT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function hapusAntreanSubmitLokal() {
+    try {
+        localStorage.removeItem(PENDING_SUBMIT_STORAGE_KEY);
+    } catch (e) {}
+}
+
+async function kirimDenganRetry(fnAsync, maxPercobaan = 3, delayAwalMs = 1500, labelStatus = "") {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxPercobaan; attempt++) {
+        try {
+            if (labelStatus && attempt > 1) {
+                showLoading(`${labelStatus} (Percobaan ${attempt}/${maxPercobaan})...`);
+            }
+            return await fnAsync();
+        } catch (err) {
+            lastErr = err;
+            if (attempt < maxPercobaan) {
+                const jeda = delayAwalMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 400);
+                await new Promise(resolve => setTimeout(resolve, jeda));
+            }
+        }
+    }
+    throw lastErr;
+}
+
+async function prosesAntreanSubmitTertunda(silent = false) {
+    const pending = bacaAntreanSubmitLokal();
+    if (!pending || !pending.payload) return false;
+
+    try {
+        if (!silent) {
+            showLoading(`Mengirim ulang hasil ujian tertunda (${pending.payload.nama || pending.payload.nis})...`);
+        }
+        if (pending.sesiData) {
+            await setSesiToGAS(pending.sesiData);
+        }
+        if (pending.logData) {
+            await axios.post(GAS_URL, JSON.stringify(pending.logData));
+        }
+        await axios.post(GAS_URL, JSON.stringify(pending.payload));
+        if (pending.username && pending.mapel) {
+            tandaiMapelTerkunciLokal(pending.username, pending.mapel);
+        }
+        hapusAntreanSubmitLokal();
+        hapusCadanganJawabanLokal();
+        if (!silent) {
+            hideLoading();
+            alert(`Hasil ujian yang sebelumnya tertunda untuk ${pending.payload.nama || pending.payload.nis} berhasil dikirim ke server!`);
+        }
+        return true;
+    } catch (err) {
+        if (!silent) hideLoading();
+        console.warn("Pengiriman ulang antrean tertunda belum berhasil:", err);
+        return false;
+    }
+}
+
+async function loadSoalUjian(jadwalMatch = null) {
+    showLoading("Memuat soal ujian...");
+    try {
+        const kelasTrim = kelasSiswaLogin.trim();
+        const paketScope = `paket_${encodeURIComponent(mapelSiswaLogin)}_${encodeURIComponent(kelasTrim)}`;
+        let soalTerfilter = bacaCacheSoal(paketScope);
+
+        if (!soalTerfilter) {
+            const allSoal = await fetchAllSoalFromGist({
+                preferRaw: true,
+                forceRefresh: false,
+                cacheScope: "raw_exam"
+            });
+            soalTerfilter = allSoal.filter(s => cekSoalCocokKelas(s, mapelSiswaLogin, kelasTrim));
+            simpanCacheSoal(paketScope, soalTerfilter);
+        }
+        listSoal = siapkanSoalDanOpsiAcak(soalTerfilter);
+
+        hideLoading();
+        if(!Array.isArray(listSoal) || listSoal.length === 0) { 
+            alert("Belum ada soal yang tersedia untuk mata pelajaran dan kelas Anda."); 
+            return; 
+        }
+
+        const cadanganLokal = currentSiswaObj
+            ? bacaCadanganJawabanLokal(currentSiswaObj.username, mapelSiswaLogin, kelasTrim)
+            : null;
+        if (cadanganLokal && cadanganLokal.listSoal.length === listSoal.length) {
+            listSoal = cadanganLokal.listSoal;
+            jawabanSiswa = cadanganLokal.jawabanSiswa || {};
+            currentSoalIndex = Math.min(
+                Math.max(0, Number(cadanganLokal.currentSoalIndex || 0)),
+                listSoal.length - 1
+            );
+        } else {
+            currentSoalIndex = 0;
+            jawabanSiswa = {};
+            simpanCadanganJawabanLokal();
+        }
+
+        setCompactMode(false);
+        const jpLabel = jadwalMatch && jadwalMatch.jp ? ` • ${jadwalMatch.jp} JP` : "";
+        document.getElementById('infoUjianText').innerText = `Mapel: ${mapelSiswaLogin} (${kelasTrim}${jpLabel})`;
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewPilihUjianSiswa').classList.remove('active');
+        document.getElementById('viewUjianSiswa').classList.add('active');
+        sinkronkanHeaderAdmin();
+        renderSoalSiswa();
+
+        isExamInProgress = true;
+        isSubmittingExam = false;
+        mulaiTimerUjian(jadwalMatch);
+        pasangPengawasAntiCurang();
+
+        if (!isCurrentlyFullscreen()) {
+            await masukFullscreenWajib();
+        }
+    } catch(err) { 
+        hideLoading();
+        alert("Gagal memuat soal: " + err.message); 
+    }
+}
+
+function acakArrayFisherYates(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function siapkanSoalDanOpsiAcak(rawSoalList) {
+    const soalTeracak = acakArrayFisherYates(rawSoalList);
+
+    return soalTeracak.map(item => {
+        const kunciHurufAsli = decodeKunciGist(item.kunci);
+        const daftarHurufTersedia = ['A', 'B', 'C', 'D', 'E'].filter(
+            opt => item.options && item.options[opt] !== undefined && String(item.options[opt]).trim() !== ""
+        );
+
+        const pasanganOpsi = daftarHurufTersedia.map(huruf => ({
+            teks: item.options[huruf],
+            isBenar: huruf === kunciHurufAsli
+        }));
+
+        const pasanganTeracak = acakArrayFisherYates(pasanganOpsi);
+
+        const optionsBaru = {};
+        let kunciHurufBaru = 'A';
+
+        pasanganTeracak.forEach((p, idx) => {
+            const labelBaru = daftarHurufTersedia[idx];
+            optionsBaru[labelBaru] = p.teks;
+            if (p.isBenar) {
+                kunciHurufBaru = labelBaru;
+            }
+        });
+
+        return {
+            ...item,
+            options: optionsBaru,
+            kunci: encodeKunciGist(kunciHurufBaru)
+        };
+    });
+}
+
+function pilihJawabanSiswa(index, opt) {
+    jawabanSiswa[index] = opt;
+    simpanCadanganJawabanLokal();
+    renderSoalSiswa();
+    if (isExamInProgress && !isCurrentlyFullscreen()) {
+        masukFullscreenWajib();
+    }
+}
+
+function navigasiSoal(step) {
+    const nextIdx = currentSoalIndex + step;
+    if (nextIdx >= 0 && nextIdx < listSoal.length) {
+        currentSoalIndex = nextIdx;
+        simpanCadanganJawabanLokal();
+        renderSoalSiswa();
+        if (isExamInProgress && !isCurrentlyFullscreen()) {
+            masukFullscreenWajib();
+        }
+    }
+}
+
+function renderSoalSiswa() {
+    if (!Array.isArray(listSoal) || listSoal.length === 0) return;
+
+    const totalSoal = listSoal.length;
+    const item = listSoal[currentSoalIndex];
+    const jawabanTersimpan = jawabanSiswa[currentSoalIndex] || null;
+    const jumlahTerjawab = Object.keys(jawabanSiswa).length;
+
+    document.getElementById('labelNomorSoal').innerText = `Soal ${currentSoalIndex + 1} dari ${totalSoal}`;
+    document.getElementById('labelStatusTerjawab').innerText = `Terjawab: ${jumlahTerjawab} / ${totalSoal} soal`;
+    document.getElementById('btnPrevSoal').disabled = (currentSoalIndex === 0);
+    document.getElementById('btnNextSoal').disabled = (currentSoalIndex === totalSoal - 1);
+
+    let html = `<div class="soal-box"><p>Soal ${currentSoalIndex + 1}. ${item.soal}</p>`;
+    if (item.gambar) {
+        html += `<img src="${item.gambar}" class="img-soal">`;
+    }
+    html += `<div style="margin-top: 10px;">`;
+    ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+        if (item.options && item.options[opt]) {
+            const isChecked = (jawabanTersimpan === opt);
+            html += `<label class="option-label ${isChecked ? 'selected-opt' : ''}">
+                <input type="radio" name="soal_aktif" value="${opt}" ${isChecked ? 'checked' : ''} onclick="pilihJawabanSiswa(${currentSoalIndex}, '${opt}')"> 
+                <b>${opt}.</b> ${item.options[opt]}
+            </label>`;
+        }
+    });
+    html += `</div></div>`;
+
+    document.getElementById('soalContainer').innerHTML = html;
+}
+
+function pasangPengawasAntiCurang() {
+    document.addEventListener('fullscreenchange', handleFullscreenViolation);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenViolation);
+    document.addEventListener('msfullscreenchange', handleFullscreenViolation);
+    document.addEventListener('visibilitychange', handleVisibilityViolation);
+    window.addEventListener('blur', handleWindowBlurViolation);
+    document.addEventListener('contextmenu', preventCheatAction);
+    document.addEventListener('keydown', preventCheatKeys);
+}
+
+function lepasPengawasAntiCurang() {
+    document.removeEventListener('fullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('msfullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('visibilitychange', handleVisibilityViolation);
+    window.removeEventListener('blur', handleWindowBlurViolation);
+    document.removeEventListener('contextmenu', preventCheatAction);
+    document.removeEventListener('keydown', preventCheatKeys);
+    const guard = document.getElementById('fullscreenGuardOverlay');
+    if (guard) guard.style.display = 'none';
+}
+
+function preventCheatAction(e) {
+    if (isExamInProgress) e.preventDefault();
+}
+
+function preventCheatKeys(e) {
+    if (!isExamInProgress) return;
+    if (e.key === "Escape" || e.key === "F11" || (e.ctrlKey && ['t', 'n', 'w', 'Tab'].includes(e.key))) {
+        e.preventDefault();
+    }
+}
+
+function handleFullscreenViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    if (!isCurrentlyFullscreen()) {
+        picuPelanggaranUjian("Keluar dari mode Full Screen");
+    }
+}
+
+function handleVisibilityViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    if (document.hidden) {
+        picuPelanggaranUjian("Membuka tab lain / menyembunyikan layar ujian");
+    }
+}
+
+function handleWindowBlurViolation() {
+    if (!isExamInProgress || isSubmittingExam) return;
+    picuPelanggaranUjian("Berpindah jendela / aplikasi lain");
+}
+
+function picuPelanggaranUjian(alasan) {
+    if (!isExamInProgress || isSubmittingExam) return;
+    isExamInProgress = false;
+    hentikanTimerUjian();
+    lepasPengawasAntiCurang();
+    selesaiUjian(true, alasan, false);
+}
+
+async function selesaiUjian(isCurang = false, alasanCurang = "", isTimeUp = false) {
+    if (isSubmittingExam) return;
+
+    if (!isCurang && !isTimeUp) {
+        const belumDijawab = listSoal.length - Object.keys(jawabanSiswa).length;
+        const pesanKonfirmasi = belumDijawab > 0 
+            ? `Masih ada ${belumDijawab} soal yang belum dijawab.\nTetap kumpulkan jawaban sekarang?`
+            : "Kumpulkan jawaban sekarang?";
+        if(!confirm(pesanKonfirmasi)) return;
+    }
+
+    isSubmittingExam = true;
+    isExamInProgress = false;
+    hentikanTimerUjian();
+    lepasPengawasAntiCurang();
+
+    showLoading(
+        isCurang
+            ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci mapel & mengirim jawaban...`
+            : (isTimeUp
+                ? "WAKTU UJIAN HABIS! Otomatis menyelesaikan & mengirim jawaban ke server..."
+                : "Mengirim jawaban ke server... Jangan tutup halaman!")
+    );
+
+    let benar = 0;
+    listSoal.forEach((item, index) => {
+        const kunciAsli = decodeKunciGist(item.kunci);
+        if(jawabanSiswa[index] === kunciAsli) benar++;
+    });
+    let nilaiAkhir = listSoal.length > 0 ? Number(((benar / listSoal.length) * 100).toFixed(2)) : 0;
+    const statusSebelum = currentSiswaObj && sesiLoginSiswa[currentSiswaObj.username]
+        ? sesiLoginSiswa[currentSiswaObj.username].status
+        : "";
+    let statusFinal = "";
+    if (isCurang) {
+        const tokenCurang = formatPelanggaranRingkas(alasanCurang);
+        const setelahCurang = gabungRiwayatStatus(statusSebelum, tokenCurang);
+        statusFinal = gabungRiwayatStatus(setelahCurang, "Selesai");
+    } else if (isTimeUp) {
+        const setelahWaktuHabis = gabungRiwayatStatus(statusSebelum, "Waktu Habis");
+        statusFinal = gabungRiwayatStatus(setelahWaktuHabis, "Selesai");
+    } else {
+        statusFinal = gabungRiwayatStatus(statusSebelum, "Selesai");
+    }
+
+    if (currentSiswaObj && mapelSiswaLogin) {
+        tandaiMapelTerkunciLokal(currentSiswaObj.username, mapelSiswaLogin);
+    }
+
+    const sesiData = currentSiswaObj ? {
+        username: currentSiswaObj.username,
+        deviceId: getOrCreateDeviceId(),
+        status: statusFinal,
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        updatedAt: getLocalIsoNow()
+    } : null;
+
+    const logData = {
+        action: "logLogin",
+        sheetName: "DB_Log_login_CBT",
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        status: statusFinal,
+        nilai: nilaiAkhir
+    };
+
+    let payload = {
+        action: "submitResult", namaUjian: namaUjianAktif,
+        nis: currentSiswaObj ? currentSiswaObj.username : "Siswa", nama: namaSiswaLogin,
+        nilai: nilaiAkhir, jawaban: jawabanSiswa, status: statusFinal
+    };
+
+    simpanCadanganJawabanLokal();
+    simpanAntreanSubmitLokal({
+        username: currentSiswaObj ? currentSiswaObj.username : "",
+        mapel: mapelSiswaLogin,
+        sesiData: sesiData,
+        logData: logData,
+        payload: payload,
+        createdAt: Date.now()
+    });
+
+    if (sesiData) {
+        try {
+            await kirimDenganRetry(() => setSesiToGAS(sesiData), 2, 1000);
+        } catch(e) {
+            console.error("Gagal mengunci status sesi di GAS:", e);
+        }
+    }
+
+    try {
+        await kirimDenganRetry(() => axios.post(GAS_URL, JSON.stringify(logData)), 2, 1000);
+    } catch(e) {
+        console.error("Gagal memperbarui log selesai:", e);
+    }
+
+    try {
+        let res = await kirimDenganRetry(
+            () => axios.post(GAS_URL, JSON.stringify(payload)),
+            3,
+            1500,
+            "Koneksi lambat, mencoba mengirim ulang jawaban"
+        );
+        hapusAntreanSubmitLokal();
+        hapusCadanganJawabanLokal();
+        hideLoading();
+        bersihkanCacheSoal();
+        if (isCurrentlyFullscreen() && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+        if (isCurang) {
+            alert(`UJIAN DIHENTIKAN OTOMATIS!\nAlasan: ${alasanCurang}.\nStatus: Dianggap Curang / Selesai.\nNilai Anda: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" kini TERKUNCI dan harus direset Admin. Anda tetap bisa memilih mapel lain yang tersedia.`);
+        } else if (isTimeUp) {
+            alert(`WAKTU UJIAN TELAH HABIS!\nJawaban Anda otomatis dikumpulkan dan disimpan.\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
+        } else if(res.data && res.data.status === "success") {
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
+        } else {
+            alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
+        }
+
+        if (currentSiswaObj) {
+            await tampilkanHalamanPilihUjianSiswa(currentSiswaObj);
+        } else {
+            location.reload();
+        }
+    } catch(err) {
+        hideLoading();
+        isSubmittingExam = false;
+        if (isCurrentlyFullscreen() && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+        alert(isCurang
+            ? `UJIAN DIHENTIKAN (${alasanCurang})! Nilai: ${nilaiAkhir}.\nKoneksi sedang terputus, tetapi jawaban Anda AMAN tersimpan di perangkat ini. Jangan hapus data browser dan segera hubungkan internet lalu klik "Selesaikan & Kirim Ujian" atau muat ulang halaman.`
+            : `Koneksi gagal setelah 3x percobaan!\nJangan khawatir, seluruh jawaban Anda (Nilai: ${nilaiAkhir}) AMAN tersimpan di perangkat ini.\n\nPeriksa koneksi internet Anda lalu klik tombol "Selesaikan & Kirim Ujian" lagi (atau muat ulang halaman agar terkirim otomatis).`
+        );
+    }
+}
+
+// ================= NAVIGASI PANEL ADMIN =================
+function switchAdminTab(tabName) {
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
+    sinkronkanHeaderAdmin();
+
+    if(tabName === 'monitoring') {
+        document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('adminTabMonitoring').classList.add('active');
+        fetchTokenDariDrive(true);
+        mulaiTimerTokenAdmin();
+        fetchSesiFromGAS(true);
+        fetchLogLoginFromGAS();
+    } else if(tabName === 'ujian') {
+        document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('adminTabUjian').classList.add('active');
+        updateLabelJp();
+        renderTabelJadwal();
+    } else if(tabName === 'master') {
+        document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
+        document.getElementById('adminTabMaster').classList.add('active');
+        renderListMaster();
+    } else if(tabName === 'siswa') {
+        document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
+        document.getElementById('adminTabSiswa').classList.add('active');
+        initDropdowns();
+        renderTabelDaftarSiswa();
+    } else if(tabName === 'settings') {
+        document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
+        document.getElementById('adminTabSettings').classList.add('active');
+        fetchTokenDariDrive(true);
+        updateLabelJp();
+        renderAdminPasswordDisplay();
+        cekRateLimitGistApi(true);
+    }
+}
+
+function prosesLoginAdmin() {
+    let pass = document.getElementById('adminPassword').value;
+    if(CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
+        localStorage.setItem("isAdminLoggedIn", "true");
+        setCompactMode(false);
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        sinkronkanHeaderAdmin();
+        switchAdminTab('monitoring');
+    } else {
+        document.getElementById('errorAdmin').style.display = 'block';
+    }
+}
+
+function logoutAdmin() {
+    localStorage.removeItem("isAdminLoggedIn");
+    location.reload();
+}
+
+function showLoading(text) {
+    document.getElementById('loadingText').innerText = text;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+window.addEventListener("online", () => {
+    prosesAntreanSubmitTertunda(false);
+});
+
+window.onload = async function() {
+    showLoading("Memuat data sistem...");
+    await prosesAntreanSubmitTertunda(false);
+    await fetchCbtDatabase(false);
+    await fetchSesiFromGAS(true);
+    await fetchTokenDariDrive(true);
+    hideLoading();
+
+    if(localStorage.getItem("isAdminLoggedIn") === "true") {
+        setCompactMode(false);
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewLoginSiswa').classList.remove('active');
+        document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        sinkronkanHeaderAdmin();
+        switchAdminTab('monitoring');
+        return;
+    }
+
+    const savedSiswaSess = bacaSesiSiswaLokal();
+    if(savedSiswaSess && savedSiswaSess.username) {
+        const siswaCocok = databaseSiswa.find(s => String(s.username) === String(savedSiswaSess.username));
+        const sesiServer = sesiLoginSiswa[savedSiswaSess.username];
+        const perangkatSama = !sesiServer || !sesiServer.deviceId || sesiServer.deviceId === getOrCreateDeviceId();
+
+        if(siswaCocok && perangkatSama) {
+            await tampilkanHalamanPilihUjianSiswa(siswaCocok);
+            return;
+        } else {
+            hapusSesiSiswaLokal();
+        }
+    }
+
+    setCompactMode(true);
+    sinkronkanHeaderAdmin();
+}
+</script>
 </body>
 </html>
