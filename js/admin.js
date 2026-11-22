@@ -1518,16 +1518,18 @@ async function bacaFileSoalOtomatis(event) {
                     const fileUrl = payload && typeof payload.fileUrl === "string"
                         ? payload.fileUrl.trim()
                         : "";
+                    const errMsg = (payload && payload.message) ? String(payload.message) : "";
+                    const isPermissionWarningOnly = errMsg.toLowerCase().includes("permissiontype");
 
-                    if (payload && payload.status === "success" && fileUrl) {
+                    if (payload && (payload.status === "success" || isPermissionWarningOnly) && fileUrl) {
                         if (targetImg) {
                             targetImg.setAttribute("src", fileUrl);
                             targetImg.classList.add("img-soal");
                         }
                     } else {
                         if (targetImg) targetImg.remove();
-                        const errMsg = (payload && payload.message) ? payload.message : "URL Drive kosong";
-                        gagalUploadList.push(`Img ${i + 1}: ${errMsg}`);
+                        const finalErr = errMsg || "URL Drive kosong";
+                        gagalUploadList.push(`Img ${i + 1}: ${finalErr}`);
                     }
                 } catch (err) {
                     if (targetImg) targetImg.remove();
