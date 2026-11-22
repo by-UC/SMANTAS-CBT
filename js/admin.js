@@ -530,7 +530,6 @@ function isJadwalMapelSesuaiUntukKelas(mapelName, kelasName, options = {}) {
     });
 }
 
-// Hanya menampilkan mapel yang sesuai jadwal (dan rentang waktu aktif jadwal) untuk kelas siswa tersebut
 function kumpulkanMapelAktifSiswa(username, sesiObj) {
     const mapelSet = new Map();
     const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
@@ -1297,6 +1296,96 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
     }
 }
 
+function bersihkanSelTabelHtml(cellEl) {
+    if (!cellEl) return "";
+    const clone = cellEl.cloneNode(true);
+    const imgs = Array.from(clone.querySelectorAll("img"));
+
+    imgs.forEach(img => {
+        const src = (img.getAttribute("src") || "").trim();
+        const marker = document.createElement("span");
+        marker.textContent = src ? ` [[IMG:${src}]] ` : "";
+        img.replaceWith(marker);
+    });
+
+    clone.querySelectorAll("br").forEach(br => br.replaceWith("\n"));
+    clone.querySelectorAll("p, div, li").forEach(block => {
+        if (block.nextSibling) {
+            block.appendChild(document.createTextNode("\n"));
+        }
+    });
+
+    let raw = (clone.textContent || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\r\n/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n[ \t]+/g, "\n")
+        .replace(/[ \t]{2,}/g, " ")
+        .trim();
+
+    raw = raw.replace(/\[\[IMG:([^\]]+)\]\]/g, (_, src) => {
+        return `<br><img src="${src.trim()}" class="img-soal">`;
+    });
+
+    return raw.trim();
+}
+
+function konversiTabelWordKeFormatCbt(containerEl) {
+    const rows = Array.from(containerEl.querySelectorAll("tr"));
+    if (rows.length === 0) return "";
+
+    const blocks = [];
+    let currentSoalText = "";
+    let currentOptions = [];
+
+    const flushSoal = () => {
+        const cleanSoal = currentSoalText.trim();
+        if (cleanSoal || currentOptions.length > 0) {
+            let block = `SOAL\n${cleanSoal}\n`;
+            currentOptions.forEach(opt => {
+                block += `OPSI\n${opt.text}\n${opt.isCorrect ? "1" : "0"}\n`;
+            });
+            blocks.push(block.trim());
+        }
+        currentSoalText = "";
+        currentOptions = [];
+    };
+
+    rows.forEach(tr => {
+        const cells = Array.from(tr.querySelectorAll("th, td"));
+        if (cells.length < 2) return;
+
+        const col1 = bersihkanSelTabelHtml(cells[0]).replace(/<br><img[^>]*>/gi, "").trim();
+        const col1Upper = col1.toUpperCase();
+        const col2 = bersihkanSelTabelHtml(cells[1]);
+        const col3 = cells.length >= 3
+            ? bersihkanSelTabelHtml(cells[2]).replace(/<br><img[^>]*>/gi, "").trim()
+            : "";
+
+        if (
+            col1Upper === "JENIS" ||
+            col1Upper.startsWith("FORM IMPORT") ||
+            col1Upper.startsWith("JAWABAN DIISI") ||
+            col1Upper.startsWith("CELL YANG BERWARNA")
+        ) {
+            return;
+        }
+
+        if (col1Upper === "SOAL") {
+            flushSoal();
+            currentSoalText = col2;
+        } else if (col1Upper === "JAWABAN" || col1Upper === "OPSI" || col1Upper === "PILIHAN") {
+            if (!col2) return;
+            const flagMatch = col3.match(/\b([01])\b/);
+            const isCorrect = flagMatch ? flagMatch[1] === "1" : false;
+            currentOptions.push({ text: col2, isCorrect });
+        }
+    });
+
+    flushSoal();
+    return blocks.join("\n\n");
+}
+
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1351,7 +1440,11 @@ async function bacaFileSoalOtomatis(event) {
                 } catch (err) {}
             }
 
-            document.getElementById('soalBatchText').value = konversiHtmlKeFormatCbtDenganLink(tempDiv);
+            const hasTable = tempDiv.querySelector("table tr") !== null;
+            document.getElementById('soalBatchText').value = hasTable
+                ? konversiTabelWordKeFormatCbt(tempDiv)
+                : konversiHtmlKeFormatCbtDenganLink(tempDiv);
+
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
             alert(`File Word berhasil diproses!${infoUkuran}`);
@@ -1504,7 +1597,7 @@ async function simpanJadwalDanSoal() {
         let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
         if (parsedSoal.length === 0) {
             hideLoading();
-            alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... JAWABAN ... 0/1).");
+            alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... OPSI/JAWABAN ... 0/1).");
             return;
         }
 
@@ -1566,17 +1659,43 @@ async function simpanJadwalDanSoal() {
 }
 
 function parseSoalDariTeks(text, mapelName, kelasArray) {
-    let lines = text.split('\n');
-    let soalList = [];
-    let currentSoal = null;
-    let optionsMap = {};
-    let optionKeys = ['A', 'B', 'C', 'D', 'E'];
-    let optIdx = 0;
+    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+    const soalList = [];
+    const optionKeys = ["A", "B", "C", "D", "E"];
 
-    lines.forEach(line => {
-        let l = line.trim();
-        if (l.startsWith("SOAL")) {
-            if (currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+    let currentSoal = null;
+    let optionsList = [];
+    let mode = null; // 'SOAL' | 'OPSI' | 'FLAG'
+
+    const finalizeSoal = () => {
+        if (!currentSoal) return;
+        const optionsMap = {};
+        let kunciPlain = "A";
+
+        optionsList.slice(0, 5).forEach((opt, idx) => {
+            const key = optionKeys[idx];
+            optionsMap[key] = opt.text;
+            if (opt.isCorrect) {
+                kunciPlain = key;
+            }
+        });
+
+        currentSoal.soal = currentSoal.soal.trim();
+        currentSoal.options = optionsMap;
+        currentSoal.kunci = encodeKunciGist(kunciPlain);
+
+        if (currentSoal.soal && Object.keys(optionsMap).length >= 2) {
+            soalList.push(currentSoal);
+        }
+    };
+
+    lines.forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+
+        const upper = line.toUpperCase();
+        if (upper === "SOAL") {
+            finalizeSoal();
             currentSoal = {
                 id: Math.floor(Date.now() + Math.random() * 100000),
                 mapel: mapelName,
@@ -1585,21 +1704,47 @@ function parseSoalDariTeks(text, mapelName, kelasArray) {
                 options: {},
                 kunci: "K"
             };
-            optionsMap = {};
-            optIdx = 0;
-        } else if (l.startsWith("JAWABAN")) {
-        } else if (currentSoal && !currentSoal.soal) {
-            currentSoal.soal = l;
-        } else if (currentSoal) {
-            if (l === "0" || l === "1") {
-                if (l === "1" && optionKeys[optIdx - 1]) currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
-            } else if (l.length > 0 && optIdx < 5) {
-                optionsMap[optionKeys[optIdx]] = l;
-                optIdx++;
+            optionsList = [];
+            mode = "SOAL";
+            return;
+        }
+
+        if (!currentSoal) return;
+
+        if (upper === "OPSI" || upper === "JAWABAN") {
+            optionsList.push({ text: "", isCorrect: false });
+            mode = "OPSI";
+            return;
+        }
+
+        if (mode === "SOAL") {
+            currentSoal.soal = currentSoal.soal
+                ? `${currentSoal.soal}<br>${line}`
+                : line;
+            return;
+        }
+
+        if (mode === "OPSI") {
+            const lastOpt = optionsList[optionsList.length - 1];
+            if (!lastOpt) return;
+            if ((line === "0" || line === "1") && lastOpt.text !== "") {
+                lastOpt.isCorrect = line === "1";
+                mode = "FLAG";
+            } else {
+                lastOpt.text = lastOpt.text ? `${lastOpt.text}<br>${line}` : line;
+            }
+            return;
+        }
+
+        if (mode === "FLAG") {
+            const lastOpt = optionsList[optionsList.length - 1];
+            if (lastOpt && (line === "0" || line === "1")) {
+                lastOpt.isCorrect = line === "1";
             }
         }
     });
-    if (currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+
+    finalizeSoal();
     return soalList;
 }
 
