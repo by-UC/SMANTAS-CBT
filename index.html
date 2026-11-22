@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal CBT - SMA Negeri 1 Tanjungsari</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Axios & CryptoJS & SheetJS & Mammoth -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+<!-- AREA CETAK KARTU SISWA (TINGGI 3 CM) -->
+<div id="printKartuArea"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
+    <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang memproses data.</p>
+</div>
+
+<!-- OVERLAY PAKSA FULLSCREEN UNTUK MOBILE / BROWSER -->
+<div id="fullscreenGuardOverlay">
+    <div class="fs-guard-box">
+        <h3 style="margin:0 0 8px 0; color:#dc3545;">Mode Layar Penuh (Full Screen) Wajib!</h3>
+        <p style="font-size:12.5px; color:#444; margin:0 0 12px 0;">
+            Sistem CBT mewajibkan tampilan <b>Full Screen</b> selama ujian berlangsung. Tekan tombol di bawah untuk mengaktifkan Full Screen kembali.
+        </p>
+        <button type="button" onclick="aktifkanFullscreenDariOverlay()" style="background:#28a745; padding:10px 14px; font-size:13.5px;">
+            ⛶ Aktifkan Full Screen Sekarang
+        </button>
+    </div>
+</div>
+
+<!-- MODAL LIHAT SOAL UPLOAD -->
+<div id="modalLihatSoal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <b id="modalSoalTitle" style="font-size: 14px;">Daftar Soal Terupload</b>
+            <button onclick="tutupModalSoal()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalSoalBody">
+            Memuat soal...
+        </div>
+        <div class="modal-footer">
+            <button id="btnHapusSoalPaket" style="width:auto; background:#dc3545; padding:6px 12px; font-size:11.5px;">Hapus Paket Soal Ini dari Gist</button>
+            <button onclick="tutupModalSoal()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PILIH EXPORT HASIL PER KELAS (.XLSX) -->
+<div id="modalExportHasil" class="modal-overlay">
+    <div class="modal-box modal-sm">
+        <div class="modal-header">
+            <b id="modalExportTitle" style="font-size: 14px;">Export Hasil Ujian (.xlsx)</b>
+            <button onclick="tutupModalExport()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalExportBody">
+            Pilih kelas untuk mengunduh rekap nilai Excel:
+        </div>
+        <div class="modal-footer">
+            <button onclick="tutupModalExport()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:11.5px;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PREVIEW & CETAK KARTU SISWA (TINGGI 3 CM) -->
+<div id="modalCetakKartu" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <b id="modalKartuTitle" style="font-size: 14px;">Kartu Login Siswa (Tinggi 3 cm)</b>
+            <button onclick="tutupModalKartu()" style="width:auto; padding:3px 9px; background:#dc3545; font-size:11.5px;">Tutup ✕</button>
+        </div>
+        <div class="modal-body" id="modalKartuBody"></div>
+        <div class="modal-footer">
+            <button type="button" onclick="eksekusiCetakKartu()" style="width:auto; background:#28a745; padding:6px 14px; font-size:12px;">🖨️ Cetak Sekarang</button>
+            <button type="button" onclick="tutupModalKartu()" style="width:auto; background:#6c757d; padding:6px 12px; font-size:12px;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<div class="container login-compact" id="mainContainer">
+    <div class="header-box centered-header" id="mainHeaderBox">
+        <div class="header-brand">
+            <h2>SMANTAS-CBT</h2>
+            <h3>Portal Ujian Online Terintegrasi</h3>
+        </div>
+        <div class="header-admin-inline" id="headerAdminInline">
+            <span class="header-admin-title">Dashboard Admin CBT</span>
+            <div class="header-admin-actions">
+                <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 5px 10px; background: #17a2b8; font-size: 11.5px;">Refresh Data</button>
+                <button onclick="logoutAdmin()" style="width: auto; padding: 5px 10px; background: #dc3545; font-size: 11.5px;">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1 TOMBOL TOGGLE ROLE DI ATAS -->
+    <div class="single-role-bar" id="tabMenu">
+        <button type="button" id="btnRoleToggle" class="btn-role-toggle" onclick="toggleRoleLogin()">Login Siswa</button>
+    </div>
+
+    <!-- 1. VIEW LOGIN SISWA -->
+    <div id="viewLoginSiswa" class="section-view active">
+        <div class="form-group">
+            <label>Username / NIS:</label>
+            <input type="text" id="nis" placeholder="Masukkan Username / NIS...">
+        </div>
+        <div class="form-group">
+            <label>Password Siswa:</label>
+            <input type="password" id="passSiswa" placeholder="Masukkan password...">
+        </div>
+        <button onclick="autentikasiSiswa()">MASUK PORTAL</button>
+    </div>
+
+    <!-- 1B. VIEW PILIH UJIAN SISWA (Setelah Berhasil Login) -->
+    <div id="viewPilihUjianSiswa" class="section-view">
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center;">
+            <b id="salamSiswa" style="color: #008080; font-size: 14px;">Selamat Datang, Siswa</b><br>
+            <span id="infoKelasSiswa" style="font-size: 12.5px; color: #555;">Kelas: -</span>
+        </div>
+        <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; gap:6px; flex-wrap:wrap;">
+                <label style="margin-bottom:0;">Mata Pelajaran Ujian (Sesuai Kelas & Waktu Sekarang):</label>
+                <button type="button" onclick="muatUlangDaftarMapelSiswa()" style="width:auto; padding:3px 9px; font-size:11px; background:#17a2b8;">↻ Muat Ulang Mapel</button>
+            </div>
+            <select id="pilihMapelAktif">
+                <option value="">-- Pilih Mata Pelajaran --</option>
+            </select>
+        </div>
+        <div class="form-group" id="groupTokenUjianSiswa">
+            <label>Token Ujian (4 Digit):</label>
+            <input type="text" id="inputTokenSiswa" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Masukkan 4 digit token dari pengawas..." style="font-family:monospace; font-size:15px; letter-spacing:3px; text-align:center;">
+        </div>
+        <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 10px; border-radius:4px; font-size:11.5px; margin-bottom:10px;">
+            <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan ujian langsung dikumpulkan!
+        </div>
+        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN (FULL SCREEN)</button>
+        <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 8px;">Logout / Ganti Perangkat</button>
+    </div>
+
+    <!-- 2. VIEW LOGIN ADMIN -->
+    <div id="viewLoginAdmin" class="section-view">
+        <div class="form-group">
+            <label>Password Admin:</label>
+            <input type="password" id="adminPassword" placeholder="Masukkan password admin...">
+        </div>
+        <button onclick="prosesLoginAdmin()" style="background: #6c757d;">MASUK PANEL ADMIN</button>
+        <div id="errorAdmin" class="error-msg">Password admin salah!</div>
+    </div>
+
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
+    <div id="viewUjianSiswa" class="section-view">
+        <div class="exam-security-bar">
+            <span>MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!</span>
+            <button type="button" onclick="masukFullscreenWajib()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#856404; color:#fff;">⛶ Layar Penuh</button>
+        </div>
+        <div class="exam-header-info-bar">
+            <span id="infoUjianText">Mata Pelajaran: Memuat...</span>
+            <span id="examCountdownTimer" class="exam-timer-badge" title="Sisa waktu ujian">⏱ --:--:--</span>
+        </div>
+
+        <div class="soal-nav-bar">
+            <div class="soal-nav-left">
+                <button type="button" id="btnPrevSoal" class="btn-nav-soal btn-before" onclick="navigasiSoal(-1)">← Before</button>
+                <button type="button" id="btnNextSoal" class="btn-nav-soal" onclick="navigasiSoal(1)">Next →</button>
+            </div>
+            <div class="soal-progress-info">
+                <span id="labelNomorSoal">Soal 1 dari 1</span>
+                <span class="soal-progress-sub" id="labelStatusTerjawab">Terjawab: 0 / 1</span>
+            </div>
+            <button type="button" id="btnSelesaiUjian" class="btn-selesai-top" onclick="selesaiUjian(false)">Selesaikan & Kirim Ujian</button>
+        </div>
+
+        <div id="soalContainer"></div>
+    </div>
+
+    <!-- 4. VIEW PANEL ADMIN MASTER -->
+    <div id="viewPanelAdmin" class="section-view">
+        <div class="admin-tab-menu">
+            <button class="admin-tab-btn active" onclick="switchAdminTab('monitoring')">Monitoring Akun</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('ujian')">Daftar Ujian</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('master')">Kelas & Mapel</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('siswa')">Data Siswa</button>
+            <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
+        </div>
+
+        <!-- TAB 1: MONITORING -->
+        <div id="adminTabMonitoring" class="admin-view active">
+            <div class="monitoring-top-row">
+                <div class="admin-card monitoring-token-col">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px; flex-wrap:wrap;">
+                        <h4 style="margin: 0; color: #008080; font-size: 12.5px;">Token Ujian Otomatis (Google Drive)</h4>
+                        <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
+                    </div>
+                    <div class="token-live-box">
+                        <div>
+                            <div style="font-size:10px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
+                            <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                        </div>
+                        <div class="token-live-timer">
+                            <div>Berganti: <span id="adminTokenCountdown">05:00</span></div>
+                            <div style="display:flex; gap:3px; justify-content:flex-end; margin-top:3px;">
+                                <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 6px; font-size:9.5px;">📋 Salin</button>
+                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:9.5px;">Acak</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card monitoring-sesi-col">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
+                        <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 165px; padding: 3px 6px; font-size: 11px;">
+                            <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #008080;">Cari</button>
+                            <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 3px 7px; font-size: 10.5px; background: #6c757d;">Reset</button>
+                            <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Sesi</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="compact-monitoring-table">
+                            <thead>
+                                <tr>
+                                    <th>NIS / Username</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Status Sesi</th>
+                                    <th>Perangkat</th>
+                                    <th style="width: 210px;">Aksi Reset</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySesiAktif">
+                                <tr><td colspan="6" style="text-align:center;">Memuat data sesi dari GAS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card" style="margin-bottom:0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
+                    <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (DB_Log_login_CBT)</h4>
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 165px; padding: 3px 6px; font-size: 11px;">
+                        <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Log</button>
+                        <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #dc3545;">🗑️ Hapus Semua Log</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelSiswaLogin" class="compact-monitoring-table">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Kelas</th>
+                                <th>Mata Pelajaran</th>
+                                <th>Status</th>
+                                <th>Nilai</th>
+                                <th style="width: 85px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySiswaLogin">
+                            <tr><td colspan="6" style="text-align:center;">Memuat data log dari Spreadsheet...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: DAFTAR UJIAN -->
+        <div id="adminTabUjian" class="admin-view">
+            <div class="ujian-two-col">
+                <div class="admin-card ujian-col-left" id="cardFormJadwal">
+                    <h4 id="judulFormJadwal" style="margin: 0 0 8px 0; color: #008080;">Buat Jadwal</h4>
+                    <input type="hidden" id="editJadwalOrigIndices" value="">
+                    <input type="hidden" id="editJadwalOrigMapel" value="">
+                    <input type="hidden" id="editJadwalOrigKelas" value="">
+                    <div class="form-group">
+                        <label>Pilih Mata Pelajaran:</label>
+                        <select id="jadwalMapel">
+                            <option value="">-- Pilih Mapel --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pilih Kelas (Bisa pilih lebih dari 1):</label>
+                        <div class="checkbox-grid" id="checkboxKelasContainer"></div>
+                    </div>
+
+                    <div class="jadwal-time-row form-group">
+                        <div class="time-col">
+                            <label>Waktu Mulai Ujian:</label>
+                            <input type="datetime-local" id="waktuMulai" onchange="hitungWaktuSelesaiOtomatis()">
+                        </div>
+                        <div class="jp-inline-col">
+                            <label id="labelJumlahJp">JP (40m):</label>
+                            <input type="number" id="jumlahJp" min="1" max="20" value="1" oninput="hitungWaktuSelesaiOtomatis()" onchange="hitungWaktuSelesaiOtomatis()">
+                        </div>
+                        <div class="time-col">
+                            <label>Waktu Selesai (Terkunci):</label>
+                            <input type="datetime-local" id="waktuSelesai" class="locked-input" readonly tabindex="-1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="labelSoalUploadJadwal">Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:</label>
+                        <input type="file" id="fileSoalAny" accept=".docx, .txt" onchange="bacaFileSoalOtomatis(event)">
+                        <textarea id="soalBatchText" rows="4" placeholder="Atau paste format soal di sini (SOAL ... JAWABAN ... 0/1)"></textarea>
+                    </div>
+                    <div class="row-flex" style="margin-top:2px;">
+                        <button id="btnSimpanJadwal" onclick="simpanJadwalDanSoal()" style="background: #28a745; flex: 2;">Simpan Jadwal & Upload Soal</button>
+                        <button type="button" id="btnBatalEditJadwal" onclick="batalEditJadwal()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
+                    </div>
+                </div>
+
+                <div class="admin-card ujian-col-right">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+                        <h4 style="margin: 0; color: #008080;">Daftar Ujian Aktif</h4>
+                        <button onclick="lihatSemuaSoalGist()" class="btn-sm btn-info" style="margin:0; padding:3px 8px; font-size:10px;">Lihat Semua Bank Soal (Gist)</button>
+                    </div>
+                    <div class="table-jadwal-wrap">
+                        <table class="table-jadwal-aktif">
+                            <thead>
+                                <tr>
+                                    <th class="col-mapel">Mata Pelajaran</th>
+                                    <th class="col-kelas">Kelas</th>
+                                    <th class="col-jp">JP</th>
+                                    <th class="col-waktu">Mulai</th>
+                                    <th class="col-waktu">Selesai</th>
+                                    <th class="col-aksi">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyJadwal"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: KELOLA KELAS & MAPEL -->
+        <div id="adminTabMaster" class="admin-view">
+            <div class="admin-card">
+                <h4 style="margin: 0 0 8px 0; color: #008080;">Kelola Kelas & Mata Pelajaran</h4>
+                <div class="row-flex">
+                    <div class="form-group" style="margin-bottom:4px;">
+                        <label>Tambah Kelas Baru:</label>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="inputKelasBaru" placeholder="Contoh: XI-IPA-2">
+                            <button onclick="tambahKelas()" style="width:auto; background:#008080; padding:7px 12px; white-space:nowrap;">Tambah</button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:4px;">
+                        <label>Tambah Mapel Baru:</label>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="inputMapelBaru" placeholder="Contoh: Sejarah Indonesia">
+                            <button onclick="tambahMapel()" style="width:auto; background:#008080; padding:7px 12px; white-space:nowrap;">Tambah</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row-flex">
+                <div class="admin-card" style="flex:1;">
+                    <h4 style="margin: 0 0 6px 0; color: #008080;">Daftar Kelas</h4>
+                    <div id="listKelas" class="master-matrix-grid"></div>
+                </div>
+                <div class="admin-card" style="flex:1;">
+                    <h4 style="margin: 0 0 6px 0; color: #008080;">Daftar Mata Pelajaran</h4>
+                    <div id="listMapel" class="master-matrix-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: DATA SISWA & UPLOAD -->
+        <div id="adminTabSiswa" class="admin-view">
+            <div class="siswa-top-two-col">
+                <div class="admin-card">
+                    <div>
+                        <h4 id="judulFormSiswaSatuan" style="margin: 0 0 8px 0; color: #008080;">Tambah Siswa</h4>
+                        <input type="hidden" id="editSiswaIndex" value="-1">
+                        <div class="row-flex">
+                            <div class="form-group">
+                                <label>Nama Lengkap Siswa:</label>
+                                <input type="text" id="inputNamaSiswa" placeholder="Contoh: Ahmad Fauzi">
+                            </div>
+                            <div class="form-group">
+                                <label>Kelas:</label>
+                                <select id="selectKelasSiswaSatuan">
+                                    <option value="">-- Pilih Kelas --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row-flex">
+                            <div class="form-group">
+                                <label>Username / NIS:</label>
+                                <input type="text" id="inputUsernameSiswa" placeholder="Contoh: 262710001">
+                            </div>
+                            <div class="form-group">
+                                <label>Password:</label>
+                                <input type="text" id="inputPasswordSiswa" placeholder="Masukkan password siswa...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row-flex" style="margin-top: 2px;">
+                        <button id="btnSimpanSiswaSatuan" onclick="simpanSiswaSatuan()" style="background: #008080; flex: 2;">Simpan Siswa</button>
+                        <button id="btnBatalEditSiswa" onclick="batalEditSiswa()" style="background: #6c757d; flex: 1; display: none;">Batal Edit</button>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Upload Data Siswa</h4>
+                        <div class="form-group" style="margin-bottom: 6px;">
+                            <label>Pilih File Excel (.xlsx / .xls):</label>
+                            <input type="file" id="fileSiswaExcel" accept=".xlsx, .xls" onchange="importDataSiswaToGist(event)">
+                        </div>
+                    </div>
+                    <small style="color: #666; font-size:11px;">Format kolom template: <b>Nama, Kelas, Username, Password</b></small>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <h4 style="margin: 0; color: #008080;">Daftar Siswa</h4>
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        <select id="filterKelasKartu" onchange="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 7px; font-size: 11.5px;">
+                            <option value="">Semua Kelas</option>
+                        </select>
+                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="width: 165px; padding: 4px 7px; font-size: 11.5px;">
+                        <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 4px 8px; font-size: 11px; background: #008080;">Cari</button>
+                        <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
+                        <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #28a745;">🖨️ Cetak Kartu (3 cm)</button>
+                        <button type="button" onclick="hapusSemuaSiswa()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #dc3545;">🗑️ Hapus Semua Siswa</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Kelas</th>
+                                <th>Username</th>
+                                <th>Password</th>
+                                <th style="width: 155px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDaftarSiswa">
+                            <tr><td colspan="5" style="text-align:center;">Memuat data dari Gist...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: PENGATURAN -->
+        <div id="adminTabSettings" class="admin-view">
+            <div class="settings-top-three-col">
+                <div class="admin-card">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:6px; flex-wrap:wrap;">
+                            <h4 style="margin: 0; color: #008080;">Pengaturan Token Ujian (Google Drive)</h4>
+                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
+                        </div>
+                        <div class="row-flex" style="margin-bottom:6px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Interval Ganti Token (Menit):</label>
+                                <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Status Wajib Token:</label>
+                                <select id="settingWajibToken">
+                                    <option value="true">Aktif (Wajib)</option>
+                                    <option value="false">Nonaktif</option>
+                                </select>
+                            </div>
+                        </div>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">Kode token aktif & tombol Salin/Acak tersedia di tab <b>Monitoring Akun</b>.</small>
+                    </div>
+                    <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Token ke Drive</button>
+                </div>
+
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
+                        <div class="form-group">
+                            <label>Durasi 1 JP (dalam Menit):</label>
+                            <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
+                            <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">Tersimpan ke Gist untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                        </div>
+                    </div>
+                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
+                </div>
+
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
+                        <label>Password Admin Saat Ini:</label>
+                        <div class="pass-display-box">
+                            <span id="currentAdminPassDisplay">••••••••</span>
+                            <button type="button" onclick="toggleLihatPasswordAdmin()" class="btn-sm btn-info" id="btnTogglePassAdmin" style="margin:0;">Lihat</button>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label>Ubah Password Admin Baru:</label>
+                            <input type="text" id="newAdminPassword" placeholder="Masukkan password admin baru...">
+                        </div>
+                    </div>
+                    <button onclick="ubahPasswordAdmin()" style="background: #17a2b8; padding: 7px 10px;">Simpan Password Baru</button>
+                </div>
+            </div>
+
+            <div class="settings-backup-danger-row">
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                        <div class="row-flex">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Backup Database (.json):</label>
+                                <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Restore dari File (.json):</label>
+                                <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                    <div>
+                        <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 11.5px; color: #555; margin: 0 0 8px 0;">Menghapus seluruh data siswa, jadwal ujian Gist, sesi/log GAS, hasil ujian & gambar soal di Drive. Pastikan sudah Backup terlebih dahulu.</p>
+                    </div>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px;">Hapus Seluruh Database (Reset DB)</button>
+                </div>
+            </div>
+
+            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd; margin-bottom:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
+                        <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
+                    </div>
+                    <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 6px 12px; width:auto; font-size:11.5px;">🔄 Cek Limit Gist API</button>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Sisa Kuota (Remaining)</div>
+                        <div id="gistLimitRemaining" style="font-size:16px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Terpakai (Used)</div>
+                        <div id="gistLimitUsed" style="font-size:16px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Reset Kuota Pada</div>
+                        <div id="gistLimitReset" style="font-size:13px; font-weight:bold; color:#333; font-family:monospace;">-</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
+                        <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Urutan Script: 1. Core -> 2. Student -> 3. Admin -->
+<script src="js/app-core.js"></script>
+<script src="js/student.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
