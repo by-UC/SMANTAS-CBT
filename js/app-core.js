@@ -2,7 +2,7 @@
 const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwf_mXyaLFC1yIGHMf8JcdtHnNhNKeHODkhSvek3LZJe_XNaPIvVYzr2ZkGiIgBhT-X/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwN5mAV37rH9aMJCEYBAr9SfKRxVqIxpsmImYgUc9qFgMGg4QwxL21ltpgSQiF0hPVX/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
