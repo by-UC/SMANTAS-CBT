@@ -219,10 +219,7 @@ function serializeSoalJsonOneMapelPerLine(soalArrayOrMapelRows) {
     const mapelRows = normalisasiKeBarisPerMapel(soalArrayOrMapelRows);
     if (mapelRows.length === 0) return "[]";
     const lines = mapelRows.map(row => `  ${JSON.stringify(row)}`);
-    return `[
-${lines.join(",
-")}
-]`;
+    return `[\n${lines.join(",\n")}\n]`;
 }
 
 function parseSoalJsonFlexible(rawContent) {
@@ -238,9 +235,7 @@ function parseSoalJsonFlexible(rawContent) {
             rawItems = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? [parsed] : []);
         } catch (_) {
             const lines = text
-                .split(/
-?
-/)
+                .split(/\r?\n/)
                 .map(l => l.trim())
                 .filter(l => l && l !== "[" && l !== "]")
                 .map(l => l.endsWith(",") ? l.slice(0, -1).trim() : l);
