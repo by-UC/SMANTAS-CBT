@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Portal CBT - SMA Negeri 1 Tanjungsari</title>
     <!-- Axios & CryptoJS & SheetJS & Mammoth -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -11,23 +11,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 8px; background: #f4f7f6; color: #333; }
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 6px; background: #f4f7f6; color: #333; }
         
         /* Container default (lebar untuk ujian & admin dashboard) */
         .container { 
             background: white; 
-            padding: 14px 16px; 
+            padding: 12px 14px; 
             border-radius: 8px; 
             max-width: 1180px; 
-            margin: 10px auto; 
+            margin: 6px auto; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
         }
         /* Mode diperkecil khusus halaman login */
         .container.login-compact {
             max-width: 420px;
-            margin-top: 32px;
-            padding: 18px;
+            margin-top: 24px;
+            padding: 16px;
         }
 
         h2, h3 { text-align: center; color: #0056b3; }
@@ -35,11 +39,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
             text-align: left;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border-bottom: 2px solid #008080;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
         }
         .header-box.centered-header {
             display: block;
@@ -47,20 +51,20 @@
         }
         .header-brand h2 {
             margin: 0 0 2px 0;
-            font-size: 19px;
+            font-size: 18px;
             text-align: inherit;
         }
         .header-brand h3 {
             color: #008080;
             margin: 0;
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: normal;
             text-align: inherit;
         }
         .header-admin-inline {
             display: none;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
             justify-content: flex-end;
         }
@@ -68,7 +72,7 @@
             display: flex;
         }
         .header-admin-title {
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
             color: #008080;
             white-space: nowrap;
@@ -135,30 +139,101 @@
         }
 
         /* Tab Navigation Admin */
-        .admin-tab-menu { display: flex; margin-bottom: 10px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
-        .admin-tab-btn { flex: 1; padding: 7px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 85px; border-radius: 4px 4px 0 0; }
+        .admin-tab-menu { display: flex; margin-bottom: 8px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; gap: 2px; }
+        .admin-tab-btn { flex: 1; padding: 6px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 85px; border-radius: 4px 4px 0 0; }
         .admin-tab-btn.active { background: #008080; color: white; }
+
+        /* MONITORING TOP ROW: TOKEN KIRI + KONTROL SESI KANAN */
+        .monitoring-top-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            margin-bottom: 8px;
+        }
+        .monitoring-token-col {
+            flex: 0 0 285px;
+            min-width: 255px;
+            margin-bottom: 0 !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .monitoring-sesi-col {
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-bottom: 0 !important;
+        }
+        @media (max-width: 880px) {
+            .monitoring-top-row {
+                flex-direction: column;
+            }
+            .monitoring-token-col {
+                flex: 1 1 auto;
+                width: 100%;
+            }
+        }
+
+        /* TABEL RAPAT KHUSUS MONITORING AKUN */
+        .compact-monitoring-table th,
+        .compact-monitoring-table td {
+            padding: 2.5px 5px;
+            font-size: 11.5px;
+            line-height: 1.2;
+        }
         
-        .soal-box { margin-bottom: 14px; border-bottom: 1px solid #dee2e6; padding-bottom: 12px; user-select: none; }
-        .soal-box p { font-size: 14.5px; line-height: 1.45; font-weight: bold; margin-top: 0; }
+        .soal-box { margin-bottom: 12px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; user-select: none; }
+        .soal-box p { font-size: 14.5px; line-height: 1.45; font-weight: bold; margin-top: 0; word-break: break-word; }
         img.img-soal { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; border: 1px solid #ddd; display: block; }
-        .option-label { display: block; margin-bottom: 6px; padding: 9px 11px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; font-size: 13.5px; transition: background 0.15s, border-color 0.15s; }
+        .option-label { display: block; margin-bottom: 6px; padding: 10px 11px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 5px; cursor: pointer; font-size: 13.5px; transition: background 0.15s, border-color 0.15s; word-break: break-word; }
         .option-label:hover { background: #f0f8f8; border-color: #008080; }
         .option-label.selected-opt { background: #e6f4f4; border-color: #008080; }
-        .option-label input { margin-right: 8px; }
+        .option-label input { margin-right: 8px; transform: scale(1.1); }
+
+        /* INFO UJIAN + TIMER HITUNG MUNDUR */
+        .exam-header-info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            background: #e9ecef;
+            padding: 7px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 12.5px;
+        }
+        .exam-timer-badge {
+            background: #0056b3;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        .exam-timer-badge.timer-warning {
+            background: #dc3545;
+            animation: pulseTimer 1s infinite;
+        }
+        @keyframes pulseTimer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.72; }
+        }
 
         /* NAVIGASI BEFORE / NEXT DI BAWAH MATA PELAJARAN */
         .soal-nav-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 7px 10px;
+            padding: 7px 9px;
             border-radius: 4px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .soal-nav-left {
             display: flex;
@@ -168,8 +243,8 @@
         }
         .btn-nav-soal {
             width: auto;
-            min-width: 88px;
-            padding: 7px 12px;
+            min-width: 82px;
+            padding: 7px 10px;
             font-size: 12.5px;
             background: #008080;
             color: #fff;
@@ -177,7 +252,7 @@
         }
         .btn-selesai-top {
             width: auto;
-            padding: 7px 14px;
+            padding: 7px 12px;
             font-size: 12.5px;
             background: #28a745;
             color: #fff;
@@ -198,6 +273,7 @@
             font-weight: bold;
             color: #0056b3;
             flex: 1;
+            min-width: 110px;
         }
         .soal-progress-sub {
             display: block;
@@ -205,6 +281,20 @@
             font-weight: normal;
             color: #555;
             margin-top: 1px;
+        }
+        @media (max-width: 560px) {
+            .soal-nav-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .soal-nav-left {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+            .btn-nav-soal, .btn-selesai-top {
+                width: 100%;
+            }
         }
         
         .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -387,7 +477,7 @@
             }
         }
 
-        /* 1 BARIS: TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN */
+        /* PENGATURAN: TOKEN DRIVE, DURASI JP, & PASSWORD ADMIN */
         .settings-top-three-col {
             display: flex;
             gap: 10px;
@@ -405,17 +495,36 @@
                 flex-direction: column;
             }
         }
+
+        /* PENGATURAN BARIS 2: BACKUP/RESTORE (KIRI) & ZONA BERBAHAYA (KANAN) */
+        .settings-backup-danger-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .settings-backup-danger-row > .admin-card {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 880px) {
+            .settings-backup-danger-row {
+                flex-direction: column;
+            }
+        }
         
         .error-msg { color: red; font-size: 12px; margin-top: 6px; text-align: center; display: none; }
         .section-view, .admin-view { display: none; }
         .section-view.active, .admin-view.active { display: block; }
-        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
+        .admin-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 9px 11px; border-radius: 6px; margin-bottom: 8px; }
         .admin-card h4 { font-size: 13px; }
         
         /* Table Responsive */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 4px; min-width: 520px; }
-        th, td { border: 1px solid #ddd; padding: 5px 7px; text-align: left; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 3px; min-width: 520px; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 12px; }
         th { background-color: #008080; color: white; }
         
         .btn-sm { padding: 3px 7px; font-size: 10.5px; width: auto; border-radius: 3px; margin-right: 3px; margin-bottom: 1px; }
@@ -432,14 +541,14 @@
         .reset-aksi-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 3px;
+            gap: 2px;
             align-items: center;
         }
         .btn-reset-mapel {
             width: auto;
-            padding: 3px 6px;
-            font-size: 10px;
-            line-height: 1.15;
+            padding: 2px 5px;
+            font-size: 9.5px;
+            line-height: 1.1;
             border-radius: 3px;
             background: #ffc107;
             color: #212529;
@@ -450,9 +559,9 @@
         }
         .btn-reset-perangkat {
             width: auto;
-            padding: 3px 6px;
-            font-size: 10px;
-            line-height: 1.15;
+            padding: 2px 5px;
+            font-size: 9.5px;
+            line-height: 1.1;
             border-radius: 3px;
             background: #fd7e14;
             color: #ffffff;
@@ -535,22 +644,22 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
             background: #e6f4f4;
             border: 1px solid #008080;
             border-radius: 5px;
-            padding: 7px 10px;
-            margin-bottom: 8px;
+            padding: 6px 8px;
+            margin-bottom: 0;
         }
         .token-live-code {
             font-family: monospace;
-            font-size: 20px;
+            font-size: 19px;
             font-weight: bold;
-            letter-spacing: 4px;
+            letter-spacing: 3px;
             color: #0056b3;
         }
         .token-live-timer {
-            font-size: 11px;
+            font-size: 10.5px;
             color: #006666;
             font-weight: bold;
             text-align: right;
@@ -560,16 +669,16 @@
         .status-pill-wrap {
             display: inline-flex;
             flex-wrap: wrap;
-            gap: 3px;
+            gap: 2px;
             align-items: center;
         }
         .status-pill {
             display: inline-block;
-            padding: 2.5px 7px;
-            border-radius: 4px;
-            font-size: 10.5px;
+            padding: 1.5px 6px;
+            border-radius: 3px;
+            font-size: 10px;
             font-weight: bold;
-            line-height: 1.2;
+            line-height: 1.15;
             white-space: nowrap;
         }
         .status-pill-curang {
@@ -598,12 +707,40 @@
             background: #fff3cd;
             border: 1px solid #ffeeba;
             color: #856404;
-            padding: 8px 10px;
+            padding: 6px 8px;
             border-radius: 4px;
-            font-size: 11.5px;
-            margin-bottom: 10px;
+            font-size: 11px;
+            margin-bottom: 7px;
             text-align: center;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* OVERLAY PAKSA FULLSCREEN MOBILE / DESKTOP JIKA KELUAR */
+        #fullscreenGuardOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.94);
+            z-index: 99990;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 18px;
+            text-align: center;
+            color: #fff;
+        }
+        .fs-guard-box {
+            background: #ffffff;
+            color: #222;
+            max-width: 380px;
+            width: 100%;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
         }
 
         /* MODAL PREVIEW SOAL ADMIN & MODAL EXPORT PER KELAS */
@@ -737,7 +874,7 @@
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            #mainContainer, #loadingOverlay, .modal-overlay {
+            #mainContainer, #loadingOverlay, .modal-overlay, #fullscreenGuardOverlay {
                 display: none !important;
             }
             #printKartuArea {
@@ -802,6 +939,19 @@
     <div class="spinner"></div>
     <h3 id="loadingText" style="color: white; margin: 0;">Sedang memproses...</h3>
     <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
+</div>
+
+<!-- OVERLAY PAKSA FULLSCREEN UNTUK MOBILE / BROWSER -->
+<div id="fullscreenGuardOverlay">
+    <div class="fs-guard-box">
+        <h3 style="margin:0 0 8px 0; color:#dc3545;">Mode Layar Penuh (Full Screen) Wajib!</h3>
+        <p style="font-size:12.5px; color:#444; margin:0 0 12px 0;">
+            Sistem CBT mewajibkan tampilan <b>Full Screen</b> selama ujian berlangsung. Tekan tombol di bawah untuk mengaktifkan Full Screen kembali.
+        </p>
+        <button type="button" onclick="aktifkanFullscreenDariOverlay()" style="background:#28a745; padding:10px 14px; font-size:13.5px;">
+            ⛶ Aktifkan Full Screen Sekarang
+        </button>
+    </div>
 </div>
 
 <!-- MODAL LIHAT SOAL UPLOAD -->
@@ -892,9 +1042,9 @@
             <span id="infoKelasSiswa" style="font-size: 12.5px; color: #555;">Kelas: -</span>
         </div>
         <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                <label style="margin-bottom:0;">Mata Pelajaran Ujian yang Aktif Sekarang (Sesuai Kelas & Waktu):</label>
-                <button type="button" onclick="muatUlangDaftarMapelSiswa()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#17a2b8;">↻ Muat Ulang Mapel</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; gap:6px; flex-wrap:wrap;">
+                <label style="margin-bottom:0;">Mata Pelajaran Ujian (Sesuai Kelas & Waktu Sekarang):</label>
+                <button type="button" onclick="muatUlangDaftarMapelSiswa()" style="width:auto; padding:3px 9px; font-size:11px; background:#17a2b8;">↻ Muat Ulang Mapel</button>
             </div>
             <select id="pilihMapelAktif">
                 <option value="">-- Pilih Mata Pelajaran --</option>
@@ -921,13 +1071,15 @@
         <div id="errorAdmin" class="error-msg">Password admin salah!</div>
     </div>
 
-    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA (TAMPILAN PER SOAL + BEFORE / NEXT) -->
+    <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA (TAMPILAN PER SOAL + BEFORE / NEXT + TIMER) -->
     <div id="viewUjianSiswa" class="section-view">
         <div class="exam-security-bar">
-            MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!
+            <span>MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!</span>
+            <button type="button" onclick="masukFullscreenWajib()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#856404; color:#fff;">⛶ Layar Penuh</button>
         </div>
-        <div style="background: #e9ecef; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; text-align: center; font-weight: bold; font-size: 13px;" id="infoUjianText">
-            Mata Pelajaran: Memuat...
+        <div class="exam-header-info-bar">
+            <span id="infoUjianText">Mata Pelajaran: Memuat...</span>
+            <span id="examCountdownTimer" class="exam-timer-badge" title="Sisa waktu ujian">⏱ --:--:--</span>
         </div>
 
         <!-- TOMBOL BEFORE, NEXT & SELESAIKAN UJIAN DI BAWAH MATA PELAJARAN SEBELUM SOAL -->
@@ -960,49 +1112,72 @@
 
         <!-- TAB 1: MONITORING SISWA LOGIN UJIAN & SESI PERANGKAT (SESI DI GAS) -->
         <div id="adminTabMonitoring" class="admin-view active">
-            <!-- TABEL KONTROL SESI & RESET MAPEL / PERANGKAT SISWA (GAS) -->
-            <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                    <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
-                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 175px; padding: 4px 7px; font-size: 11.5px;">
-                        <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #008080;">Cari</button>
-                        <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 4px 7px; font-size: 11px; background: #6c757d;">Reset</button>
-                        <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
+            <!-- BARIS ATAS SEJAJAR: KIRI TOKEN AKTIF, KANAN KONTROL SESI PERANGKAT -->
+            <div class="monitoring-top-row">
+                <!-- TOKEN UJIAN OTOMATIS (GOOGLE DRIVE) -->
+                <div class="admin-card monitoring-token-col">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px; flex-wrap:wrap;">
+                        <h4 style="margin: 0; color: #008080; font-size: 12.5px;">Token Ujian Otomatis (Google Drive)</h4>
+                        <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
+                    </div>
+                    <div class="token-live-box">
+                        <div>
+                            <div style="font-size:10px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
+                            <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                        </div>
+                        <div class="token-live-timer">
+                            <div>Berganti: <span id="adminTokenCountdown">05:00</span></div>
+                            <div style="display:flex; gap:3px; justify-content:flex-end; margin-top:3px;">
+                                <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 6px; font-size:9.5px;">📋 Salin</button>
+                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:9.5px;">Acak</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status tersimpan di Google Apps Script. Gunakan <b>Reset-&lt;Mapel&gt;</b> untuk membuka kunci mapel tertentu, atau <b>Reset-Perangkat</b> untuk melepas kunci perangkat.</p>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>NIS / Username</th>
-                                <th>Nama Siswa</th>
-                                <th>Kelas</th>
-                                <th>Status Sesi</th>
-                                <th>Perangkat</th>
-                                <th style="width: 210px;">Aksi Reset</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbodySesiAktif">
-                            <tr><td colspan="6" style="text-align:center;">Memuat data sesi dari GAS...</td></tr>
-                        </tbody>
-                    </table>
+
+                <!-- TABEL KONTROL SESI & RESET MAPEL / PERANGKAT SISWA (GAS) -->
+                <div class="admin-card monitoring-sesi-col">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
+                        <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 165px; padding: 3px 6px; font-size: 11px;">
+                            <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #008080;">Cari</button>
+                            <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 3px 7px; font-size: 10.5px; background: #6c757d;">Reset</button>
+                            <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Sesi</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="compact-monitoring-table">
+                            <thead>
+                                <tr>
+                                    <th>NIS / Username</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Status Sesi</th>
+                                    <th>Perangkat</th>
+                                    <th style="width: 210px;">Aksi Reset</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySesiAktif">
+                                <tr><td colspan="6" style="text-align:center;">Memuat data sesi dari GAS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- TABEL LOG SPREADSHEET -->
-            <div class="admin-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                    <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (Spreadsheet)</h4>
-                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 175px; padding: 4px 7px; font-size: 11.5px;">
-                        <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Log</button>
-                        <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #dc3545;">🗑️ Hapus Semua Log</button>
+            <!-- TABEL LOG SPREADSHEET (DB_Log_login_CBT) -->
+            <div class="admin-card" style="margin-bottom:0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 5px;">
+                    <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (DB_Log_login_CBT)</h4>
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 165px; padding: 3px 6px; font-size: 11px;">
+                        <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #17a2b8;">Refresh Log</button>
+                        <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 3px 8px; font-size: 10.5px; background: #dc3545;">🗑️ Hapus Semua Log</button>
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table id="tabelSiswaLogin">
+                    <table id="tabelSiswaLogin" class="compact-monitoring-table">
                         <thead>
                             <tr>
                                 <th>Nama</th>
@@ -1010,7 +1185,7 @@
                                 <th>Mata Pelajaran</th>
                                 <th>Status</th>
                                 <th>Nilai</th>
-                                <th style="width: 90px;">Aksi</th>
+                                <th style="width: 85px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySiswaLogin">
@@ -1214,41 +1389,29 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- 1 BARIS: TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
+            <!-- 1 BARIS: PENGATURAN TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
             <div class="settings-top-three-col">
-                <!-- KOLOM 1: TOKEN OTOMATIS 4 DIGIT -->
+                <!-- KOLOM 1: PENGATURAN TOKEN GOOGLE DRIVE -->
                 <div class="admin-card">
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:6px; flex-wrap:wrap;">
-                            <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                            <h4 style="margin: 0; color: #008080;">Pengaturan Token Ujian (Google Drive)</h4>
                             <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
-                        </div>
-                        <div class="token-live-box">
-                            <div>
-                                <div style="font-size:10px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
-                                <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
-                            </div>
-                            <div class="token-live-timer">
-                                <div>Berganti: <span id="adminTokenCountdown">05:00</span></div>
-                                <div style="display:flex; gap:3px; justify-content:flex-end; margin-top:3px;">
-                                    <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 6px; font-size:9.5px;">📋 Salin</button>
-                                    <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:9.5px;">Acak</button>
-                                </div>
-                            </div>
                         </div>
                         <div class="row-flex" style="margin-bottom:6px;">
                             <div class="form-group" style="margin-bottom:0;">
-                                <label>Interval (Menit):</label>
+                                <label>Interval Ganti Token (Menit):</label>
                                 <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
                             </div>
                             <div class="form-group" style="margin-bottom:0;">
-                                <label>Wajib Token:</label>
+                                <label>Status Wajib Token:</label>
                                 <select id="settingWajibToken">
                                     <option value="true">Aktif (Wajib)</option>
                                     <option value="false">Nonaktif</option>
                                 </select>
                             </div>
                         </div>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">Kode token aktif & tombol Salin/Acak tersedia di tab <b>Monitoring Akun</b>.</small>
                     </div>
                     <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Token ke Drive</button>
                 </div>
@@ -1284,23 +1447,37 @@
                 </div>
             </div>
 
-            <!-- BARIS 2: BACKUP/RESTORE DB -->
-            <div class="admin-card">
-                <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
-                <div class="row-flex">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Backup Seluruh Database ke File JSON:</label>
-                        <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
+            <!-- BARIS 2 SEJAJAR: BACKUP/RESTORE DB & ZONA BERBAHAYA -->
+            <div class="settings-backup-danger-row">
+                <!-- KIRI: BACKUP & RESTORE -->
+                <div class="admin-card">
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
+                        <div class="row-flex">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Backup Database (.json):</label>
+                                <button onclick="backupDatabaseJson()" style="background: #28a745; padding: 7px 10px;">Download Backup DB (.json)</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Restore dari File (.json):</label>
+                                <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Restore Database dari File Backup (.json):</label>
-                        <input type="file" id="fileRestoreDb" accept=".json" onchange="restoreDatabaseJson(event)">
+                </div>
+
+                <!-- KANAN: ZONA BERBAHAYA -->
+                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                    <div>
+                        <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
+                        <p style="font-size: 11.5px; color: #555; margin: 0 0 8px 0;">Menghapus seluruh data siswa, jadwal ujian Gist, sesi/log GAS, hasil ujian & gambar soal di Drive. Pastikan sudah Backup terlebih dahulu.</p>
                     </div>
+                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px;">Hapus Seluruh Database (Reset DB)</button>
                 </div>
             </div>
 
             <!-- BARIS 3: CEK KUOTA / RATE LIMIT GITHUB GIST API -->
-            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd;">
+            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd; margin-bottom:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
                     <div>
                         <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
@@ -1325,17 +1502,6 @@
                         <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
                         <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- BARIS 4: HAPUS / RESET DB -->
-            <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <div>
-                        <h4 style="margin: 0 0 4px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
-                        <p style="font-size: 12px; color: #555; margin: 0;">Menghapus seluruh data siswa dan jadwal ujian dari GitHub Gist. Pastikan Anda sudah melakukan Backup terlebih dahulu.</p>
-                    </div>
-                    <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px; width:auto;">Hapus Seluruh Database (Reset DB)</button>
                 </div>
             </div>
         </div>
@@ -1790,9 +1956,35 @@ let mapelSiswaLogin = "";
 let namaSiswaLogin = "";
 let currentSiswaObj = null;
 
-// Status keamanan ujian aktif
+// Status keamanan ujian aktif & Timer ujian
 let isExamInProgress = false;
 let isSubmittingExam = false;
+let examCountdownIntervalId = null;
+let examEndTimestampMs = 0;
+
+// ================= FUNGSI BERSIHKAN CACHE LOCAL STORAGE LAMA =================
+function bersihkanCacheLokalLama(usernameOpsional = null) {
+    try {
+        localStorage.removeItem(CBT_DB_CACHE_KEY);
+        if (usernameOpsional) {
+            localStorage.removeItem(getLockedMapelStorageKey(usernameOpsional));
+            localStorage.removeItem(`smantas_cbt_unlocked_mapel_${String(usernameOpsional).trim()}`);
+        } else {
+            Object.keys(localStorage).forEach(k => {
+                if (
+                    k.startsWith("smantas_cbt_master_cache_") ||
+                    k.startsWith("smantas_cbt_locked_mapel_") ||
+                    k.startsWith("smantas_cbt_unlocked_mapel_")
+                ) {
+                    localStorage.removeItem(k);
+                }
+            });
+        }
+        bersihkanCacheSoal();
+    } catch (e) {
+        console.warn("Gagal membersihkan localStorage lama:", e);
+    }
+}
 
 // ================= SESI LOGIN SISWA LOKAL & KUNCI PER MAPEL =================
 const SISWA_SESSION_STORAGE_KEY = "smantas_cbt_siswa_session_v1";
@@ -1888,27 +2080,9 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const targetMapel = normStr(mapelName);
     if (!targetMapel) return false;
 
-    const unlockedList = getUnlockedMapelList(username);
-    const sudahDireset = unlockedList.some(item => normStr(item.mapel) === targetMapel);
-
-    const sess = sesiLoginSiswa[username];
-    const sessStatus = sess ? String(sess.status || "").trim() : "";
-    const sessMapelNorm = sess ? normStr(sess.mapel) : "";
-    const resetTerbaru = sudahDireset || sessStatus.endsWith("Direset") || (sessMapelNorm === targetMapel && sessStatus.toLowerCase().includes("reset"));
-
-    if (resetTerbaru) {
-        bukaKunciMapelLokal(username, mapelName);
-        return false;
-    }
-
-    const lockedLocal = bacaLockedMapelLokal(username);
-    if (lockedLocal.includes(targetMapel)) {
-        return true;
-    }
-
     const logs = Array.isArray(logSiswaLogin) ? logSiswaLogin : [];
-    const namaNorm = normStr(namaSiswa || (sess && sess.nama) || "");
-    const kelasNorm = normStr(kelasSiswa || (sess && sess.kelas) || "");
+    const namaNorm = normStr(namaSiswa || "");
+    const kelasNorm = normStr(kelasSiswa || "");
 
     const logMapelIni = logs.filter(l =>
         normStr(l.mapel) === targetMapel &&
@@ -1920,6 +2094,7 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
         const lastLog = logMapelIni[logMapelIni.length - 1];
         const st = String(lastLog.status || "").trim();
         if (st === "Direset" || st.toLowerCase().includes("reset")) {
+            bukaKunciMapelLokal(username, mapelName);
             return false;
         }
         if (st.includes("Selesai") || st.toLowerCase().includes("curang")) {
@@ -1927,11 +2102,36 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
         }
     }
 
-    if (sess && sessMapelNorm === targetMapel && cekStatusTerkunci(sessStatus)) {
+    const sess = sesiLoginSiswa[username];
+    const sessStatus = sess ? String(sess.status || "").trim() : "";
+    const sessMapelNorm = sess ? normStr(sess.mapel) : "";
+    if (sess && sessMapelNorm === targetMapel) {
+        if (sessStatus.endsWith("Direset") || sessStatus.toLowerCase().includes("reset")) {
+            bukaKunciMapelLokal(username, mapelName);
+            return false;
+        }
+        if (cekStatusTerkunci(sessStatus)) {
+            return true;
+        }
+    }
+
+    const unlockedList = getUnlockedMapelList(username);
+    if (unlockedList.some(item => normStr(item.mapel) === targetMapel)) {
+        return false;
+    }
+
+    const lockedLocal = bacaLockedMapelLokal(username);
+    if (lockedLocal.includes(targetMapel)) {
         return true;
     }
 
     return false;
+}
+
+function parseJadwalDateTimeMs(isoLocalStr) {
+    if (!isoLocalStr) return NaN;
+    const d = new Date(isoLocalStr);
+    return d.getTime();
 }
 
 function renderOpsiMapelUntukSiswa(siswa) {
@@ -1943,13 +2143,17 @@ function renderOpsiMapelUntukSiswa(siswa) {
 
     selectMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
 
-    const now = getLocalIsoNow();
+    const nowMs = Date.now();
     const kelasTrim = String(siswa.kelas || "").trim().toLowerCase();
 
+    // Hanya mapel yang sesuai kelas DAN sedang berada di rentang waktu ujian (mulai <= sekarang <= selesai)
     const jadwalAktifKelas = daftarJadwalUjian.filter(j => {
         const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
-        const waktuMatch = (now >= j.mulai && now <= j.selesai);
-        return kelasMatch && waktuMatch;
+        if (!kelasMatch) return false;
+        const startMs = parseJadwalDateTimeMs(j.mulai);
+        const endMs = parseJadwalDateTimeMs(j.selesai);
+        if (isNaN(startMs) || isNaN(endMs)) return false;
+        return nowMs >= startMs && nowMs <= endMs;
     });
 
     if (jadwalAktifKelas.length === 0) {
@@ -1960,16 +2164,18 @@ function renderOpsiMapelUntukSiswa(siswa) {
     jadwalAktifKelas.forEach(j => {
         const terkunci = isMapelTerkunciUntukSiswa(siswa.username, siswa.nama, siswa.kelas, j.mapel);
         if (terkunci) {
-            selectMapel.innerHTML += `<option value="${j.mapel}" disabled style="color:#999; background:#f1f1f1;">[TERKUNCI - Selesai/Curang] ${j.mapel}</option>`;
+            selectMapel.innerHTML += `<option value="${j.mapel}" disabled style="color:#999; background:#f1f1f1;">[TERKUNCI - Curang/Selesai] ${j.mapel}</option>`;
         } else {
-            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (Selesai: ${j.selesai.replace('T', ' ')})</option>`;
+            selectMapel.innerHTML += `<option value="${j.mapel}">${j.mapel} (${j.jp ? j.jp + ' JP • ' : ''}Selesai: ${j.selesai.replace('T', ' ')})</option>`;
         }
     });
 }
 
 async function muatUlangDaftarMapelSiswa() {
     if (!currentSiswaObj) return;
-    showLoading("Memperbarui daftar mata pelajaran & status ujian...");
+    showLoading("Menghapus cache lokal & mengambil data terbaru dari GAS (DB_Log_login_CBT)...");
+    bersihkanCacheLokalLama(currentSiswaObj.username);
+    isDataLoadedOnce = false;
     await fetchCbtDatabase(true);
     await fetchSesiFromGAS(true);
     await fetchLogLoginFromGAS();
@@ -2410,6 +2616,9 @@ function formatPelanggaranRingkas(alasan) {
     if (low.includes("tab") || low.includes("jendela") || low.includes("aplikasi") || low.includes("menyembunyikan")) {
         return "Curang: Pindah Tab / Aplikasi";
     }
+    if (low.includes("waktu")) {
+        return "Waktu Habis";
+    }
     return alasan ? `Curang: ${alasan}` : "Curang";
 }
 
@@ -2640,12 +2849,15 @@ async function fetchAllSoalFromGist(options = {}) {
 
 async function fetchLogLoginFromGAS() {
     try {
-        let res = await axios.post(GAS_URL, JSON.stringify({ action: "getLogLogin" }));
+        let res = await axios.post(GAS_URL, JSON.stringify({
+            action: "getLogLogin",
+            sheetName: "DB_Log_login_CBT"
+        }));
         if(res.data && res.data.status === "success") {
             logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
         }
     } catch(e) {
-        console.error("Gagal mengambil log login dari GAS:", e);
+        console.error("Gagal mengambil log login dari GAS (DB_Log_login_CBT):", e);
     }
     renderTabelSiswaLogin();
     renderTabelSesiAktif();
@@ -2666,6 +2878,7 @@ async function hapusBarisLogSpreadsheet(index) {
     try {
         const res = await axios.post(GAS_URL, JSON.stringify({
             action: "deleteLogRow",
+            sheetName: "DB_Log_login_CBT",
             index: index,
             nama: row.nama || "",
             kelas: row.kelas || "",
@@ -2732,7 +2945,10 @@ async function hapusSemuaLogSpreadsheet() {
 
         for (const actName of candidateActions) {
             try {
-                const res = await axios.post(GAS_URL, JSON.stringify({ action: actName }));
+                const res = await axios.post(GAS_URL, JSON.stringify({
+                    action: actName,
+                    sheetName: "DB_Log_login_CBT"
+                }));
                 const data = res && res.data;
 
                 if (data && data.status === "success") {
@@ -2895,6 +3111,7 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
     try {
         await axios.post(GAS_URL, JSON.stringify({
             action: "resetMapelSiswa",
+            sheetName: "DB_Log_login_CBT",
             username: username,
             nama: sesiLama.nama || "",
             kelas: sesiLama.kelas || "",
@@ -2932,7 +3149,9 @@ async function resetPerangkatSiswaAdmin(usernameEnc) {
 }
 
 async function refreshSemuaDataAdmin() {
-    showLoading("Menyegarkan data Master Gist, Token Drive, Sesi GAS & Log...");
+    showLoading("Menghapus cache lokal & mengambil data terbaru dari GAS (DB_Log_login_CBT)...");
+    bersihkanCacheLokalLama();
+    isDataLoadedOnce = false;
     await fetchCbtDatabase(true, true);
     await fetchTokenDariDrive(true);
     await fetchSesiFromGAS(true);
@@ -4493,6 +4712,7 @@ async function autentikasiSiswa() {
 }
 
 async function logoutSiswa() {
+    hentikanTimerUjian();
     bersihkanCacheSoal();
     hapusSesiSiswaLokal();
     if(currentSiswaObj) {
@@ -4531,19 +4751,85 @@ async function masukFullscreenWajib() {
     const elem = document.documentElement;
     try {
         if (elem.requestFullscreen) {
-            await elem.requestFullscreen();
+            await elem.requestFullscreen({ navigationUI: "hide" }).catch(() => elem.requestFullscreen());
         } else if (elem.webkitRequestFullscreen) {
             await elem.webkitRequestFullscreen();
         } else if (elem.msRequestFullscreen) {
             await elem.msRequestFullscreen();
         }
+        const guard = document.getElementById('fullscreenGuardOverlay');
+        if (guard && isCurrentlyFullscreen()) guard.style.display = 'none';
     } catch (e) {
         console.warn("Fullscreen request warning:", e);
     }
 }
 
+function aktifkanFullscreenDariOverlay() {
+    masukFullscreenWajib();
+}
+
 function isCurrentlyFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
+
+// ================= TIMER HITUNG MUNDUR UJIAN (BERDASARKAN JP / WAKTU SELESAI) =================
+function formatDurasiDetikKeHhMmSs(totalSec) {
+    const sec = Math.max(0, Math.floor(totalSec));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function hentikanTimerUjian() {
+    if (examCountdownIntervalId) {
+        clearInterval(examCountdownIntervalId);
+        examCountdownIntervalId = null;
+    }
+    const timerEl = document.getElementById('examCountdownTimer');
+    if (timerEl) {
+        timerEl.classList.remove('timer-warning');
+        timerEl.innerText = "⏱ --:--:--";
+    }
+}
+
+function mulaiTimerUjian(jadwalMatch) {
+    hentikanTimerUjian();
+    const timerEl = document.getElementById('examCountdownTimer');
+
+    let endMs = parseJadwalDateTimeMs(jadwalMatch?.selesai);
+    if (isNaN(endMs)) {
+        const jp = parseInt(jadwalMatch?.jp, 10) || 1;
+        const menitPerJp = parseInt(pengaturanCbt.menitPerJp, 10) || 40;
+        endMs = Date.now() + (jp * menitPerJp * 60 * 1000);
+    }
+    examEndTimestampMs = endMs;
+
+    const tick = () => {
+        const sisaMs = examEndTimestampMs - Date.now();
+        const sisaSec = Math.max(0, Math.ceil(sisaMs / 1000));
+
+        if (timerEl) {
+            timerEl.innerText = `⏱ ${formatDurasiDetikKeHhMmSs(sisaSec)}`;
+            if (sisaSec <= 300) {
+                timerEl.classList.add('timer-warning');
+            } else {
+                timerEl.classList.remove('timer-warning');
+            }
+        }
+
+        if (sisaMs <= 0) {
+            hentikanTimerUjian();
+            if (isExamInProgress && !isSubmittingExam) {
+                isExamInProgress = false;
+                lepasPengawasAntiCurang();
+                selesaiUjian(false, "", true);
+            }
+        }
+    };
+
+    tick();
+    examCountdownIntervalId = setInterval(tick, 1000);
 }
 
 async function mulaiUjianPilihan() {
@@ -4561,6 +4847,9 @@ async function mulaiUjianPilihan() {
         alert("Masukkan 4 digit token ujian terlebih dahulu!");
         return;
     }
+
+    // Paksa fullscreen langsung pada gestur klik pertama pengguna agar didukung semua browser mobile & desktop
+    await masukFullscreenWajib();
 
     showLoading("Memverifikasi token ujian dari Google Drive...");
     try {
@@ -4581,7 +4870,7 @@ async function mulaiUjianPilihan() {
 
     await masukFullscreenWajib();
 
-    let now = getLocalIsoNow();
+    const nowMs = Date.now();
     const kelasTrim = kelasSiswaLogin.trim().toLowerCase();
     let jadwalMatch = daftarJadwalUjian.find(j => 
         j.mapel === mapel && String(j.kelas || "").trim().toLowerCase() === kelasTrim
@@ -4592,12 +4881,15 @@ async function mulaiUjianPilihan() {
         return;
     }
 
-    if(now < jadwalMatch.mulai) {
+    const startMs = parseJadwalDateTimeMs(jadwalMatch.mulai);
+    const endMs = parseJadwalDateTimeMs(jadwalMatch.selesai);
+
+    if(!isNaN(startMs) && nowMs < startMs) {
         alert(`Ujian belum dimulai!\nJadwal mulai: ${jadwalMatch.mulai.replace('T', ' ')}`);
         return;
     }
 
-    if(now > jadwalMatch.selesai) {
+    if(!isNaN(endMs) && nowMs > endMs) {
         alert(`Ujian sudah berakhir!\nJadwal selesai: ${jadwalMatch.selesai.replace('T', ' ')}`);
         return;
     }
@@ -4622,6 +4914,7 @@ async function mulaiUjianPilihan() {
     try {
         axios.post(GAS_URL, JSON.stringify({
             action: "logLogin",
+            sheetName: "DB_Log_login_CBT",
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapel,
@@ -4633,7 +4926,7 @@ async function mulaiUjianPilihan() {
     }
 
     namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
-    await loadSoalUjian();
+    await loadSoalUjian(jadwalMatch);
 }
 
 // ================= CADANGAN JAWABAN LOKAL & ANTREAN KIRIM ULANG (RETRY) =================
@@ -4757,7 +5050,7 @@ async function prosesAntreanSubmitTertunda(silent = false) {
     }
 }
 
-async function loadSoalUjian() {
+async function loadSoalUjian(jadwalMatch = null) {
     showLoading("Memuat soal ujian...");
     try {
         const kelasTrim = kelasSiswaLogin.trim();
@@ -4798,7 +5091,8 @@ async function loadSoalUjian() {
         }
 
         setCompactMode(false);
-        document.getElementById('infoUjianText').innerText = `Mata Pelajaran: ${mapelSiswaLogin} (${kelasTrim})`;
+        const jpLabel = jadwalMatch && jadwalMatch.jp ? ` • ${jadwalMatch.jp} JP` : "";
+        document.getElementById('infoUjianText').innerText = `Mapel: ${mapelSiswaLogin} (${kelasTrim}${jpLabel})`;
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewPilihUjianSiswa').classList.remove('active');
         document.getElementById('viewUjianSiswa').classList.add('active');
@@ -4807,6 +5101,7 @@ async function loadSoalUjian() {
 
         isExamInProgress = true;
         isSubmittingExam = false;
+        mulaiTimerUjian(jadwalMatch);
         pasangPengawasAntiCurang();
 
         if (!isCurrentlyFullscreen()) {
@@ -4866,6 +5161,9 @@ function pilihJawabanSiswa(index, opt) {
     jawabanSiswa[index] = opt;
     simpanCadanganJawabanLokal();
     renderSoalSiswa();
+    if (isExamInProgress && !isCurrentlyFullscreen()) {
+        masukFullscreenWajib();
+    }
 }
 
 function navigasiSoal(step) {
@@ -4874,6 +5172,9 @@ function navigasiSoal(step) {
         currentSoalIndex = nextIdx;
         simpanCadanganJawabanLokal();
         renderSoalSiswa();
+        if (isExamInProgress && !isCurrentlyFullscreen()) {
+            masukFullscreenWajib();
+        }
     }
 }
 
@@ -4927,6 +5228,8 @@ function lepasPengawasAntiCurang() {
     window.removeEventListener('blur', handleWindowBlurViolation);
     document.removeEventListener('contextmenu', preventCheatAction);
     document.removeEventListener('keydown', preventCheatKeys);
+    const guard = document.getElementById('fullscreenGuardOverlay');
+    if (guard) guard.style.display = 'none';
 }
 
 function preventCheatAction(e) {
@@ -4962,14 +5265,15 @@ function handleWindowBlurViolation() {
 function picuPelanggaranUjian(alasan) {
     if (!isExamInProgress || isSubmittingExam) return;
     isExamInProgress = false;
+    hentikanTimerUjian();
     lepasPengawasAntiCurang();
-    selesaiUjian(true, alasan);
+    selesaiUjian(true, alasan, false);
 }
 
-async function selesaiUjian(isCurang = false, alasanCurang = "") {
+async function selesaiUjian(isCurang = false, alasanCurang = "", isTimeUp = false) {
     if (isSubmittingExam) return;
 
-    if (!isCurang) {
+    if (!isCurang && !isTimeUp) {
         const belumDijawab = listSoal.length - Object.keys(jawabanSiswa).length;
         const pesanKonfirmasi = belumDijawab > 0 
             ? `Masih ada ${belumDijawab} soal yang belum dijawab.\nTetap kumpulkan jawaban sekarang?`
@@ -4979,11 +5283,15 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
 
     isSubmittingExam = true;
     isExamInProgress = false;
+    hentikanTimerUjian();
     lepasPengawasAntiCurang();
 
-    showLoading(isCurang 
-        ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci mapel & mengirim jawaban...` 
-        : "Mengirim jawaban ke server... Jangan tutup halaman!"
+    showLoading(
+        isCurang
+            ? `PELANGGARAN TERDETEKSI (${alasanCurang})! Mengunci mapel & mengirim jawaban...`
+            : (isTimeUp
+                ? "WAKTU UJIAN HABIS! Otomatis menyelesaikan & mengirim jawaban ke server..."
+                : "Mengirim jawaban ke server... Jangan tutup halaman!")
     );
 
     let benar = 0;
@@ -5000,6 +5308,9 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         const tokenCurang = formatPelanggaranRingkas(alasanCurang);
         const setelahCurang = gabungRiwayatStatus(statusSebelum, tokenCurang);
         statusFinal = gabungRiwayatStatus(setelahCurang, "Selesai");
+    } else if (isTimeUp) {
+        const setelahWaktuHabis = gabungRiwayatStatus(statusSebelum, "Waktu Habis");
+        statusFinal = gabungRiwayatStatus(setelahWaktuHabis, "Selesai");
     } else {
         statusFinal = gabungRiwayatStatus(statusSebelum, "Selesai");
     }
@@ -5020,6 +5331,7 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
 
     const logData = {
         action: "logLogin",
+        sheetName: "DB_Log_login_CBT",
         nama: namaSiswaLogin,
         kelas: kelasSiswaLogin,
         mapel: mapelSiswaLogin,
@@ -5073,6 +5385,8 @@ async function selesaiUjian(isCurang = false, alasanCurang = "") {
         }
         if (isCurang) {
             alert(`UJIAN DIHENTIKAN OTOMATIS!\nAlasan: ${alasanCurang}.\nStatus: Dianggap Curang / Selesai.\nNilai Anda: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" kini TERKUNCI dan harus direset Admin. Anda tetap bisa memilih mapel lain yang tersedia.`);
+        } else if (isTimeUp) {
+            alert(`WAKTU UJIAN TELAH HABIS!\nJawaban Anda otomatis dikumpulkan dan disimpan.\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
         } else if(res.data && res.data.status === "success") {
             alert(`Ujian Selesai!\nNilai Akhir: ${nilaiAkhir}\n\nMata pelajaran "${mapelSiswaLogin}" telah ditandai Selesai/Terkunci.`);
         } else {
@@ -5106,6 +5420,8 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
+        fetchTokenDariDrive(true);
+        mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
@@ -5126,7 +5442,6 @@ function switchAdminTab(tabName) {
         document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
         document.getElementById('adminTabSettings').classList.add('active');
         fetchTokenDariDrive(true);
-        mulaiTimerTokenAdmin();
         updateLabelJp();
         renderAdminPasswordDisplay();
         cekRateLimitGistApi(true);
