@@ -208,7 +208,7 @@
         }
         
         .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
-        .row-flex > div { flex: 1; min-width: 160px; }
+        .row-flex > div { flex: 1; min-width: 140px; }
         .row-flex > div.jp-col { flex: 0 0 120px; min-width: 110px; max-width: 130px; }
 
         /* GRID MATRIKS KHUSUS DAFTAR KELAS & DAFTAR MAPEL */
@@ -383,6 +383,25 @@
         }
         @media (max-width: 820px) {
             .siswa-top-two-col {
+                flex-direction: column;
+            }
+        }
+
+        /* 1 BARIS: TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN */
+        .settings-top-three-col {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        .settings-top-three-col > .admin-card {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        @media (max-width: 960px) {
+            .settings-top-three-col {
                 flex-direction: column;
             }
         }
@@ -952,7 +971,7 @@
                         <button onclick="fetchSesiFromGAS()" style="width: auto; padding: 4px 9px; font-size: 11px; background: #17a2b8;">Refresh Sesi</button>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status (Sedang Ujian / Selesai / Curang) tersimpan di Google Apps Script. Gunakan <b>Reset-&lt;Mapel&gt;</b> untuk membuka kunci mapel aktif tertentu, atau <b>Reset-Perangkat</b> untuk melepas kunci perangkat.</p>
+                <p style="font-size: 11px; color: #555; margin: 0 0 6px 0;">Sesi perangkat & status tersimpan di Google Apps Script. Gunakan <b>Reset-&lt;Mapel&gt;</b> untuk membuka kunci mapel tertentu, atau <b>Reset-Perangkat</b> untuk melepas kunci perangkat.</p>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -1195,59 +1214,59 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- PANEL TOKEN OTOMATIS 4 DIGIT (DI TAB PENGATURAN) -->
-            <div class="admin-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
-                    <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Buka Folder Drive ↗</a>
-                </div>
-                <div class="token-live-box">
+            <!-- 1 BARIS: TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
+            <div class="settings-top-three-col">
+                <!-- KOLOM 1: TOKEN OTOMATIS 4 DIGIT -->
+                <div class="admin-card">
                     <div>
-                        <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
-                        <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
-                    </div>
-                    <div class="token-live-timer">
-                        <div>Berganti dalam: <span id="adminTokenCountdown">05:00</span></div>
-                        <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
-                            <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin Token</button>
-                            <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:10px;">Acak Token Sekarang</button>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:6px; flex-wrap:wrap;">
+                            <h4 style="margin: 0; color: #008080;">Token Ujian Otomatis (Google Drive)</h4>
+                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10.5px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
+                        </div>
+                        <div class="token-live-box">
+                            <div>
+                                <div style="font-size:10px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
+                                <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
+                            </div>
+                            <div class="token-live-timer">
+                                <div>Berganti: <span id="adminTokenCountdown">05:00</span></div>
+                                <div style="display:flex; gap:3px; justify-content:flex-end; margin-top:3px;">
+                                    <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 6px; font-size:9.5px;">📋 Salin</button>
+                                    <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 6px; font-size:9.5px;">Acak</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row-flex" style="margin-bottom:6px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Interval (Menit):</label>
+                                <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Wajib Token:</label>
+                                <select id="settingWajibToken">
+                                    <option value="true">Aktif (Wajib)</option>
+                                    <option value="false">Nonaktif</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
+                    <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Token ke Drive</button>
                 </div>
-                <div class="row-flex" style="align-items:flex-end;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Interval Ganti Token (Menit):</label>
-                        <input type="number" id="settingTokenIntervalMenit" min="1" max="120" value="5">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Wajib Token Saat Mulai Ujian:</label>
-                        <select id="settingWajibToken">
-                            <option value="true">Aktif (Wajib)</option>
-                            <option value="false">Nonaktif</option>
-                        </select>
-                    </div>
-                    <div style="flex:0 0 auto; min-width:auto;">
-                        <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 12px; width:auto;">Simpan Pengaturan Token ke Drive</button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- BARIS 1: DURASI JP & PASSWORD ADMIN -->
-            <div class="siswa-top-two-col">
-                <!-- KOLOM KIRI: PENGATURAN JP -->
+                <!-- KOLOM 2: PENGATURAN JP -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
                         <div class="form-group">
                             <label>Durasi 1 JP (dalam Menit):</label>
                             <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
-                            <small style="color: #666; display: block; margin-top: 3px; font-size:11px;">Nilai ini akan tersimpan ke Gist dan digunakan untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                            <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">Tersimpan ke Gist untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
                         </div>
                     </div>
                     <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
                 </div>
 
-                <!-- KOLOM KANAN: PASSWORD ADMIN -->
+                <!-- KOLOM 3: PASSWORD ADMIN -->
                 <div class="admin-card">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Manajemen Password Admin</h4>
@@ -1331,7 +1350,7 @@ const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f93
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz-JYkUqnZhqzgaBBp_58H_9r-mi8QBoDWKuknOFqoysRJR0nDPJUf-HTMcg0Xh8pgz/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbySX2FnqpZeoMk7GLqFlpLUw4MwhdLPg9Somm0FR4Vcsp89kQRDcJOGLkg_8QYLIoxH/exec";
 
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
@@ -1775,7 +1794,7 @@ let currentSiswaObj = null;
 let isExamInProgress = false;
 let isSubmittingExam = false;
 
-// ================= SESI LOGIN SISWA LOKAL & KUNCI PER MAPEL (REVISI 0) =================
+// ================= SESI LOGIN SISWA LOKAL & KUNCI PER MAPEL =================
 const SISWA_SESSION_STORAGE_KEY = "smantas_cbt_siswa_session_v1";
 
 function simpanSesiSiswaLokal(sessionObj) {
@@ -1869,12 +1888,15 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const targetMapel = normStr(mapelName);
     if (!targetMapel) return false;
 
+    const unlockedList = getUnlockedMapelList(username);
+    const sudahDireset = unlockedList.some(item => normStr(item.mapel) === targetMapel);
+
     const sess = sesiLoginSiswa[username];
     const sessStatus = sess ? String(sess.status || "").trim() : "";
     const sessMapelNorm = sess ? normStr(sess.mapel) : "";
-    const resetTerbaru = sessStatus.endsWith("Direset");
+    const resetTerbaru = sudahDireset || sessStatus.endsWith("Direset") || (sessMapelNorm === targetMapel && sessStatus.toLowerCase().includes("reset"));
 
-    if (resetTerbaru && sessMapelNorm === targetMapel) {
+    if (resetTerbaru) {
         bukaKunciMapelLokal(username, mapelName);
         return false;
     }
@@ -1896,11 +1918,12 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
 
     if (logMapelIni.length > 0) {
         const lastLog = logMapelIni[logMapelIni.length - 1];
-        const st = String(lastLog.status || "");
+        const st = String(lastLog.status || "").trim();
+        if (st === "Direset" || st.toLowerCase().includes("reset")) {
+            return false;
+        }
         if (st.includes("Selesai") || st.toLowerCase().includes("curang")) {
-            if (!resetTerbaru) {
-                return true;
-            }
+            return true;
         }
     }
 
@@ -2373,7 +2396,7 @@ function cekStatusTerkunci(statusStr) {
     const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
     if (tokens.length === 0) return false;
     const terakhir = tokens[tokens.length - 1];
-    if (terakhir === "Direset" || terakhir.endsWith("Direset") || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
+    if (terakhir === "Direset" || terakhir.endsWith("Direset") || terakhir.toLowerCase().includes("reset") || terakhir === "Sedang Ujian" || terakhir === "Login Aktif") {
         return false;
     }
     return terakhir === "Selesai" || terakhir.toLowerCase().startsWith("curang");
@@ -2628,6 +2651,10 @@ async function fetchLogLoginFromGAS() {
     renderTabelSesiAktif();
 }
 
+function isWaitLockError(errMsg) {
+    return String(errMsg || "").toLowerCase().includes("waitlock");
+}
+
 async function hapusBarisLogSpreadsheet(index) {
     if (!Array.isArray(logSiswaLogin) || index < 0 || index >= logSiswaLogin.length) return;
     const row = logSiswaLogin[index];
@@ -2651,12 +2678,32 @@ async function hapusBarisLogSpreadsheet(index) {
             await fetchLogLoginFromGAS();
             hideLoading();
         } else {
+            const errMsg = data?.message || "Unknown error";
+            logSiswaLogin.splice(index, 1);
+            renderTabelSiswaLogin();
             hideLoading();
-            alert("Gagal menghapus baris log di Spreadsheet: " + (data?.message || "Unknown error"));
+            if (isWaitLockError(errMsg)) {
+                alert(
+                    `Baris log dihapus dari tampilan, namun GAS mengembalikan error LockService (${errMsg}).\n\n` +
+                    `Pastikan di Google Apps Script (Code.gs) menggunakan helper lock yang aman (runWithScriptLock / runWithDocumentLock).`
+                );
+            } else {
+                alert("Gagal menghapus baris log di Spreadsheet: " + errMsg);
+            }
         }
     } catch (e) {
+        const errMsg = e.message || "";
+        logSiswaLogin.splice(index, 1);
+        renderTabelSiswaLogin();
         hideLoading();
-        alert("Gagal menghapus baris log: " + e.message);
+        if (isWaitLockError(errMsg)) {
+            alert(
+                `Baris log dihapus dari tampilan, namun GAS mengalami error LockService (${errMsg}).\n` +
+                `Periksa penggunaan LockService di script Google Apps Script Anda.`
+            );
+        } else {
+            alert("Gagal menghapus baris log: " + errMsg);
+        }
     }
 }
 
@@ -2677,8 +2724,7 @@ async function hapusSemuaLogSpreadsheet() {
             "resetLogLogin",
             "deleteAllLogLogin",
             "clearLog",
-            "deleteLog",
-            "resetAllSesiAndLog"
+            "deleteLog"
         ];
 
         let berhasilDiGas = false;
@@ -2686,11 +2732,7 @@ async function hapusSemuaLogSpreadsheet() {
 
         for (const actName of candidateActions) {
             try {
-                const payload = actName === "resetAllSesiAndLog"
-                    ? { action: actName, onlyLog: true, includeDriveAssets: false }
-                    : { action: actName };
-
-                const res = await axios.post(GAS_URL, JSON.stringify(payload));
+                const res = await axios.post(GAS_URL, JSON.stringify({ action: actName }));
                 const data = res && res.data;
 
                 if (data && data.status === "success") {
@@ -2701,7 +2743,7 @@ async function hapusSemuaLogSpreadsheet() {
                 const msg = (data && data.message) ? String(data.message) : "";
                 lastGasMessage = msg || lastGasMessage;
 
-                if (!msg.toLowerCase().includes("invalid action")) {
+                if (!msg.toLowerCase().includes("invalid action") && !isWaitLockError(msg)) {
                     break;
                 }
             } catch (reqErr) {
@@ -2718,9 +2760,9 @@ async function hapusSemuaLogSpreadsheet() {
             alert("Seluruh log pengerjaan & nilai siswa di Spreadsheet berhasil dihapus!");
         } else {
             alert(
-                "Tampilan Log Pengerjaan & Nilai di aplikasi sudah dibersihkan, namun endpoint GAS saat ini belum mendukung aksi hapus log (" +
+                "Tampilan Log Pengerjaan & Nilai telah dibersihkan, namun respons GAS: " +
                 (lastGasMessage || "Invalid action") +
-                ").\n\nTambahkan handler aksi `clearLogLogin` di kode Google Apps Script (doPost) agar penghapusan tersimpan permanen di Spreadsheet."
+                (isWaitLockError(lastGasMessage) ? "\n(Terdeteksi error LockService 'waitLock' di skrip Google Apps Script)." : "")
             );
         }
     } catch (e) {
@@ -2836,7 +2878,7 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
     const username = decodeURIComponent(usernameEnc);
     const mapel = decodeURIComponent(mapelEnc);
 
-    if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nSiswa akan dapat mengerjakan ulang mapel ${mapel}.`)) return;
+    if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nKunci mapel & status pelanggaran/selesai untuk mapel ini akan dibuka agar siswa bisa mengerjakan ulang.`)) return;
 
     showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
     tandaiMapelDiresetLokal(username, mapel);
@@ -2850,11 +2892,22 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
         mapel: mapel
     };
 
-    const statusBaru = gabungRiwayatStatus(sesiLama.status, `Reset-${mapel}`);
+    try {
+        await axios.post(GAS_URL, JSON.stringify({
+            action: "resetMapelSiswa",
+            username: username,
+            nama: sesiLama.nama || "",
+            kelas: sesiLama.kelas || "",
+            mapel: mapel
+        }));
+    } catch (e) {
+        console.warn("Peringatan saat memanggil resetMapelSiswa ke GAS:", e);
+    }
+
     await setSesiToGAS({
         username: username,
         deviceId: sesiLama.deviceId || "",
-        status: statusBaru,
+        status: `Reset-${mapel} (Direset)`,
         nama: sesiLama.nama || "",
         kelas: sesiLama.kelas || "",
         mapel: mapel,
@@ -2862,31 +2915,17 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
     });
 
     await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
     hideLoading();
-    alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset!`);
+    alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset dan tidak lagi terkunci!`);
 }
 
 async function resetPerangkatSiswaAdmin(usernameEnc) {
     const username = decodeURIComponent(usernameEnc);
-    if(!confirm(`Reset kunci perangkat untuk akun "${username}"?\nPerangkat aktif saat ini akan dilepas agar akun dapat login di perangkat lain.`)) return;
+    if(!confirm(`Reset kunci perangkat untuk akun "${username}"?\nPerangkat lama akan dilepas dan sesi direset agar bersih / dapat digunakan kembali.`)) return;
 
     showLoading(`Mereset kunci perangkat untuk ${username}...`);
-    const sesiLama = sesiLoginSiswa[username];
-    if (sesiLama) {
-        const statusDenganReset = gabungRiwayatStatus(sesiLama.status, "Reset-Perangkat");
-        await setSesiToGAS({
-            username: username,
-            deviceId: "",
-            status: statusDenganReset,
-            nama: sesiLama.nama || "",
-            kelas: sesiLama.kelas || "",
-            mapel: sesiLama.mapel || "-",
-            updatedAt: getLocalIsoNow()
-        });
-    } else {
-        await deleteSesiFromGAS(username);
-    }
-
+    await deleteSesiFromGAS(username);
     await fetchSesiFromGAS(true);
     hideLoading();
     alert(`Kunci perangkat untuk "${username}" berhasil di-reset!`);
