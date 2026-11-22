@@ -1453,13 +1453,20 @@ function konversiTabelWordKeFormatCbt(containerEl) {
 }
 
 function ekstrakUrlGambarDariResponGAS(resData) {
-    if (!resData || typeof resData !== "object") return "";
+    if (!resData) return "";
+    let obj = resData;
+    if (typeof obj === "string") {
+        try { obj = JSON.parse(obj); } catch (e) { return ""; }
+    }
+    if (!obj || typeof obj !== "object") return "";
     const candidates = [
-        resData.fileUrl,
-        resData.url,
-        resData.downloadUrl,
-        resData.data?.fileUrl,
-        resData.data?.url
+        obj.fileUrl,
+        obj.url,
+        obj.downloadUrl,
+        obj.imageUrl,
+        obj.data?.fileUrl,
+        obj.data?.url,
+        obj.data?.imageUrl
     ];
     for (const c of candidates) {
         if (typeof c === "string" && c.trim() && !/^IMG_DRIVE_/i.test(c.trim())) {
@@ -1467,6 +1474,33 @@ function ekstrakUrlGambarDariResponGAS(resData) {
         }
     }
     return "";
+}
+
+async function unggahGambarKeDriveDenganFallback(finalBase64, fileName, folderName = "Soal_CBT_Drive") {
+    const payloads = [
+        { action: "uploadImage", folderName, fileData: finalBase64, fileName },
+        { action: "uploadImage", folderName, base64: finalBase64, fileName }
+    ];
+
+    let pesanErrorTerakhir = "Tidak ada URL gambar dikembalikan oleh GAS";
+    for (const payload of payloads) {
+        try {
+            const uploadRes = await postToGAS(payload);
+            const data = uploadRes?.data;
+            const url = ekstrakUrlGambarDariResponGAS(data);
+            if (url) {
+                return { url, error: "" };
+            }
+            if (data && typeof data === "object" && data.message) {
+                pesanErrorTerakhir = String(data.message);
+            } else if (data && typeof data === "object" && data.status && data.status !== "success") {
+                pesanErrorTerakhir = `Status GAS: ${data.status}`;
+            }
+        } catch (err) {
+            pesanErrorTerakhir = err?.response?.data?.message || err?.message || "Gagal koneksi ke GAS";
+        }
+    }
+    return { url: "", error: pesanErrorTerakhir };
 }
 
 async function bacaFileSoalOtomatis(event) {
@@ -1500,6 +1534,7 @@ async function bacaFileSoalOtomatis(event) {
             let totalImg = imagesList.length;
             let ringkasanKompresi = [];
             let gagalUploadCount = 0;
+            let alasanGagalPertama = "";
 
             for (let i = 0; i < totalImg; i++) {
                 let imgData = imagesList[i];
@@ -1510,20 +1545,9 @@ async function bacaFileSoalOtomatis(event) {
                 const extFile = finalBase64.startsWith("data:image/webp") ? "webp" : "jpg";
                 ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
 
-                let uploadedUrl = "";
-                try {
-                    let uploadRes = await postToGAS({
-                        action: "uploadImage",
-                        folderName: "Soal_CBT_Drive",
-                        fileData: finalBase64,
-                        fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
-                    });
-                    if (uploadRes.data && uploadRes.data.status === "success") {
-                        uploadedUrl = ekstrakUrlGambarDariResponGAS(uploadRes.data);
-                    }
-                } catch (err) {
-                    console.warn("Gagal upload gambar ke Drive:", err);
-                }
+                const fileName = `soal_img_${Date.now()}_${i + 1}.${extFile}`;
+                const hasilUpload = await unggahGambarKeDriveDenganFallback(finalBase64, fileName, "Soal_CBT_Drive");
+                const uploadedUrl = hasilUpload.url;
 
                 const matchingImgs = Array.from(tempDiv.querySelectorAll("img")).filter(
                     el => (el.getAttribute("src") || "").trim() === imgData.id
@@ -1533,6 +1557,9 @@ async function bacaFileSoalOtomatis(event) {
                     matchingImgs.forEach(el => el.setAttribute("src", uploadedUrl));
                 } else {
                     gagalUploadCount++;
+                    if (!alasanGagalPertama && hasilUpload.error) {
+                        alasanGagalPertama = hasilUpload.error;
+                    }
                     matchingImgs.forEach(el => el.remove());
                 }
             }
@@ -1544,7 +1571,9 @@ async function bacaFileSoalOtomatis(event) {
 
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
-            const infoGagal = gagalUploadCount > 0 ? `\n⚠️ ${gagalUploadCount} gambar gagal diunggah ke Drive (placeholder dihapus agar tidak 404).` : "";
+            const infoGagal = gagalUploadCount > 0
+                ? `\n⚠️ ${gagalUploadCount} gambar gagal diunggah ke Drive${alasanGagalPertama ? ` (${alasanGagalPertama})` : ""} (placeholder dihapus agar tidak 404).`
+                : "";
             alert(`File Word berhasil diproses!${infoUkuran}${infoGagal}`);
         } catch (err) {
             hideLoading();
