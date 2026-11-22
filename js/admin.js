@@ -1,4 +1,30 @@
 // ================= TOKEN ADMIN (TAMPILAN & AKSI) =================
+let gistLimitCountdownTimerId = null;
+let gistLimitResetEpochMs = 0;
+
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function normalisasiUrlGambarDrive(url) {
+    const clean = String(url || "").trim();
+    if (!clean) return "";
+    const matchFileD = clean.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchFileD && matchFileD[1]) {
+        return `https://drive.google.com/uc?export=view&id=${matchFileD[1]}`;
+    }
+    const matchOpenId = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (clean.includes("drive.google.com") && matchOpenId && matchOpenId[1]) {
+        return `https://drive.google.com/uc?export=view&id=${matchOpenId[1]}`;
+    }
+    return clean;
+}
+
 function updateTampilanTokenAdmin() {
     const codeEl = document.getElementById("adminTokenAktifDisplay");
     const timerEl = document.getElementById("adminTokenCountdown");
@@ -263,29 +289,29 @@ function switchAdminTab(tabName) {
     sinkronkanHeaderAdmin();
 
     if (tabName === 'monitoring') {
-        document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
-        document.getElementById('adminTabMonitoring').classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(1)')?.classList.add('active');
+        document.getElementById('adminTabMonitoring')?.classList.add('active');
         fetchTokenDariDrive(true);
         mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if (tabName === 'ujian') {
-        document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
-        document.getElementById('adminTabUjian').classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(2)')?.classList.add('active');
+        document.getElementById('adminTabUjian')?.classList.add('active');
         updateLabelJp();
         renderTabelJadwal();
     } else if (tabName === 'master') {
-        document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
-        document.getElementById('adminTabMaster').classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(3)')?.classList.add('active');
+        document.getElementById('adminTabMaster')?.classList.add('active');
         renderListMaster();
     } else if (tabName === 'siswa') {
-        document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
-        document.getElementById('adminTabSiswa').classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(4)')?.classList.add('active');
+        document.getElementById('adminTabSiswa')?.classList.add('active');
         initDropdowns();
         renderTabelDaftarSiswa();
     } else if (tabName === 'settings') {
-        document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
-        document.getElementById('adminTabSettings').classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(5)')?.classList.add('active');
+        document.getElementById('adminTabSettings')?.classList.add('active');
         fetchTokenDariDrive(true);
         updateLabelJp();
         renderAdminPasswordDisplay();
@@ -355,11 +381,48 @@ async function saveCbtDatabaseToGist() {
     }
 }
 
+function formatHitungMundurGist(msRemaining) {
+    const totalSec = Math.max(0, Math.floor(msRemaining / 1000));
+    const jam = Math.floor(totalSec / 3600);
+    const menit = Math.floor((totalSec % 3600) / 60);
+    const detik = totalSec % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${jam} jam ${pad(menit)} menit ${pad(detik)} detik`;
+}
+
+function updateTampilanCountdownGist() {
+    const resetEl = document.getElementById('gistLimitReset');
+    if (!resetEl || !gistLimitResetEpochMs) return;
+
+    const sisaMs = gistLimitResetEpochMs - Date.now();
+    if (sisaMs <= 0) {
+        resetEl.innerText = "0 jam 00 menit 00 detik";
+        if (gistLimitCountdownTimerId) {
+            clearInterval(gistLimitCountdownTimerId);
+            gistLimitCountdownTimerId = null;
+        }
+        cekRateLimitGistApi(true);
+        return;
+    }
+
+    resetEl.innerText = formatHitungMundurGist(sisaMs);
+}
+
+function mulaiTimerCountdownGist() {
+    if (gistLimitCountdownTimerId) clearInterval(gistLimitCountdownTimerId);
+    updateTampilanCountdownGist();
+    gistLimitCountdownTimerId = setInterval(updateTampilanCountdownGist, 1000);
+}
+
 async function cekRateLimitGistApi(silent = false) {
     const remEl = document.getElementById('gistLimitRemaining');
     const usedEl = document.getElementById('gistLimitUsed');
     const resetEl = document.getElementById('gistLimitReset');
     const statusEl = document.getElementById('gistLimitStatus');
+
+    if (resetEl && resetEl.previousElementSibling) {
+        resetEl.previousElementSibling.innerText = "Reset Kuota :";
+    }
 
     if (!silent && remEl) remEl.innerText = "Memuat...";
     try {
@@ -372,11 +435,13 @@ async function cekRateLimitGistApi(silent = false) {
         const used = Number(core.used ?? (limit - remaining));
         const resetEpoch = Number(core.reset || 0);
 
-        let resetStr = "-";
         if (resetEpoch > 0) {
-            const d = new Date(resetEpoch * 1000);
-            const pad = (n) => String(n).padStart(2, '0');
-            resetStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} WIB`;
+            gistLimitResetEpochMs = resetEpoch * 1000;
+            mulaiTimerCountdownGist();
+        } else {
+            gistLimitResetEpochMs = 0;
+            if (gistLimitCountdownTimerId) clearInterval(gistLimitCountdownTimerId);
+            if (resetEl) resetEl.innerText = "-";
         }
 
         if (remEl) {
@@ -384,7 +449,6 @@ async function cekRateLimitGistApi(silent = false) {
             remEl.style.color = remaining > 500 ? "#28a745" : (remaining > 100 ? "#fd7e14" : "#dc3545");
         }
         if (usedEl) usedEl.innerText = `${used} req`;
-        if (resetEl) resetEl.innerText = resetStr;
         if (statusEl) {
             statusEl.innerText = remaining > 500 ? "Aman (Raw-First Aktif)" : "Waspada Kuota Menipis";
             statusEl.style.color = remaining > 500 ? "#008080" : "#dc3545";
@@ -424,7 +488,7 @@ function renderStatusBadgesHtml(statusStr) {
         else if (low.includes("curang")) cls = "status-pill-curang";
         else if (low.includes("reset")) cls = "status-pill-reset";
         else if (low.includes("sedang")) cls = "status-pill-ujian";
-        return `<span class="status-pill ${cls}">${part}</span>`;
+        return `<span class="status-pill ${cls}">${escapeHtml(part)}</span>`;
     });
 
     return `<div class="status-pill-wrap">${pills.join("")}</div>`;
@@ -580,7 +644,7 @@ function buatTombolResetAksiHtml(username, sesiObj) {
 
     mapelAktifList.forEach(mp => {
         const mpEnc = encodeURIComponent(mp);
-        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${mp}</button>`);
+        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${escapeHtml(mp)}</button>`);
     });
 
     btns.push(`<button type="button" onclick="resetPerangkatSiswaAdmin('${unameEnc}')" class="btn-reset-perangkat">Reset-Perangkat</button>`);
@@ -610,17 +674,17 @@ function renderTabelSesiAktif() {
         const aksiHtml = buatTombolResetAksiHtml(username, s);
 
         tbody.innerHTML += `<tr>
-            <td><b>${username}</b></td>
-            <td>${s.nama || '-'}</td>
-            <td>${s.kelas || '-'}</td>
+            <td><b>${escapeHtml(username)}</b></td>
+            <td>${escapeHtml(s.nama || '-')}</td>
+            <td>${escapeHtml(s.kelas || '-')}</td>
             <td>${statusBadge}</td>
-            <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
+            <td style="font-family:monospace; font-size:10.5px;">${escapeHtml(s.deviceId || '-')}</td>
             <td>${aksiHtml}</td>
         </tr>`;
     });
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan pada sesi aktif.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${escapeHtml(keyword)}" tidak ditemukan pada sesi aktif.</td></tr>`;
     }
 }
 
@@ -709,11 +773,11 @@ function renderTabelSiswaLogin() {
         tampilCount++;
         let badgeStatus = renderStatusBadgesHtml(l.status);
         tbody.innerHTML += `<tr>
-            <td>${l.nama}</td>
-            <td>${l.kelas}</td>
-            <td>${l.mapel}</td>
+            <td>${escapeHtml(l.nama)}</td>
+            <td>${escapeHtml(l.kelas)}</td>
+            <td>${escapeHtml(l.mapel)}</td>
             <td>${badgeStatus}</td>
-            <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+            <td>${l.nilai !== null && l.nilai !== undefined ? escapeHtml(l.nilai) : "-"}</td>
             <td>
                 <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
             </td>
@@ -721,7 +785,7 @@ function renderTabelSiswaLogin() {
     });
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${escapeHtml(keyword)}" tidak ditemukan.</td></tr>`;
     }
 }
 
@@ -815,20 +879,20 @@ function initDropdowns() {
 
     if (jdMp) {
         jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
-        daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${m}">${m}</option>`);
+        daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`);
     }
 
     if (selKelasSatuan) {
         const prevVal = selKelasSatuan.value;
         selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-        daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
+        daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`);
         if (prevVal) selKelasSatuan.value = prevVal;
     }
 
     if (selFilterKartu) {
         const prevFilter = selFilterKartu.value;
         selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>';
-        daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${k}">${k}</option>`);
+        daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`);
         if (prevFilter) selFilterKartu.value = prevFilter;
     }
 
@@ -922,7 +986,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         const div = document.createElement("div");
         div.className = "master-matrix-item";
         div.innerHTML = `
-            <span class="item-label" title="${labelText}">${labelText}</span>
+            <span class="item-label" title="${escapeHtml(labelText)}">${escapeHtml(labelText)}</span>
             <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1.5px 5px; font-size:10px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
         `;
         containerEl.appendChild(div);
@@ -982,17 +1046,17 @@ function buatHtmlKartuSiswa(daftar) {
         <div class="kartu-siswa-3cm">
             <div class="kartu-3cm-top">
                 <span>KARTU CBT</span>
-                <span>${s.kelas || '-'}</span>
+                <span>${escapeHtml(s.kelas || '-')}</span>
             </div>
-            <div class="kartu-3cm-nama" title="${s.nama || '-'}">${s.nama || '-'}</div>
+            <div class="kartu-3cm-nama" title="${escapeHtml(s.nama || '-')}">${escapeHtml(s.nama || '-')}</div>
             <div class="kartu-3cm-cred">
                 <div class="kartu-3cm-cred-row">
                     <span class="kartu-3cm-cred-label">User:</span>
-                    <span class="kartu-3cm-cred-val">${s.username || '-'}</span>
+                    <span class="kartu-3cm-cred-val">${escapeHtml(s.username || '-')}</span>
                 </div>
                 <div class="kartu-3cm-cred-row">
                     <span class="kartu-3cm-cred-label">Pass:</span>
-                    <span class="kartu-3cm-cred-val">${s.password || '-'}</span>
+                    <span class="kartu-3cm-cred-val">${escapeHtml(s.password || '-')}</span>
                 </div>
             </div>
         </div>
@@ -1077,7 +1141,7 @@ function editSiswa(idx) {
     document.getElementById('inputNamaSiswa').value = s.nama;
     const selKelas = document.getElementById('selectKelasSiswaSatuan');
     if (!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
-        selKelas.innerHTML += `<option value="${s.kelas}">${s.kelas}</option>`;
+        selKelas.innerHTML += `<option value="${escapeHtml(s.kelas)}">${escapeHtml(s.kelas)}</option>`;
     }
     selKelas.value = s.kelas;
     document.getElementById('inputUsernameSiswa').value = s.username;
@@ -1136,7 +1200,7 @@ async function hapusSiswa(idx) {
     const s = databaseSiswa[idx];
     if (!s || !confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
     showLoading("Menghapus data siswa...");
-    await deleteSesiFromGAS(s.username);
+    try { await deleteSesiFromGAS(s.username); } catch (e) {}
     databaseSiswa.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
@@ -1202,10 +1266,10 @@ function renderTabelDaftarSiswa() {
         if (!cocokNama || !cocokKelas) return;
         tampilCount++;
         tbody.innerHTML += `<tr>
-            <td>${s.nama}</td>
-            <td>${s.kelas}</td>
-            <td>${s.username}</td>
-            <td>${s.password}</td>
+            <td>${escapeHtml(s.nama)}</td>
+            <td>${escapeHtml(s.kelas)}</td>
+            <td>${escapeHtml(s.username)}</td>
+            <td>${escapeHtml(s.password)}</td>
             <td>
                 <button onclick="bukaModalCetakKartu(${idx})" class="btn-sm btn-info" title="Cetak Kartu 3 cm">Kartu</button>
                 <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
@@ -1324,7 +1388,9 @@ function bersihkanSelTabelHtml(cellEl) {
         .trim();
 
     raw = raw.replace(/\[\[IMG:([^\]]+)\]\]/g, (_, src) => {
-        return `<br><img src="${src.trim()}" class="img-soal">`;
+        const cleanSrc = normalisasiUrlGambarDrive(src.trim());
+        if (!cleanSrc || /^IMG_DRIVE_/i.test(cleanSrc)) return "";
+        return `<br><img src="${cleanSrc}" class="img-soal">`;
     });
 
     return raw.trim();
@@ -1386,6 +1452,23 @@ function konversiTabelWordKeFormatCbt(containerEl) {
     return blocks.join("\n\n");
 }
 
+function ekstrakUrlGambarDariResponGAS(resData) {
+    if (!resData || typeof resData !== "object") return "";
+    const candidates = [
+        resData.fileUrl,
+        resData.url,
+        resData.downloadUrl,
+        resData.data?.fileUrl,
+        resData.data?.url
+    ];
+    for (const c of candidates) {
+        if (typeof c === "string" && c.trim() && !/^IMG_DRIVE_/i.test(c.trim())) {
+            return normalisasiUrlGambarDrive(c.trim());
+        }
+    }
+    return "";
+}
+
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1416,6 +1499,7 @@ async function bacaFileSoalOtomatis(event) {
             tempDiv.innerHTML = result.value;
             let totalImg = imagesList.length;
             let ringkasanKompresi = [];
+            let gagalUploadCount = 0;
 
             for (let i = 0; i < totalImg; i++) {
                 let imgData = imagesList[i];
@@ -1426,6 +1510,7 @@ async function bacaFileSoalOtomatis(event) {
                 const extFile = finalBase64.startsWith("data:image/webp") ? "webp" : "jpg";
                 ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
 
+                let uploadedUrl = "";
                 try {
                     let uploadRes = await postToGAS({
                         action: "uploadImage",
@@ -1434,10 +1519,22 @@ async function bacaFileSoalOtomatis(event) {
                         fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
                     });
                     if (uploadRes.data && uploadRes.data.status === "success") {
-                        let targetImg = tempDiv.querySelector(`[src="${imgData.id}"]`);
-                        if (targetImg) targetImg.setAttribute("src", uploadRes.data.fileUrl);
+                        uploadedUrl = ekstrakUrlGambarDariResponGAS(uploadRes.data);
                     }
-                } catch (err) {}
+                } catch (err) {
+                    console.warn("Gagal upload gambar ke Drive:", err);
+                }
+
+                const matchingImgs = Array.from(tempDiv.querySelectorAll("img")).filter(
+                    el => (el.getAttribute("src") || "").trim() === imgData.id
+                );
+
+                if (uploadedUrl) {
+                    matchingImgs.forEach(el => el.setAttribute("src", uploadedUrl));
+                } else {
+                    gagalUploadCount++;
+                    matchingImgs.forEach(el => el.remove());
+                }
             }
 
             const hasTable = tempDiv.querySelector("table tr") !== null;
@@ -1447,7 +1544,8 @@ async function bacaFileSoalOtomatis(event) {
 
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
-            alert(`File Word berhasil diproses!${infoUkuran}`);
+            const infoGagal = gagalUploadCount > 0 ? `\n⚠️ ${gagalUploadCount} gambar gagal diunggah ke Drive (placeholder dihapus agar tidak 404).` : "";
+            alert(`File Word berhasil diproses!${infoUkuran}${infoGagal}`);
         } catch (err) {
             hideLoading();
             alert("Gagal memproses file Word: " + err.message);
@@ -1463,7 +1561,10 @@ function konversiHtmlKeFormatCbtDenganLink(element) {
         let text = node.innerText.trim();
         let imgEl = node.querySelector('img');
         if (imgEl && imgEl.getAttribute('src')) {
-            text += `<br><img src="${imgEl.getAttribute('src')}" class="img-soal">`;
+            const src = normalisasiUrlGambarDrive(imgEl.getAttribute('src').trim());
+            if (src && !/^IMG_DRIVE_/i.test(src)) {
+                text += `<br><img src="${src}" class="img-soal">`;
+            }
         }
         if (text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
             textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
@@ -1665,7 +1766,7 @@ function parseSoalDariTeks(text, mapelName, kelasArray) {
 
     let currentSoal = null;
     let optionsList = [];
-    let mode = null; // 'SOAL' | 'OPSI' | 'FLAG'
+    let mode = null;
 
     const finalizeSoal = () => {
         if (!currentSoal) return;
@@ -1767,7 +1868,7 @@ function getGroupedJadwalList() {
 function formatWaktuRingkasTabel(isoStr) {
     if (!isoStr) return "-";
     const parts = String(isoStr).replace("T", " ").split(" ");
-    return parts.length < 2 ? isoStr : `${parts[0]}<br>${parts[1]}`;
+    return parts.length < 2 ? escapeHtml(isoStr) : `${escapeHtml(parts[0])}<br>${escapeHtml(parts[1])}`;
 }
 
 function renderTabelJadwal() {
@@ -1790,9 +1891,9 @@ function renderTabelJadwal() {
         }));
 
         tbody.innerHTML += `<tr>
-            <td class="col-mapel"><b>${g.mapel}</b></td>
-            <td class="col-kelas">${kelasStr}</td>
-            <td class="col-jp">${g.jp ? g.jp + ' JP' : '-'}</td>
+            <td class="col-mapel"><b>${escapeHtml(g.mapel)}</b></td>
+            <td class="col-kelas">${escapeHtml(kelasStr)}</td>
+            <td class="col-jp">${g.jp ? escapeHtml(g.jp) + ' JP' : '-'}</td>
             <td class="col-waktu">${formatWaktuRingkasTabel(g.mulai)}</td>
             <td class="col-waktu">${formatWaktuRingkasTabel(g.selesai)}</td>
             <td class="col-aksi">
@@ -1821,7 +1922,7 @@ function editJadwalGroup(groupPayloadEnc) {
     const selMapel = document.getElementById('jadwalMapel');
     if (selMapel) {
         if (!Array.from(selMapel.options).some(opt => opt.value === g.mapel)) {
-            selMapel.innerHTML += `<option value="${g.mapel}">${g.mapel}</option>`;
+            selMapel.innerHTML += `<option value="${escapeHtml(g.mapel)}">${escapeHtml(g.mapel)}</option>`;
         }
         selMapel.value = g.mapel;
     }
@@ -1889,11 +1990,11 @@ async function bukaModalExportHasil(mapelEnc, kelasJson) {
     let html = `<p style="font-size:12.5px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p><div class="export-kelas-btn-list">`;
     kelasList.forEach(kls => {
         const klsEnc = encodeURIComponent(kls);
-        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">📥 Download Hasil Kelas <b>${kls}</b> (.xlsx)</button>`;
+        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">📥 Download Hasil Kelas <b>${escapeHtml(kls)}</b> (.xlsx)</button>`;
     });
     if (kelasList.length > 1) {
         html += `<hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:4px 0;">`;
-        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">📊 Download Gabungan Semua Kelas (${kelasList.join(', ')}) (.xlsx)</button>`;
+        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">📊 Download Gabungan Semua Kelas (${escapeHtml(kelasList.join(', '))}) (.xlsx)</button>`;
     }
     html += `</div>`;
     body.innerHTML = html;
@@ -2021,13 +2122,16 @@ function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarge
             const kunciPlain = decodeKunciGist(item.kunci);
             const kunciCipher = encodeKunciGist(kunciPlain);
             const infoKelas = Array.isArray(item.kelas) ? item.kelas.join(', ') : (item.namaUjian || '-');
+            const imgSrc = normalisasiUrlGambarDrive(item.gambar || "");
             html += `<div class="preview-item">
                 <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#666; margin-bottom:5px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
-                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${item.mapel || '-'}</b> | Kelas: <b>${infoKelas}</b></span>
-                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
+                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${escapeHtml(item.mapel || '-')}</b> | Kelas: <b>${escapeHtml(infoKelas)}</b></span>
+                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${escapeHtml(kunciCipher)}</b> (${escapeHtml(kunciPlain)})</span>
                 </div>
                 <div style="font-size:13.5px; font-weight:bold; margin-bottom:6px;">${item.soal}</div>`;
-            if (item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
+            if (imgSrc && !/^IMG_DRIVE_/i.test(imgSrc)) {
+                html += `<img src="${escapeHtml(imgSrc)}" class="img-soal" onerror="this.style.display='none'">`;
+            }
             ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
                 if (item.options && item.options[opt]) {
                     const isBenar = (opt === kunciPlain);
