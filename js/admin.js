@@ -149,7 +149,7 @@ function toggleRoleLogin() {
         currentLoginRole = 'admin';
         btn.innerText = "Login Admin";
         btn.classList.add('admin-mode');
-        
+
         if (localStorage.getItem("isAdminLoggedIn") === "true") {
             setCompactMode(false);
             document.getElementById('viewPanelAdmin').classList.add('active');
@@ -188,9 +188,9 @@ function getAdminPasswordHash() {
 function renderAdminPasswordDisplay() {
     const span = document.getElementById('currentAdminPassDisplay');
     const btn = document.getElementById('btnTogglePassAdmin');
-    if(!span || !btn) return;
+    if (!span || !btn) return;
     const plain = getAdminPasswordPlain();
-    if(isAdminPassVisible) {
+    if (isAdminPassVisible) {
         span.innerText = plain;
         btn.innerText = "Sembunyikan";
     } else {
@@ -206,7 +206,7 @@ function toggleLihatPasswordAdmin() {
 
 async function ubahPasswordAdmin() {
     const newPass = document.getElementById('newAdminPassword').value.trim();
-    if(!newPass) { alert("Password baru kosong!"); return; }
+    if (!newPass) { alert("Password baru kosong!"); return; }
     showLoading("Menyimpan password admin baru...");
     localStorage.setItem("adminPasswordPlain", newPass);
     localStorage.setItem("adminPasswordHash", CryptoJS.SHA256(newPass).toString());
@@ -220,7 +220,7 @@ async function ubahPasswordAdmin() {
 
 async function simpanPengaturanJp() {
     const val = parseInt(document.getElementById('settingMenitPerJp').value, 10);
-    if(isNaN(val) || val < 1) {
+    if (isNaN(val) || val < 1) {
         alert("Masukkan durasi menit per JP yang valid (minimal 1 menit)!");
         return;
     }
@@ -236,9 +236,9 @@ async function simpanPengaturanJp() {
 function updateLabelJp() {
     const m = pengaturanCbt.menitPerJp || 40;
     const lbl = document.getElementById('labelJumlahJp');
-    if(lbl) lbl.innerText = `JP (${m}m):`;
+    if (lbl) lbl.innerText = `JP (${m}m):`;
     const inp = document.getElementById('settingMenitPerJp');
-    if(inp) inp.value = m;
+    if (inp) inp.value = m;
 }
 
 function hitungWaktuSelesaiOtomatis() {
@@ -246,9 +246,9 @@ function hitungWaktuSelesaiOtomatis() {
     const jp = parseInt(document.getElementById('jumlahJp').value, 10);
     const menitPerJp = parseInt(pengaturanCbt.menitPerJp, 10) || 40;
 
-    if(!mulaiStr || isNaN(jp) || jp < 1) return;
+    if (!mulaiStr || isNaN(jp) || jp < 1) return;
     const startDate = new Date(mulaiStr);
-    if(isNaN(startDate.getTime())) return;
+    if (isNaN(startDate.getTime())) return;
 
     const totalMenit = jp * menitPerJp;
     const endDate = new Date(startDate.getTime() + totalMenit * 60000);
@@ -262,28 +262,28 @@ function switchAdminTab(tabName) {
     document.querySelectorAll('.admin-view').forEach(view => view.classList.remove('active'));
     sinkronkanHeaderAdmin();
 
-    if(tabName === 'monitoring') {
+    if (tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
         fetchTokenDariDrive(true);
         mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
-    } else if(tabName === 'ujian') {
+    } else if (tabName === 'ujian') {
         document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('adminTabUjian').classList.add('active');
         updateLabelJp();
         renderTabelJadwal();
-    } else if(tabName === 'master') {
+    } else if (tabName === 'master') {
         document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
         document.getElementById('adminTabMaster').classList.add('active');
         renderListMaster();
-    } else if(tabName === 'siswa') {
+    } else if (tabName === 'siswa') {
         document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
         document.getElementById('adminTabSiswa').classList.add('active');
         initDropdowns();
         renderTabelDaftarSiswa();
-    } else if(tabName === 'settings') {
+    } else if (tabName === 'settings') {
         document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
         document.getElementById('adminTabSettings').classList.add('active');
         fetchTokenDariDrive(true);
@@ -295,7 +295,7 @@ function switchAdminTab(tabName) {
 
 function prosesLoginAdmin() {
     let pass = document.getElementById('adminPassword').value;
-    if(CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
+    if (CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
         localStorage.setItem("isAdminLoggedIn", "true");
         setCompactMode(false);
         document.getElementById('tabMenu').style.display = 'none';
@@ -317,6 +317,7 @@ function refreshUISetelahDbMaster() {
     initDropdowns();
     renderTabelDaftarSiswa();
     renderTabelJadwal();
+    renderTabelSesiAktif();
     updateLabelJp();
     renderAdminPasswordDisplay();
 }
@@ -432,10 +433,10 @@ function renderStatusBadgesHtml(statusStr) {
 async function fetchLogLoginFromGAS() {
     try {
         let res = await postToGAS({ action: "getLogLogin", sheetName: "DB_Log_login_CBT" });
-        if(res.data && res.data.status === "success") {
+        if (res.data && res.data.status === "success") {
             logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
         }
-    } catch(e) {
+    } catch (e) {
         console.error("Gagal mengambil log login dari GAS:", e);
     }
     renderTabelSiswaLogin();
@@ -506,36 +507,67 @@ function resetCariNamaSesi() {
     renderTabelSesiAktif();
 }
 
+function isJadwalMapelSesuaiUntukKelas(mapelName, kelasName, options = {}) {
+    const targetMapel = normStr(mapelName);
+    const targetKelas = normStr(kelasName);
+    if (!targetMapel || !targetKelas) return false;
+
+    const requireActiveTime = options.requireActiveTime === true;
+    const nowMs = Date.now();
+
+    return (Array.isArray(daftarJadwalUjian) ? daftarJadwalUjian : []).some(j => {
+        if (!j) return false;
+        const mapelMatch = normStr(j.mapel) === targetMapel;
+        const kelasMatch = normStr(j.kelas) === targetKelas;
+        if (!mapelMatch || !kelasMatch) return false;
+
+        if (!requireActiveTime) return true;
+
+        const startMs = parseJadwalDateTimeMs(j.mulai);
+        const endMs = parseJadwalDateTimeMs(j.selesai);
+        if (isNaN(startMs) || isNaN(endMs)) return false;
+        return nowMs >= startMs && nowMs <= endMs;
+    });
+}
+
+// Hanya menampilkan mapel yang sesuai jadwal (dan rentang waktu aktif jadwal) untuk kelas siswa tersebut
 function kumpulkanMapelAktifSiswa(username, sesiObj) {
     const mapelSet = new Map();
-    const addMapel = (m) => {
+    const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
+    if (!kelasNorm) return [];
+
+    const jadwalOptions = { requireActiveTime: true };
+
+    const addMapelJikaSesuaiJadwal = (m) => {
         const clean = String(m || "").trim();
         if (!clean || clean === "-") return;
+        if (!isJadwalMapelSesuaiUntukKelas(clean, kelasNorm, jadwalOptions)) return;
         const key = normStr(clean);
         if (!mapelSet.has(key)) mapelSet.set(key, clean);
     };
 
-    if (sesiObj && sesiObj.mapel) addMapel(sesiObj.mapel);
+    if (sesiObj && sesiObj.mapel) addMapelJikaSesuaiJadwal(sesiObj.mapel);
 
     const lockedArr = bacaLockedMapelLokal(username);
     lockedArr.forEach(mNorm => {
         const matched = daftarMapel.find(dm => normStr(dm) === mNorm);
-        addMapel(matched || mNorm);
+        addMapelJikaSesuaiJadwal(matched || mNorm);
     });
 
     const namaNorm = normStr(sesiObj && sesiObj.nama ? sesiObj.nama : "");
-    const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
-    if (Array.isArray(logSiswaLogin) && (namaNorm || kelasNorm)) {
+    if (Array.isArray(logSiswaLogin) && namaNorm) {
         logSiswaLogin.forEach(l => {
-            const cocokNama = !namaNorm || normStr(l.nama) === namaNorm;
-            const cocokKelas = !kelasNorm || normStr(l.kelas) === kelasNorm;
-            if (cocokNama && cocokKelas && l.mapel) addMapel(l.mapel);
+            const cocokNama = normStr(l.nama) === namaNorm;
+            const cocokKelas = !l.kelas || normStr(l.kelas) === kelasNorm;
+            if (cocokNama && cocokKelas && l.mapel) addMapelJikaSesuaiJadwal(l.mapel);
         });
     }
 
-    if (mapelSet.size === 0 && kelasNorm) {
+    if (mapelSet.size === 0) {
         daftarJadwalUjian.forEach(j => {
-            if (normStr(j.kelas) === kelasNorm && j.mapel) addMapel(j.mapel);
+            if (normStr(j.kelas) === kelasNorm && j.mapel) {
+                addMapelJikaSesuaiJadwal(j.mapel);
+            }
         });
     }
 
@@ -558,11 +590,11 @@ function buatTombolResetAksiHtml(username, sesiObj) {
 
 function renderTabelSesiAktif() {
     const tbody = document.getElementById('tbodySesiAktif');
-    if(!tbody) return;
+    if (!tbody) return;
     tbody.innerHTML = "";
 
     const keys = Object.keys(sesiLoginSiswa);
-    if(keys.length === 0) {
+    if (keys.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
         return;
     }
@@ -572,7 +604,7 @@ function renderTabelSesiAktif() {
 
     keys.forEach(username => {
         const s = sesiLoginSiswa[username];
-        if(!s) return;
+        if (!s) return;
         if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) return;
         tampilCount++;
         let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
@@ -596,14 +628,20 @@ function renderTabelSesiAktif() {
 async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
     const username = decodeURIComponent(usernameEnc);
     const mapel = decodeURIComponent(mapelEnc);
-    if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?`)) return;
-
-    showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
-    tandaiMapelDiresetLokal(username, mapel);
-
     const sesiLama = sesiLoginSiswa[username] || {
         username: username, deviceId: "", status: "Login Aktif", nama: "", kelas: "", mapel: mapel
     };
+
+    if (!isJadwalMapelSesuaiUntukKelas(mapel, sesiLama.kelas, { requireActiveTime: true })) {
+        alert(`Mapel "${mapel}" berada di luar jadwal aktif kelas ${sesiLama.kelas || "-"} sehingga tidak bisa di-reset langsung. Silakan hapus log atau sesuaikan jadwal ujian.`);
+        renderTabelSesiAktif();
+        return;
+    }
+
+    if (!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?`)) return;
+
+    showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
+    tandaiMapelDiresetLokal(username, mapel);
 
     try {
         await postToGAS({
@@ -634,7 +672,7 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
 
 async function resetPerangkatSiswaAdmin(usernameEnc) {
     const username = decodeURIComponent(usernameEnc);
-    if(!confirm(`Reset kunci perangkat untuk akun "${username}"?`)) return;
+    if (!confirm(`Reset kunci perangkat untuk akun "${username}"?`)) return;
 
     showLoading(`Mereset kunci perangkat untuk ${username}...`);
     await deleteSesiFromGAS(username);
@@ -656,11 +694,11 @@ async function refreshSemuaDataAdmin() {
 
 function renderTabelSiswaLogin() {
     let tbody = document.getElementById('tbodySiswaLogin');
-    if(!tbody) return;
+    if (!tbody) return;
     tbody.innerHTML = "";
 
     const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
-    if(!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
         return;
     }
@@ -711,8 +749,8 @@ function backupDatabaseJson() {
 
 function restoreDatabaseJson(event) {
     const file = event.target.files[0];
-    if(!file) return;
-    if(!confirm("Apakah Anda yakin ingin me-restore database dari file ini?")) {
+    if (!file) return;
+    if (!confirm("Apakah Anda yakin ingin me-restore database dari file ini?")) {
         event.target.value = "";
         return;
     }
@@ -721,15 +759,15 @@ function restoreDatabaseJson(event) {
     reader.onload = async function(e) {
         try {
             const parsed = JSON.parse(e.target.result);
-            if(!parsed || typeof parsed !== 'object') throw new Error("Format JSON tidak valid.");
+            if (!parsed || typeof parsed !== 'object') throw new Error("Format JSON tidak valid.");
             showLoading("Merestore database ke GitHub Gist...");
-            if(Array.isArray(parsed.db_kelas)) daftarKelas = parsed.db_kelas;
-            if(Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
-            if(Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
-            if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
-            if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
+            if (Array.isArray(parsed.db_kelas)) daftarKelas = parsed.db_kelas;
+            if (Array.isArray(parsed.db_mapel)) daftarMapel = parsed.db_mapel;
+            if (Array.isArray(parsed.db_siswa)) databaseSiswa = parsed.db_siswa;
+            if (Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
+            if (parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
-                if(parsed.db_pengaturan.adminPasswordPlain) {
+                if (parsed.db_pengaturan.adminPasswordPlain) {
                     localStorage.setItem("adminPasswordPlain", parsed.db_pengaturan.adminPasswordPlain);
                 }
             }
@@ -737,7 +775,7 @@ function restoreDatabaseJson(event) {
             refreshUISetelahDbMaster();
             hideLoading();
             alert("Database berhasil direstore dan disinkronkan ke Gist!");
-        } catch(err) {
+        } catch (err) {
             hideLoading();
             alert("Gagal restore database: " + err.message);
         }
@@ -747,8 +785,8 @@ function restoreDatabaseJson(event) {
 }
 
 async function hapusDatabaseGist() {
-    if(!confirm("PERINGATAN! Semua data Siswa, Jadwal Ujian di Gist, Sesi & Log di GAS, file Hasil Ujian, serta gambar soal di Drive akan dihapus permanen. Lanjutkan?")) return;
-    if(!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database?")) return;
+    if (!confirm("PERINGATAN! Semua data Siswa, Jadwal Ujian di Gist, Sesi & Log di GAS, file Hasil Ujian, serta gambar soal di Drive akan dihapus permanen. Lanjutkan?")) return;
+    if (!confirm("Konfirmasi terakhir: Yakin ingin mereset seluruh database?")) return;
 
     showLoading("Menghapus database Gist & membersihkan GAS/Drive...");
     databaseSiswa = [];
@@ -776,26 +814,26 @@ function initDropdowns() {
     let selKelasSatuan = document.getElementById('selectKelasSiswaSatuan');
     let selFilterKartu = document.getElementById('filterKelasKartu');
 
-    if(jdMp) {
+    if (jdMp) {
         jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
         daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${m}">${m}</option>`);
     }
 
-    if(selKelasSatuan) {
+    if (selKelasSatuan) {
         const prevVal = selKelasSatuan.value;
         selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
         daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${k}">${k}</option>`);
-        if(prevVal) selKelasSatuan.value = prevVal;
+        if (prevVal) selKelasSatuan.value = prevVal;
     }
 
-    if(selFilterKartu) {
+    if (selFilterKartu) {
         const prevFilter = selFilterKartu.value;
         selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>';
         daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${k}">${k}</option>`);
-        if(prevFilter) selFilterKartu.value = prevFilter;
+        if (prevFilter) selFilterKartu.value = prevFilter;
     }
 
-    if(checkboxContainer) renderCheckboxKelasPerBaris(checkboxContainer);
+    if (checkboxContainer) renderCheckboxKelasPerBaris(checkboxContainer);
     renderListMaster();
 }
 
@@ -899,8 +937,8 @@ function renderListMaster() {
 
 async function tambahKelas() {
     let k = document.getElementById('inputKelasBaru').value.trim();
-    if(!k) return;
-    if(daftarKelas.includes(k)) { alert("Kelas sudah ada!"); return; }
+    if (!k) return;
+    if (daftarKelas.includes(k)) { alert("Kelas sudah ada!"); return; }
     showLoading("Menyimpan kelas...");
     daftarKelas.push(k);
     document.getElementById('inputKelasBaru').value = "";
@@ -910,7 +948,7 @@ async function tambahKelas() {
 }
 
 async function hapusKelas(index) {
-    if(!confirm("Yakin ingin menghapus kelas ini?")) return;
+    if (!confirm("Yakin ingin menghapus kelas ini?")) return;
     showLoading("Menghapus kelas...");
     daftarKelas.splice(index, 1);
     await saveCbtDatabaseToGist();
@@ -920,8 +958,8 @@ async function hapusKelas(index) {
 
 async function tambahMapel() {
     let m = document.getElementById('inputMapelBaru').value.trim();
-    if(!m) return;
-    if(daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
+    if (!m) return;
+    if (daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
     showLoading("Menyimpan mata pelajaran...");
     daftarMapel.push(m);
     document.getElementById('inputMapelBaru').value = "";
@@ -931,7 +969,7 @@ async function tambahMapel() {
 }
 
 async function hapusMapel(index) {
-    if(!confirm("Yakin ingin menghapus mata pelajaran ini?")) return;
+    if (!confirm("Yakin ingin menghapus mata pelajaran ini?")) return;
     showLoading("Menghapus mata pelajaran...");
     daftarMapel.splice(index, 1);
     await saveCbtDatabaseToGist();
@@ -1009,19 +1047,19 @@ async function simpanSiswaSatuan() {
     const password = document.getElementById('inputPasswordSiswa').value.trim();
     const editIdx = parseInt(document.getElementById('editSiswaIndex').value, 10);
 
-    if(!nama || !kelas || !username || !password) {
+    if (!nama || !kelas || !username || !password) {
         alert("Semua kolom (Nama, Kelas, Username, Password) wajib diisi!");
         return;
     }
 
     const duplikatIdx = databaseSiswa.findIndex((s, i) => s.username === username && i !== editIdx);
-    if(duplikatIdx !== -1) {
+    if (duplikatIdx !== -1) {
         alert(`Username "${username}" sudah digunakan oleh ${databaseSiswa[duplikatIdx].nama}!`);
         return;
     }
 
     showLoading(editIdx >= 0 ? "Memperbarui data siswa..." : "Menambahkan siswa ke Gist...");
-    if(editIdx >= 0 && editIdx < databaseSiswa.length) {
+    if (editIdx >= 0 && editIdx < databaseSiswa.length) {
         databaseSiswa[editIdx] = { nama, kelas, username, password };
     } else {
         databaseSiswa.push({ nama, kelas, username, password });
@@ -1035,11 +1073,11 @@ async function simpanSiswaSatuan() {
 
 function editSiswa(idx) {
     const s = databaseSiswa[idx];
-    if(!s) return;
+    if (!s) return;
     document.getElementById('editSiswaIndex').value = idx;
     document.getElementById('inputNamaSiswa').value = s.nama;
     const selKelas = document.getElementById('selectKelasSiswaSatuan');
-    if(!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
+    if (!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
         selKelas.innerHTML += `<option value="${s.kelas}">${s.kelas}</option>`;
     }
     selKelas.value = s.kelas;
@@ -1097,26 +1135,26 @@ async function hapusSemuaSiswa() {
 
 async function hapusSiswa(idx) {
     const s = databaseSiswa[idx];
-    if(!s || !confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
+    if (!s || !confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
     showLoading("Menghapus data siswa...");
     await deleteSesiFromGAS(s.username);
     databaseSiswa.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
     renderTabelSesiAktif();
-    if(parseInt(document.getElementById('editSiswaIndex').value, 10) === idx) batalEditSiswa();
+    if (parseInt(document.getElementById('editSiswaIndex').value, 10) === idx) batalEditSiswa();
     hideLoading();
 }
 
 async function importDataSiswaToGist(event) {
     const file = event.target.files[0];
-    if(!file) return;
+    if (!file) return;
     showLoading("Membaca Excel & mengunggah data siswa...");
     const reader = new FileReader();
     reader.onload = async function(e) {
         try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
+            const workbook = XLSX.read(data, { type: 'array' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(worksheet);
             databaseSiswa = json.map(row => ({
@@ -1129,7 +1167,7 @@ async function importDataSiswaToGist(event) {
             renderTabelDaftarSiswa();
             hideLoading();
             alert(`Berhasil mengunggah ${databaseSiswa.length} data siswa!`);
-        } catch(err) {
+        } catch (err) {
             hideLoading();
             alert("Gagal membaca file Excel: " + err.message);
         }
@@ -1148,9 +1186,9 @@ function resetCariNamaSiswa() {
 
 function renderTabelDaftarSiswa() {
     let tbody = document.getElementById('tbodyDaftarSiswa');
-    if(!tbody) return;
+    if (!tbody) return;
     tbody.innerHTML = "";
-    if(databaseSiswa.length === 0) {
+    if (databaseSiswa.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
         return;
     }
@@ -1261,19 +1299,19 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
 
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
-    if(!file) return;
+    if (!file) return;
     let ekstensi = file.name.split('.').pop().toLowerCase();
-    
-    if(ekstensi === 'txt') {
+
+    if (ekstensi === 'txt') {
         const reader = new FileReader();
         reader.onload = function(e) { document.getElementById('soalBatchText').value = e.target.result; };
         reader.readAsText(file);
-    } else if(ekstensi === 'docx') {
+    } else if (ekstensi === 'docx') {
         showLoading("Membaca file Word & mengunggah gambar ke Google Drive...");
         let imagesList = [];
         let imageCounter = 0;
         try {
-            let result = await mammoth.convertToHtml({arrayBuffer: await file.arrayBuffer()}, {
+            let result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() }, {
                 convertImage: mammoth.images.imgElement(function(image) {
                     return image.read("base64").then(function(imageBuffer) {
                         let base64Str = "data:" + image.contentType + ";base64," + imageBuffer;
@@ -1290,7 +1328,7 @@ async function bacaFileSoalOtomatis(event) {
             let totalImg = imagesList.length;
             let ringkasanKompresi = [];
 
-            for(let i = 0; i < totalImg; i++) {
+            for (let i = 0; i < totalImg; i++) {
                 let imgData = imagesList[i];
                 showLoading(`Mengompres & mengunggah gambar ${i + 1} dari ${totalImg} (< 50 KB)...`);
                 const hasilKompres = await kompresGambarSoalKeBawah50KB(imgData.data, MAX_GAMBAR_SOAL_BYTES);
@@ -1298,7 +1336,7 @@ async function bacaFileSoalOtomatis(event) {
                 const kbAkhir = (hasilKompres.sizeBytes / 1024).toFixed(1);
                 const extFile = finalBase64.startsWith("data:image/webp") ? "webp" : "jpg";
                 ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
-                
+
                 try {
                     let uploadRes = await postToGAS({
                         action: "uploadImage",
@@ -1306,18 +1344,18 @@ async function bacaFileSoalOtomatis(event) {
                         fileData: finalBase64,
                         fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
                     });
-                    if(uploadRes.data && uploadRes.data.status === "success") {
+                    if (uploadRes.data && uploadRes.data.status === "success") {
                         let targetImg = tempDiv.querySelector(`[src="${imgData.id}"]`);
-                        if(targetImg) targetImg.setAttribute("src", uploadRes.data.fileUrl);
+                        if (targetImg) targetImg.setAttribute("src", uploadRes.data.fileUrl);
                     }
-                } catch(err) {}
+                } catch (err) {}
             }
 
             document.getElementById('soalBatchText').value = konversiHtmlKeFormatCbtDenganLink(tempDiv);
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
             alert(`File Word berhasil diproses!${infoUkuran}`);
-        } catch(err) {
+        } catch (err) {
             hideLoading();
             alert("Gagal memproses file Word: " + err.message);
             document.getElementById('soalBatchText').value = "";
@@ -1331,14 +1369,14 @@ function konversiHtmlKeFormatCbtDenganLink(element) {
     nodes.forEach(node => {
         let text = node.innerText.trim();
         let imgEl = node.querySelector('img');
-        if(imgEl && imgEl.getAttribute('src')) {
+        if (imgEl && imgEl.getAttribute('src')) {
             text += `<br><img src="${imgEl.getAttribute('src')}" class="img-soal">`;
         }
-        if(text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
+        if (text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
             textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
-        } else if(text.toLowerCase().startsWith("jawaban") || text === "0" || text === "1") {
+        } else if (text.toLowerCase().startsWith("jawaban") || text === "0" || text === "1") {
             textOut += text + "\n";
-        } else if(text.length > 0) {
+        } else if (text.length > 0) {
             textOut += text + "\n";
         }
     });
@@ -1438,10 +1476,10 @@ async function simpanJadwalDanSoal() {
     const origKelasStr = document.getElementById('editJadwalOrigKelas')?.value || "";
     const isEditMode = origIndicesStr !== "";
 
-    if(!mapel) { alert("Pilih Mata Pelajaran!"); return; }
-    if(checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
-    if(!mulai || !selesai) { alert("Tentukan waktu mulai dan jumlah JP!"); return; }
-    if(mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
+    if (!mapel) { alert("Pilih Mata Pelajaran!"); return; }
+    if (checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
+    if (!mulai || !selesai) { alert("Tentukan waktu mulai dan jumlah JP!"); return; }
+    if (mulai >= selesai) { alert("Waktu selesai harus lebih besar dari mulai!"); return; }
 
     showLoading(isEditMode ? "Memperbarui jadwal ujian..." : "Menyiapkan jadwal & menyimpan soal...");
 
@@ -1458,13 +1496,13 @@ async function simpanJadwalDanSoal() {
         daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
         daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai });
     });
-    
+
     await saveCbtDatabaseToGist();
 
-    if(rawText) {
+    if (rawText) {
         showLoading("Menyimpan soal ke Gist...");
         let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
-        if(parsedSoal.length === 0) {
+        if (parsedSoal.length === 0) {
             hideLoading();
             alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... JAWABAN ... 0/1).");
             return;
@@ -1506,10 +1544,10 @@ async function simpanJadwalDanSoal() {
                 files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
             }, githubHeaders);
             bersihkanCacheSoal();
-        } catch(e) { 
+        } catch (e) {
             hideLoading();
-            alert("Gagal upload soal ke Gist: " + e.message); 
-            return; 
+            alert("Gagal upload soal ke Gist: " + e.message);
+            return;
         }
     } else if (isEditMode && origMapel && origKelasStr) {
         try {
@@ -1523,6 +1561,7 @@ async function simpanJadwalDanSoal() {
     hideLoading();
     batalEditJadwal();
     renderTabelJadwal();
+    renderTabelSesiAktif();
     alert(isEditMode ? "Jadwal ujian berhasil diperbarui!" : "Jadwal ujian dan soal berhasil disimpan!");
 }
 
@@ -1536,8 +1575,8 @@ function parseSoalDariTeks(text, mapelName, kelasArray) {
 
     lines.forEach(line => {
         let l = line.trim();
-        if(l.startsWith("SOAL")) {
-            if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+        if (l.startsWith("SOAL")) {
+            if (currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
             currentSoal = {
                 id: Math.floor(Date.now() + Math.random() * 100000),
                 mapel: mapelName,
@@ -1548,19 +1587,19 @@ function parseSoalDariTeks(text, mapelName, kelasArray) {
             };
             optionsMap = {};
             optIdx = 0;
-        } else if(l.startsWith("JAWABAN")) {
-        } else if(currentSoal && !currentSoal.soal) {
+        } else if (l.startsWith("JAWABAN")) {
+        } else if (currentSoal && !currentSoal.soal) {
             currentSoal.soal = l;
-        } else if(currentSoal) {
-            if(l === "0" || l === "1") {
-                if(l === "1" && optionKeys[optIdx - 1]) currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
-            } else if(l.length > 0 && optIdx < 5) {
+        } else if (currentSoal) {
+            if (l === "0" || l === "1") {
+                if (l === "1" && optionKeys[optIdx - 1]) currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
+            } else if (l.length > 0 && optIdx < 5) {
                 optionsMap[optionKeys[optIdx]] = l;
                 optIdx++;
             }
         }
     });
-    if(currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
+    if (currentSoal) { currentSoal.options = optionsMap; soalList.push(currentSoal); }
     return soalList;
 }
 
@@ -1569,8 +1608,8 @@ function getGroupedJadwalList() {
     daftarJadwalUjian.forEach((j, originalIdx) => {
         const key = `${j.mapel}||${j.jp}||${j.mulai}||${j.selesai}`;
         let existing = groups.find(g => g.key === key);
-        if(existing) {
-            if(!existing.kelasList.includes(j.kelas)) existing.kelasList.push(j.kelas);
+        if (existing) {
+            if (!existing.kelasList.includes(j.kelas)) existing.kelasList.push(j.kelas);
             existing.indices.push(originalIdx);
         } else {
             groups.push({ key: key, mapel: j.mapel, jp: j.jp, mulai: j.mulai, selesai: j.selesai, kelasList: [j.kelas], indices: [originalIdx] });
@@ -1588,10 +1627,10 @@ function formatWaktuRingkasTabel(isoStr) {
 
 function renderTabelJadwal() {
     let tbody = document.getElementById('tbodyJadwal');
-    if(!tbody) return;
+    if (!tbody) return;
     tbody.innerHTML = "";
     const groupedList = getGroupedJadwalList();
-    if(groupedList.length === 0) {
+    if (groupedList.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
         return;
     }
@@ -1805,7 +1844,7 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
     allSoal.forEach((item, idx) => {
         const cocok = kelasList.some(k => cekSoalCocokKelas(item, mapel, k));
         const keyId = item.id !== undefined && item.id !== null ? String(item.id) : `idx_${idx}`;
-        if(cocok && !seenIds.has(keyId)) { seenIds.add(keyId); matchedSoal.push(item); }
+        if (cocok && !seenIds.has(keyId)) { seenIds.add(keyId); matchedSoal.push(item); }
     });
     tampilkanModalPreviewSoal(`Soal: ${mapel} (${kelasList.join(', ')})`, matchedSoal, mapel, kelasList);
 }
@@ -1822,14 +1861,14 @@ function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarge
     const body = document.getElementById('modalSoalBody');
     const btnHapus = document.getElementById('btnHapusSoalPaket');
 
-    if(mapelTarget && kelasListTarget && soalArray.length > 0) {
+    if (mapelTarget && kelasListTarget && soalArray.length > 0) {
         btnHapus.style.display = "inline-block";
         btnHapus.onclick = () => hapusSoalUntukKelas(mapelTarget, kelasListTarget);
     } else {
         btnHapus.style.display = "none";
     }
 
-    if(soalArray.length === 0) {
+    if (soalArray.length === 0) {
         body.innerHTML = `<div style="text-align:center; padding:30px; color:#666;">Belum ada soal yang tersimpan di Gist untuk ujian/kelas ini.</div>`;
     } else {
         let html = "";
@@ -1843,9 +1882,9 @@ function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarge
                     <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
                 </div>
                 <div style="font-size:13.5px; font-weight:bold; margin-bottom:6px;">${item.soal}</div>`;
-            if(item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
+            if (item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
             ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
-                if(item.options && item.options[opt]) {
+                if (item.options && item.options[opt]) {
                     const isBenar = (opt === kunciPlain);
                     html += `<div class="preview-opt ${isBenar ? 'is-kunci' : ''}"><b>${opt}.</b> ${item.options[opt]} ${isBenar ? ' ✔' : ''}</div>`;
                 }
@@ -1862,14 +1901,14 @@ function tutupModalSoal() {
 }
 
 async function hapusSoalUntukKelas(mapel, kelasList) {
-    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari soal.json di Gist?`)) return;
+    if (!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari soal.json di Gist?`)) return;
     showLoading("Menghapus soal dari soal.json di Gist...");
     try {
         await eksekusiHapusSoalDiGist(mapel, kelasList);
         hideLoading();
         tutupModalSoal();
         alert(`Soal untuk ${mapel} (${kelasList.join(', ')}) berhasil dihapus!`);
-    } catch(err) {
+    } catch (err) {
         hideLoading();
         alert("Gagal menghapus soal: " + err.message);
     }
@@ -1879,13 +1918,14 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     const indices = JSON.parse(decodeURIComponent(indicesJson));
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
-    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus soalnya?`)) return;
+    if (!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus soalnya?`)) return;
 
     showLoading("Menghapus jadwal & membersihkan soal...");
     indices.sort((a, b) => b - a).forEach(idx => daftarJadwalUjian.splice(idx, 1));
     await saveCbtDatabaseToGist();
     try { await eksekusiHapusSoalDiGist(mapel, kelasList); } catch (err) {}
     renderTabelJadwal();
+    renderTabelSesiAktif();
     hideLoading();
 }
 
@@ -1899,7 +1939,7 @@ window.onload = async function() {
     await prosesAntreanSubmitTertunda(false);
     await fetchCbtDatabase(false);
 
-    if(localStorage.getItem("isAdminLoggedIn") === "true") {
+    if (localStorage.getItem("isAdminLoggedIn") === "true") {
         await fetchSesiFromGAS(true);
         await fetchTokenDariDrive(true);
         hideLoading();
@@ -1914,14 +1954,14 @@ window.onload = async function() {
     }
 
     const savedSiswaSess = bacaSesiSiswaLokal();
-    if(savedSiswaSess && savedSiswaSess.username) {
+    if (savedSiswaSess && savedSiswaSess.username) {
         const siswaCocok = databaseSiswa.find(s => String(s.username) === String(savedSiswaSess.username));
         const sesiServer = await fetchSingleSesiFromGAS(savedSiswaSess.username, true);
         await fetchTokenDariDrive(true);
         const perangkatSama = !sesiServer || !sesiServer.deviceId || sesiServer.deviceId === getOrCreateDeviceId();
 
         hideLoading();
-        if(siswaCocok && perangkatSama) {
+        if (siswaCocok && perangkatSama) {
             await tampilkanHalamanPilihUjianSiswa(siswaCocok);
             return;
         } else {
