@@ -1,30 +1,4 @@
 // ================= TOKEN ADMIN (TAMPILAN & AKSI) =================
-let gistLimitCountdownTimerId = null;
-let gistLimitResetEpochMs = 0;
-
-function escapeHtml(str) {
-    return String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}
-
-function normalisasiUrlGambarDrive(url) {
-    const clean = String(url || "").trim();
-    if (!clean) return "";
-    const matchFileD = clean.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (matchFileD && matchFileD[1]) {
-        return `https://drive.google.com/uc?export=view&id=${matchFileD[1]}`;
-    }
-    const matchOpenId = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (clean.includes("drive.google.com") && matchOpenId && matchOpenId[1]) {
-        return `https://drive.google.com/uc?export=view&id=${matchOpenId[1]}`;
-    }
-    return clean;
-}
-
 function updateTampilanTokenAdmin() {
     const codeEl = document.getElementById("adminTokenAktifDisplay");
     const timerEl = document.getElementById("adminTokenCountdown");
@@ -78,8 +52,9 @@ async function simpanPengaturanToken() {
             wajibToken: wajibVal,
             regenerate: false
         });
-        if (res.data && res.data.status === "success" && res.data.data) {
-            const d = res.data.data;
+        const payload = res?.data?.data ? res.data : res;
+        if (payload && payload.status === "success" && payload.data) {
+            const d = payload.data;
             const serverNow = Number(d.serverNow || Date.now());
             tokenDriveState = {
                 token: String(d.token || "----"),
@@ -94,7 +69,7 @@ async function simpanPengaturanToken() {
             alert(`Berhasil! Pengaturan token diperbarui (interval ${intervalVal} menit).`);
         } else {
             hideLoading();
-            alert("Gagal menyimpan token: " + (res.data?.message || "Unknown error"));
+            alert("Gagal menyimpan token: " + (payload?.message || "Unknown error"));
         }
     } catch (e) {
         hideLoading();
@@ -112,8 +87,9 @@ async function acakUlangTokenDrive() {
             wajibToken: tokenDriveState.wajibToken !== false,
             regenerate: true
         });
-        if (res.data && res.data.status === "success" && res.data.data) {
-            const d = res.data.data;
+        const payload = res?.data?.data ? res.data : res;
+        if (payload && payload.status === "success" && payload.data) {
+            const d = payload.data;
             const serverNow = Number(d.serverNow || Date.now());
             tokenDriveState = {
                 token: String(d.token || "----"),
@@ -289,29 +265,29 @@ function switchAdminTab(tabName) {
     sinkronkanHeaderAdmin();
 
     if (tabName === 'monitoring') {
-        document.querySelector('.admin-tab-btn:nth-child(1)')?.classList.add('active');
-        document.getElementById('adminTabMonitoring')?.classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('adminTabMonitoring').classList.add('active');
         fetchTokenDariDrive(true);
         mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
         fetchLogLoginFromGAS();
     } else if (tabName === 'ujian') {
-        document.querySelector('.admin-tab-btn:nth-child(2)')?.classList.add('active');
-        document.getElementById('adminTabUjian')?.classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('adminTabUjian').classList.add('active');
         updateLabelJp();
         renderTabelJadwal();
     } else if (tabName === 'master') {
-        document.querySelector('.admin-tab-btn:nth-child(3)')?.classList.add('active');
-        document.getElementById('adminTabMaster')?.classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(3)').classList.add('active');
+        document.getElementById('adminTabMaster').classList.add('active');
         renderListMaster();
     } else if (tabName === 'siswa') {
-        document.querySelector('.admin-tab-btn:nth-child(4)')?.classList.add('active');
-        document.getElementById('adminTabSiswa')?.classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(4)').classList.add('active');
+        document.getElementById('adminTabSiswa').classList.add('active');
         initDropdowns();
         renderTabelDaftarSiswa();
     } else if (tabName === 'settings') {
-        document.querySelector('.admin-tab-btn:nth-child(5)')?.classList.add('active');
-        document.getElementById('adminTabSettings')?.classList.add('active');
+        document.querySelector('.admin-tab-btn:nth-child(5)').classList.add('active');
+        document.getElementById('adminTabSettings').classList.add('active');
         fetchTokenDariDrive(true);
         updateLabelJp();
         renderAdminPasswordDisplay();
@@ -381,48 +357,11 @@ async function saveCbtDatabaseToGist() {
     }
 }
 
-function formatHitungMundurGist(msRemaining) {
-    const totalSec = Math.max(0, Math.floor(msRemaining / 1000));
-    const jam = Math.floor(totalSec / 3600);
-    const menit = Math.floor((totalSec % 3600) / 60);
-    const detik = totalSec % 60;
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${jam} jam ${pad(menit)} menit ${pad(detik)} detik`;
-}
-
-function updateTampilanCountdownGist() {
-    const resetEl = document.getElementById('gistLimitReset');
-    if (!resetEl || !gistLimitResetEpochMs) return;
-
-    const sisaMs = gistLimitResetEpochMs - Date.now();
-    if (sisaMs <= 0) {
-        resetEl.innerText = "0 jam 00 menit 00 detik";
-        if (gistLimitCountdownTimerId) {
-            clearInterval(gistLimitCountdownTimerId);
-            gistLimitCountdownTimerId = null;
-        }
-        cekRateLimitGistApi(true);
-        return;
-    }
-
-    resetEl.innerText = formatHitungMundurGist(sisaMs);
-}
-
-function mulaiTimerCountdownGist() {
-    if (gistLimitCountdownTimerId) clearInterval(gistLimitCountdownTimerId);
-    updateTampilanCountdownGist();
-    gistLimitCountdownTimerId = setInterval(updateTampilanCountdownGist, 1000);
-}
-
 async function cekRateLimitGistApi(silent = false) {
     const remEl = document.getElementById('gistLimitRemaining');
     const usedEl = document.getElementById('gistLimitUsed');
     const resetEl = document.getElementById('gistLimitReset');
     const statusEl = document.getElementById('gistLimitStatus');
-
-    if (resetEl && resetEl.previousElementSibling) {
-        resetEl.previousElementSibling.innerText = "Reset Kuota :";
-    }
 
     if (!silent && remEl) remEl.innerText = "Memuat...";
     try {
@@ -435,13 +374,11 @@ async function cekRateLimitGistApi(silent = false) {
         const used = Number(core.used ?? (limit - remaining));
         const resetEpoch = Number(core.reset || 0);
 
+        let resetStr = "-";
         if (resetEpoch > 0) {
-            gistLimitResetEpochMs = resetEpoch * 1000;
-            mulaiTimerCountdownGist();
-        } else {
-            gistLimitResetEpochMs = 0;
-            if (gistLimitCountdownTimerId) clearInterval(gistLimitCountdownTimerId);
-            if (resetEl) resetEl.innerText = "-";
+            const d = new Date(resetEpoch * 1000);
+            const pad = (n) => String(n).padStart(2, '0');
+            resetStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} WIB`;
         }
 
         if (remEl) {
@@ -449,6 +386,7 @@ async function cekRateLimitGistApi(silent = false) {
             remEl.style.color = remaining > 500 ? "#28a745" : (remaining > 100 ? "#fd7e14" : "#dc3545");
         }
         if (usedEl) usedEl.innerText = `${used} req`;
+        if (resetEl) resetEl.innerText = resetStr;
         if (statusEl) {
             statusEl.innerText = remaining > 500 ? "Aman (Raw-First Aktif)" : "Waspada Kuota Menipis";
             statusEl.style.color = remaining > 500 ? "#008080" : "#dc3545";
@@ -464,7 +402,11 @@ async function cekRateLimitGistApi(silent = false) {
     }
 }
 
-// ================= MONITORING SESI & LOG SPREADSHEET =================
+// ================= MONITORING SESI & LOG SPREADSHEET (OPTIMASI 1000+ SISWA) =================
+let _debounceTimerSesi = null;
+let _debounceTimerLog = null;
+let _debounceTimerSiswa = null;
+
 function renderStatusBadgesHtml(statusStr) {
     const raw = String(statusStr || "").trim();
     if (!raw || raw === "-") return `<span class="status-pill status-pill-login">-</span>`;
@@ -488,7 +430,7 @@ function renderStatusBadgesHtml(statusStr) {
         else if (low.includes("curang")) cls = "status-pill-curang";
         else if (low.includes("reset")) cls = "status-pill-reset";
         else if (low.includes("sedang")) cls = "status-pill-ujian";
-        return `<span class="status-pill ${cls}">${escapeHtml(part)}</span>`;
+        return `<span class="status-pill ${cls}">${part}</span>`;
     });
 
     return `<div class="status-pill-wrap">${pills.join("")}</div>`;
@@ -497,8 +439,9 @@ function renderStatusBadgesHtml(statusStr) {
 async function fetchLogLoginFromGAS() {
     try {
         let res = await postToGAS({ action: "getLogLogin", sheetName: "DB_Log_login_CBT" });
-        if (res.data && res.data.status === "success") {
-            logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
+        const payload = res?.data?.status ? res.data : res;
+        if (payload && payload.status === "success") {
+            logSiswaLogin = Array.isArray(payload.data) ? payload.data : [];
         }
     } catch (e) {
         console.error("Gagal mengambil log login dari GAS:", e);
@@ -524,14 +467,15 @@ async function hapusBarisLogSpreadsheet(index) {
             mapel: row.mapel || "",
             status: row.status || ""
         });
-        if (res.data && res.data.status === "success") {
+        const payload = res?.data?.status ? res.data : res;
+        if (payload && payload.status === "success") {
             await fetchLogLoginFromGAS();
             hideLoading();
         } else {
             logSiswaLogin.splice(index, 1);
             renderTabelSiswaLogin();
             hideLoading();
-            alert("Gagal menghapus baris log di Spreadsheet: " + (res.data?.message || "Unknown error"));
+            alert("Gagal menghapus baris log di Spreadsheet: " + (payload?.message || "Unknown error"));
         }
     } catch (e) {
         logSiswaLogin.splice(index, 1);
@@ -553,10 +497,11 @@ async function hapusSemuaLogSpreadsheet() {
     showLoading("Menghapus seluruh log pengerjaan & nilai di Spreadsheet...");
     try {
         const res = await postToGAS({ action: "clearLogLogin", sheetName: "DB_Log_login_CBT" });
+        const payload = res?.data?.status ? res.data : res;
         logSiswaLogin = [];
         renderTabelSiswaLogin();
         hideLoading();
-        if (res.data && res.data.status === "success") {
+        if (payload && payload.status === "success") {
             alert("Seluruh log pengerjaan & nilai siswa berhasil dihapus!");
         }
     } catch (e) {
@@ -594,7 +539,7 @@ function isJadwalMapelSesuaiUntukKelas(mapelName, kelasName, options = {}) {
     });
 }
 
-function kumpulkanMapelAktifSiswa(username, sesiObj) {
+function kumpulkanMapelAktifSiswa(username, sesiObj, logIndexByNamaKelas = null) {
     const mapelSet = new Map();
     const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
     if (!kelasNorm) return [];
@@ -618,12 +563,17 @@ function kumpulkanMapelAktifSiswa(username, sesiObj) {
     });
 
     const namaNorm = normStr(sesiObj && sesiObj.nama ? sesiObj.nama : "");
-    if (Array.isArray(logSiswaLogin) && namaNorm) {
-        logSiswaLogin.forEach(l => {
-            const cocokNama = normStr(l.nama) === namaNorm;
-            const cocokKelas = !l.kelas || normStr(l.kelas) === kelasNorm;
-            if (cocokNama && cocokKelas && l.mapel) addMapelJikaSesuaiJadwal(l.mapel);
-        });
+    if (namaNorm) {
+        if (logIndexByNamaKelas) {
+            const userLogs = logIndexByNamaKelas.get(`${namaNorm}||${kelasNorm}`) || logIndexByNamaKelas.get(`${namaNorm}||`) || [];
+            userLogs.forEach(mp => addMapelJikaSesuaiJadwal(mp));
+        } else if (Array.isArray(logSiswaLogin)) {
+            logSiswaLogin.forEach(l => {
+                const cocokNama = normStr(l.nama) === namaNorm;
+                const cocokKelas = !l.kelas || normStr(l.kelas) === kelasNorm;
+                if (cocokNama && cocokKelas && l.mapel) addMapelJikaSesuaiJadwal(l.mapel);
+            });
+        }
     }
 
     if (mapelSet.size === 0) {
@@ -637,14 +587,14 @@ function kumpulkanMapelAktifSiswa(username, sesiObj) {
     return Array.from(mapelSet.values());
 }
 
-function buatTombolResetAksiHtml(username, sesiObj) {
-    const mapelAktifList = kumpulkanMapelAktifSiswa(username, sesiObj);
+function buatTombolResetAksiHtml(username, sesiObj, logIndexByNamaKelas = null) {
+    const mapelAktifList = kumpulkanMapelAktifSiswa(username, sesiObj, logIndexByNamaKelas);
     const unameEnc = encodeURIComponent(username);
     const btns = [];
 
     mapelAktifList.forEach(mp => {
         const mpEnc = encodeURIComponent(mp);
-        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${escapeHtml(mp)}</button>`);
+        btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${mpEnc}')" class="btn-reset-mapel">Reset-${mp}</button>`);
     });
 
     btns.push(`<button type="button" onclick="resetPerangkatSiswaAdmin('${unameEnc}')" class="btn-reset-perangkat">Reset-Perangkat</button>`);
@@ -654,7 +604,6 @@ function buatTombolResetAksiHtml(username, sesiObj) {
 function renderTabelSesiAktif() {
     const tbody = document.getElementById('tbodySesiAktif');
     if (!tbody) return;
-    tbody.innerHTML = "";
 
     const keys = Object.keys(sesiLoginSiswa);
     if (keys.length === 0) {
@@ -662,30 +611,54 @@ function renderTabelSesiAktif() {
         return;
     }
 
+    // Indeks log 1x O(N) agar 1000+ siswa tidak O(N^2)
+    const logIndexByNamaKelas = new Map();
+    if (Array.isArray(logSiswaLogin)) {
+        logSiswaLogin.forEach(l => {
+            if (!l || !l.nama || !l.mapel) return;
+            const nKey = normStr(l.nama);
+            const kKey = normStr(l.kelas || "");
+            const fullKey = `${nKey}||${kKey}`;
+            if (!logIndexByNamaKelas.has(fullKey)) logIndexByNamaKelas.set(fullKey, []);
+            logIndexByNamaKelas.get(fullKey).push(l.mapel);
+        });
+    }
+
     const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
+    const MAX_RENDER = 300;
+    const rowsHtml = [];
     let tampilCount = 0;
 
-    keys.forEach(username => {
+    for (let i = 0; i < keys.length; i++) {
+        const username = keys[i];
         const s = sesiLoginSiswa[username];
-        if (!s) return;
-        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) return;
+        if (!s) continue;
+        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword) && !String(username).toLowerCase().includes(keyword)) continue;
         tampilCount++;
-        let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
-        const aksiHtml = buatTombolResetAksiHtml(username, s);
-
-        tbody.innerHTML += `<tr>
-            <td><b>${escapeHtml(username)}</b></td>
-            <td>${escapeHtml(s.nama || '-')}</td>
-            <td>${escapeHtml(s.kelas || '-')}</td>
-            <td>${statusBadge}</td>
-            <td style="font-family:monospace; font-size:10.5px;">${escapeHtml(s.deviceId || '-')}</td>
-            <td>${aksiHtml}</td>
-        </tr>`;
-    });
+        if (rowsHtml.length < MAX_RENDER) {
+            const statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
+            const aksiHtml = buatTombolResetAksiHtml(username, s, logIndexByNamaKelas);
+            rowsHtml.push(`<tr>
+                <td><b>${username}</b></td>
+                <td>${s.nama || '-'}</td>
+                <td>${s.kelas || '-'}</td>
+                <td>${statusBadge}</td>
+                <td style="font-family:monospace; font-size:10.5px;">${s.deviceId || '-'}</td>
+                <td>${aksiHtml}</td>
+            </tr>`);
+        }
+    }
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${escapeHtml(keyword)}" tidak ditemukan pada sesi aktif.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan pada sesi aktif.</td></tr>`;
+        return;
     }
+
+    if (tampilCount > MAX_RENDER) {
+        rowsHtml.push(`<tr><td colspan="6" style="text-align:center; background:#fff3cd; color:#856404; font-size:11.5px;">Menampilkan ${MAX_RENDER} dari ${tampilCount} sesi aktif. Gunakan kolom pencarian nama/username untuk menyaring lebih spesifik.</td></tr>`);
+    }
+
+    tbody.innerHTML = rowsHtml.join("");
 }
 
 async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
@@ -756,9 +729,8 @@ async function refreshSemuaDataAdmin() {
 }
 
 function renderTabelSiswaLogin() {
-    let tbody = document.getElementById('tbodySiswaLogin');
+    const tbody = document.getElementById('tbodySiswaLogin');
     if (!tbody) return;
-    tbody.innerHTML = "";
 
     const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
     if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
@@ -766,27 +738,40 @@ function renderTabelSiswaLogin() {
         return;
     }
 
+    const MAX_RENDER = 300;
+    const rowsHtml = [];
     let tampilCount = 0;
-    logSiswaLogin.forEach((l, idx) => {
-        if (!l) return;
-        if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) return;
+
+    for (let idx = 0; idx < logSiswaLogin.length; idx++) {
+        const l = logSiswaLogin[idx];
+        if (!l) continue;
+        if (keyword && !String(l.nama || "").toLowerCase().includes(keyword) && !String(l.kelas || "").toLowerCase().includes(keyword)) continue;
         tampilCount++;
-        let badgeStatus = renderStatusBadgesHtml(l.status);
-        tbody.innerHTML += `<tr>
-            <td>${escapeHtml(l.nama)}</td>
-            <td>${escapeHtml(l.kelas)}</td>
-            <td>${escapeHtml(l.mapel)}</td>
-            <td>${badgeStatus}</td>
-            <td>${l.nilai !== null && l.nilai !== undefined ? escapeHtml(l.nilai) : "-"}</td>
-            <td>
-                <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
-            </td>
-        </tr>`;
-    });
+        if (rowsHtml.length < MAX_RENDER) {
+            const badgeStatus = renderStatusBadgesHtml(l.status);
+            rowsHtml.push(`<tr>
+                <td>${l.nama}</td>
+                <td>${l.kelas}</td>
+                <td>${l.mapel}</td>
+                <td>${badgeStatus}</td>
+                <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+                <td>
+                    <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
+                </td>
+            </tr>`);
+        }
+    }
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${escapeHtml(keyword)}" tidak ditemukan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+        return;
     }
+
+    if (tampilCount > MAX_RENDER) {
+        rowsHtml.push(`<tr><td colspan="6" style="text-align:center; background:#fff3cd; color:#856404; font-size:11.5px;">Menampilkan ${MAX_RENDER} dari ${tampilCount} baris log. Gunakan pencarian untuk menyaring data tertentu.</td></tr>`);
+    }
+
+    tbody.innerHTML = rowsHtml.join("");
 }
 
 // ================= BACKUP, RESTORE & RESET DB =================
@@ -878,21 +863,21 @@ function initDropdowns() {
     let selFilterKartu = document.getElementById('filterKelasKartu');
 
     if (jdMp) {
-        jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>';
-        daftarMapel.forEach(m => jdMp.innerHTML += `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`);
+        jdMp.innerHTML = '<option value="">-- Pilih Mapel --</option>' +
+            daftarMapel.map(m => `<option value="${m}">${m}</option>`).join("");
     }
 
     if (selKelasSatuan) {
         const prevVal = selKelasSatuan.value;
-        selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-        daftarKelas.forEach(k => selKelasSatuan.innerHTML += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`);
+        selKelasSatuan.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+            daftarKelas.map(k => `<option value="${k}">${k}</option>`).join("");
         if (prevVal) selKelasSatuan.value = prevVal;
     }
 
     if (selFilterKartu) {
         const prevFilter = selFilterKartu.value;
-        selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>';
-        daftarKelas.forEach(k => selFilterKartu.innerHTML += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`);
+        selFilterKartu.innerHTML = '<option value="">Semua Kelas</option>' +
+            daftarKelas.map(k => `<option value="${k}">${k}</option>`).join("");
         if (prevFilter) selFilterKartu.value = prevFilter;
     }
 
@@ -986,7 +971,7 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
         const div = document.createElement("div");
         div.className = "master-matrix-item";
         div.innerHTML = `
-            <span class="item-label" title="${escapeHtml(labelText)}">${escapeHtml(labelText)}</span>
+            <span class="item-label" title="${labelText}">${labelText}</span>
             <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1.5px 5px; font-size:10px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
         `;
         containerEl.appendChild(div);
@@ -1046,17 +1031,17 @@ function buatHtmlKartuSiswa(daftar) {
         <div class="kartu-siswa-3cm">
             <div class="kartu-3cm-top">
                 <span>KARTU CBT</span>
-                <span>${escapeHtml(s.kelas || '-')}</span>
+                <span>${s.kelas || '-'}</span>
             </div>
-            <div class="kartu-3cm-nama" title="${escapeHtml(s.nama || '-')}">${escapeHtml(s.nama || '-')}</div>
+            <div class="kartu-3cm-nama" title="${s.nama || '-'}">${s.nama || '-'}</div>
             <div class="kartu-3cm-cred">
                 <div class="kartu-3cm-cred-row">
                     <span class="kartu-3cm-cred-label">User:</span>
-                    <span class="kartu-3cm-cred-val">${escapeHtml(s.username || '-')}</span>
+                    <span class="kartu-3cm-cred-val">${s.username || '-'}</span>
                 </div>
                 <div class="kartu-3cm-cred-row">
                     <span class="kartu-3cm-cred-label">Pass:</span>
-                    <span class="kartu-3cm-cred-val">${escapeHtml(s.password || '-')}</span>
+                    <span class="kartu-3cm-cred-val">${s.password || '-'}</span>
                 </div>
             </div>
         </div>
@@ -1141,7 +1126,7 @@ function editSiswa(idx) {
     document.getElementById('inputNamaSiswa').value = s.nama;
     const selKelas = document.getElementById('selectKelasSiswaSatuan');
     if (!Array.from(selKelas.options).some(opt => opt.value === s.kelas)) {
-        selKelas.innerHTML += `<option value="${escapeHtml(s.kelas)}">${escapeHtml(s.kelas)}</option>`;
+        selKelas.innerHTML += `<option value="${s.kelas}">${s.kelas}</option>`;
     }
     selKelas.value = s.kelas;
     document.getElementById('inputUsernameSiswa').value = s.username;
@@ -1200,7 +1185,7 @@ async function hapusSiswa(idx) {
     const s = databaseSiswa[idx];
     if (!s || !confirm(`Yakin ingin menghapus siswa "${s.nama}" (${s.username})?`)) return;
     showLoading("Menghapus data siswa...");
-    try { await deleteSesiFromGAS(s.username); } catch (e) {}
+    await deleteSesiFromGAS(s.username);
     databaseSiswa.splice(idx, 1);
     await saveCbtDatabaseToGist();
     renderTabelDaftarSiswa();
@@ -1221,11 +1206,11 @@ async function importDataSiswaToGist(event) {
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(worksheet);
             databaseSiswa = json.map(row => ({
-                nama: row.Nama || row.nama || "",
-                kelas: row.Kelas || row.kelas || "",
-                username: String(row.Username || row.username || ""),
-                password: String(row.Password || row.password || "")
-            }));
+                nama: String(row.Nama || row.nama || "").trim(),
+                kelas: String(row.Kelas || row.kelas || "").trim(),
+                username: String(row.Username || row.username || "").trim(),
+                password: String(row.Password || row.password || "").trim()
+            })).filter(s => s.nama && s.username);
             await saveCbtDatabaseToGist();
             renderTabelDaftarSiswa();
             hideLoading();
@@ -1248,9 +1233,8 @@ function resetCariNamaSiswa() {
 }
 
 function renderTabelDaftarSiswa() {
-    let tbody = document.getElementById('tbodyDaftarSiswa');
+    const tbody = document.getElementById('tbodyDaftarSiswa');
     if (!tbody) return;
-    tbody.innerHTML = "";
     if (databaseSiswa.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
         return;
@@ -1258,32 +1242,44 @@ function renderTabelDaftarSiswa() {
 
     const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
     const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
+    const MAX_RENDER = 300;
+    const rowsHtml = [];
     let tampilCount = 0;
 
-    databaseSiswa.forEach((s, idx) => {
-        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
+    for (let idx = 0; idx < databaseSiswa.length; idx++) {
+        const s = databaseSiswa[idx];
+        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword) || String(s.username || "").toLowerCase().includes(keyword);
         const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
-        if (!cocokNama || !cocokKelas) return;
+        if (!cocokNama || !cocokKelas) continue;
         tampilCount++;
-        tbody.innerHTML += `<tr>
-            <td>${escapeHtml(s.nama)}</td>
-            <td>${escapeHtml(s.kelas)}</td>
-            <td>${escapeHtml(s.username)}</td>
-            <td>${escapeHtml(s.password)}</td>
-            <td>
-                <button onclick="bukaModalCetakKartu(${idx})" class="btn-sm btn-info" title="Cetak Kartu 3 cm">Kartu</button>
-                <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
-                <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
-            </td>
-        </tr>`;
-    });
+        if (rowsHtml.length < MAX_RENDER) {
+            rowsHtml.push(`<tr>
+                <td>${s.nama}</td>
+                <td>${s.kelas}</td>
+                <td>${s.username}</td>
+                <td>${s.password}</td>
+                <td>
+                    <button onclick="bukaModalCetakKartu(${idx})" class="btn-sm btn-info" title="Cetak Kartu 3 cm">Kartu</button>
+                    <button onclick="editSiswa(${idx})" class="btn-sm btn-warning">Edit</button>
+                    <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
+                </td>
+            </tr>`);
+        }
+    }
 
     if (tampilCount === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data siswa tidak ditemukan untuk filter saat ini.</td></tr>`;
+        return;
     }
+
+    if (tampilCount > MAX_RENDER) {
+        rowsHtml.push(`<tr><td colspan="5" style="text-align:center; background:#fff3cd; color:#856404; font-size:11.5px;">Menampilkan ${MAX_RENDER} dari ${tampilCount} siswa. Filter berdasarkan Kelas atau Nama untuk melihat data spesifik (Cetak Kartu tetap mencetak seluruh ${tampilCount} siswa tersaring).</td></tr>`);
+    }
+
+    tbody.innerHTML = rowsHtml.join("");
 }
 
-// ================= KOMPRESI GAMBAR SOAL (< 50 KB) & UPLOAD WORD =================
+// ================= KOMPRESI GAMBAR SOAL (< 50 KB) & UPLOAD WORD KE DRIVE =================
 const MAX_GAMBAR_SOAL_BYTES = 50 * 1024;
 const MAX_GAMBAR_SOAL_DIM = 1280;
 
@@ -1388,9 +1384,7 @@ function bersihkanSelTabelHtml(cellEl) {
         .trim();
 
     raw = raw.replace(/\[\[IMG:([^\]]+)\]\]/g, (_, src) => {
-        const cleanSrc = normalisasiUrlGambarDrive(src.trim());
-        if (!cleanSrc || /^IMG_DRIVE_/i.test(cleanSrc)) return "";
-        return `<br><img src="${cleanSrc}" class="img-soal">`;
+        return `<br><img src="${src.trim()}" class="img-soal">`;
     });
 
     return raw.trim();
@@ -1452,57 +1446,6 @@ function konversiTabelWordKeFormatCbt(containerEl) {
     return blocks.join("\n\n");
 }
 
-function ekstrakUrlGambarDariResponGAS(resData) {
-    if (!resData) return "";
-    let obj = resData;
-    if (typeof obj === "string") {
-        try { obj = JSON.parse(obj); } catch (e) { return ""; }
-    }
-    if (!obj || typeof obj !== "object") return "";
-    const candidates = [
-        obj.fileUrl,
-        obj.url,
-        obj.downloadUrl,
-        obj.imageUrl,
-        obj.data?.fileUrl,
-        obj.data?.url,
-        obj.data?.imageUrl
-    ];
-    for (const c of candidates) {
-        if (typeof c === "string" && c.trim() && !/^IMG_DRIVE_/i.test(c.trim())) {
-            return normalisasiUrlGambarDrive(c.trim());
-        }
-    }
-    return "";
-}
-
-async function unggahGambarKeDriveDenganFallback(finalBase64, fileName, folderName = "Soal_CBT_Drive") {
-    const payloads = [
-        { action: "uploadImage", folderName, fileData: finalBase64, fileName },
-        { action: "uploadImage", folderName, base64: finalBase64, fileName }
-    ];
-
-    let pesanErrorTerakhir = "Tidak ada URL gambar dikembalikan oleh GAS";
-    for (const payload of payloads) {
-        try {
-            const uploadRes = await postToGAS(payload);
-            const data = uploadRes?.data;
-            const url = ekstrakUrlGambarDariResponGAS(data);
-            if (url) {
-                return { url, error: "" };
-            }
-            if (data && typeof data === "object" && data.message) {
-                pesanErrorTerakhir = String(data.message);
-            } else if (data && typeof data === "object" && data.status && data.status !== "success") {
-                pesanErrorTerakhir = `Status GAS: ${data.status}`;
-            }
-        } catch (err) {
-            pesanErrorTerakhir = err?.response?.data?.message || err?.message || "Gagal koneksi ke GAS";
-        }
-    }
-    return { url: "", error: pesanErrorTerakhir };
-}
-
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1533,8 +1476,7 @@ async function bacaFileSoalOtomatis(event) {
             tempDiv.innerHTML = result.value;
             let totalImg = imagesList.length;
             let ringkasanKompresi = [];
-            let gagalUploadCount = 0;
-            let alasanGagalPertama = "";
+            let gagalUploadList = [];
 
             for (let i = 0; i < totalImg; i++) {
                 let imgData = imagesList[i];
@@ -1545,24 +1487,49 @@ async function bacaFileSoalOtomatis(event) {
                 const extFile = finalBase64.startsWith("data:image/webp") ? "webp" : "jpg";
                 ringkasanKompresi.push(`Img ${i + 1}: ${kbAkhir} KB`);
 
-                const fileName = `soal_img_${Date.now()}_${i + 1}.${extFile}`;
-                const hasilUpload = await unggahGambarKeDriveDenganFallback(finalBase64, fileName, "Soal_CBT_Drive");
-                const uploadedUrl = hasilUpload.url;
+                const targetImg = tempDiv.querySelector(`img[src="${imgData.id}"]`);
 
-                const matchingImgs = Array.from(tempDiv.querySelectorAll("img")).filter(
-                    el => (el.getAttribute("src") || "").trim() === imgData.id
-                );
+                try {
+                    let uploadRes = await postToGAS({
+                        action: "uploadImage",
+                        folderName: "Soal_CBT_Drive",
+                        fileData: finalBase64,
+                        fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
+                    });
 
-                if (uploadedUrl) {
-                    matchingImgs.forEach(el => el.setAttribute("src", uploadedUrl));
-                } else {
-                    gagalUploadCount++;
-                    if (!alasanGagalPertama && hasilUpload.error) {
-                        alasanGagalPertama = hasilUpload.error;
+                    // Dukung respons langsung { status, fileUrl } maupun terbungkus { data: { status, fileUrl } }
+                    const payload = (uploadRes && uploadRes.status)
+                        ? uploadRes
+                        : (uploadRes && uploadRes.data ? uploadRes.data : null);
+
+                    const fileUrl = payload && typeof payload.fileUrl === "string"
+                        ? payload.fileUrl.trim()
+                        : "";
+
+                    if (payload && payload.status === "success" && fileUrl) {
+                        if (targetImg) {
+                            targetImg.setAttribute("src", fileUrl);
+                            targetImg.classList.add("img-soal");
+                        }
+                    } else {
+                        if (targetImg) targetImg.remove();
+                        const errMsg = (payload && payload.message) ? payload.message : "URL Drive kosong";
+                        gagalUploadList.push(`Img ${i + 1}: ${errMsg}`);
                     }
-                    matchingImgs.forEach(el => el.remove());
+                } catch (err) {
+                    if (targetImg) targetImg.remove();
+                    const errMsg = err && err.message ? err.message : String(err);
+                    gagalUploadList.push(`Img ${i + 1}: ${errMsg}`);
                 }
             }
+
+            // Hapus sisa placeholder yang belum terganti agar tidak menimbulkan 404
+            tempDiv.querySelectorAll("img").forEach(imgEl => {
+                const srcVal = (imgEl.getAttribute("src") || "").trim();
+                if (!srcVal || srcVal.startsWith("IMG_DRIVE_")) {
+                    imgEl.remove();
+                }
+            });
 
             const hasTable = tempDiv.querySelector("table tr") !== null;
             document.getElementById('soalBatchText').value = hasTable
@@ -1571,13 +1538,13 @@ async function bacaFileSoalOtomatis(event) {
 
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
-            const infoGagal = gagalUploadCount > 0
-                ? `\n⚠️ ${gagalUploadCount} gambar gagal diunggah ke Drive${alasanGagalPertama ? ` (${alasanGagalPertama})` : ""} (placeholder dihapus agar tidak 404).`
+            const infoGagal = gagalUploadList.length > 0
+                ? `\n⚠️ ${gagalUploadList.length} gambar gagal diunggah ke Drive (${gagalUploadList.join("; ")}) (placeholder dihapus agar tidak 404).`
                 : "";
             alert(`File Word berhasil diproses!${infoUkuran}${infoGagal}`);
         } catch (err) {
             hideLoading();
-            alert("Gagal memproses file Word: " + err.message);
+            alert("Gagal memproses file Word: " + (err && err.message ? err.message : String(err)));
             document.getElementById('soalBatchText').value = "";
         }
     }
@@ -1590,10 +1557,7 @@ function konversiHtmlKeFormatCbtDenganLink(element) {
         let text = node.innerText.trim();
         let imgEl = node.querySelector('img');
         if (imgEl && imgEl.getAttribute('src')) {
-            const src = normalisasiUrlGambarDrive(imgEl.getAttribute('src').trim());
-            if (src && !/^IMG_DRIVE_/i.test(src)) {
-                text += `<br><img src="${src}" class="img-soal">`;
-            }
+            text += `<br><img src="${imgEl.getAttribute('src')}" class="img-soal">`;
         }
         if (text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
             textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
@@ -1897,7 +1861,7 @@ function getGroupedJadwalList() {
 function formatWaktuRingkasTabel(isoStr) {
     if (!isoStr) return "-";
     const parts = String(isoStr).replace("T", " ").split(" ");
-    return parts.length < 2 ? escapeHtml(isoStr) : `${escapeHtml(parts[0])}<br>${escapeHtml(parts[1])}`;
+    return parts.length < 2 ? isoStr : `${parts[0]}<br>${parts[1]}`;
 }
 
 function renderTabelJadwal() {
@@ -1910,7 +1874,7 @@ function renderTabelJadwal() {
         return;
     }
 
-    groupedList.forEach((g) => {
+    tbody.innerHTML = groupedList.map((g) => {
         const kelasStr = g.kelasList.join(', ');
         const kelasJson = encodeURIComponent(JSON.stringify(g.kelasList));
         const indicesJson = encodeURIComponent(JSON.stringify(g.indices));
@@ -1919,10 +1883,10 @@ function renderTabelJadwal() {
             mapel: g.mapel, kelasList: g.kelasList, jp: g.jp || 1, mulai: g.mulai || "", selesai: g.selesai || "", indices: g.indices
         }));
 
-        tbody.innerHTML += `<tr>
-            <td class="col-mapel"><b>${escapeHtml(g.mapel)}</b></td>
-            <td class="col-kelas">${escapeHtml(kelasStr)}</td>
-            <td class="col-jp">${g.jp ? escapeHtml(g.jp) + ' JP' : '-'}</td>
+        return `<tr>
+            <td class="col-mapel"><b>${g.mapel}</b></td>
+            <td class="col-kelas">${kelasStr}</td>
+            <td class="col-jp">${g.jp ? g.jp + ' JP' : '-'}</td>
             <td class="col-waktu">${formatWaktuRingkasTabel(g.mulai)}</td>
             <td class="col-waktu">${formatWaktuRingkasTabel(g.selesai)}</td>
             <td class="col-aksi">
@@ -1938,7 +1902,7 @@ function renderTabelJadwal() {
                 </div>
             </td>
         </tr>`;
-    });
+    }).join("");
 }
 
 function editJadwalGroup(groupPayloadEnc) {
@@ -1951,7 +1915,7 @@ function editJadwalGroup(groupPayloadEnc) {
     const selMapel = document.getElementById('jadwalMapel');
     if (selMapel) {
         if (!Array.from(selMapel.options).some(opt => opt.value === g.mapel)) {
-            selMapel.innerHTML += `<option value="${escapeHtml(g.mapel)}">${escapeHtml(g.mapel)}</option>`;
+            selMapel.innerHTML += `<option value="${g.mapel}">${g.mapel}</option>`;
         }
         selMapel.value = g.mapel;
     }
@@ -2019,11 +1983,11 @@ async function bukaModalExportHasil(mapelEnc, kelasJson) {
     let html = `<p style="font-size:12.5px; margin-top:0; color:#444;">Pilih kelas yang ingin diunduh file rekap nilainya (<b>.xlsx</b>):</p><div class="export-kelas-btn-list">`;
     kelasList.forEach(kls => {
         const klsEnc = encodeURIComponent(kls);
-        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">📥 Download Hasil Kelas <b>${escapeHtml(kls)}</b> (.xlsx)</button>`;
+        html += `<button type="button" onclick="prosesExportHasilXlsx('${mapelEnc}', '${klsEnc}')" style="background:#28a745; text-align:left; padding:8px 12px;">📥 Download Hasil Kelas <b>${kls}</b> (.xlsx)</button>`;
     });
     if (kelasList.length > 1) {
         html += `<hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:4px 0;">`;
-        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">📊 Download Gabungan Semua Kelas (${escapeHtml(kelasList.join(', '))}) (.xlsx)</button>`;
+        html += `<button type="button" onclick="prosesExportHasilMultiKelasXlsx('${mapelEnc}', '${kelasJson}')" style="background:#008080; text-align:left; padding:8px 12px;">📊 Download Gabungan Semua Kelas (${kelasList.join(', ')}) (.xlsx)</button>`;
     }
     html += `</div>`;
     body.innerHTML = html;
@@ -2151,16 +2115,13 @@ function tampilkanModalPreviewSoal(judul, soalArray, mapelTarget, kelasListTarge
             const kunciPlain = decodeKunciGist(item.kunci);
             const kunciCipher = encodeKunciGist(kunciPlain);
             const infoKelas = Array.isArray(item.kelas) ? item.kelas.join(', ') : (item.namaUjian || '-');
-            const imgSrc = normalisasiUrlGambarDrive(item.gambar || "");
             html += `<div class="preview-item">
                 <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#666; margin-bottom:5px; border-bottom:1px dashed #ddd; padding-bottom:4px;">
-                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${escapeHtml(item.mapel || '-')}</b> | Kelas: <b>${escapeHtml(infoKelas)}</b></span>
-                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${escapeHtml(kunciCipher)}</b> (${escapeHtml(kunciPlain)})</span>
+                    <span><b>No. ${idx + 1}</b> | Mapel: <b>${item.mapel || '-'}</b> | Kelas: <b>${infoKelas}</b></span>
+                    <span style="background:#008080; color:#fff; padding:2px 6px; border-radius:3px;">Kunci Gist: <b>${kunciCipher}</b> (${kunciPlain})</span>
                 </div>
                 <div style="font-size:13.5px; font-weight:bold; margin-bottom:6px;">${item.soal}</div>`;
-            if (imgSrc && !/^IMG_DRIVE_/i.test(imgSrc)) {
-                html += `<img src="${escapeHtml(imgSrc)}" class="img-soal" onerror="this.style.display='none'">`;
-            }
+            if (item.gambar) html += `<img src="${item.gambar}" class="img-soal">`;
             ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
                 if (item.options && item.options[opt]) {
                     const isBenar = (opt === kunciPlain);
