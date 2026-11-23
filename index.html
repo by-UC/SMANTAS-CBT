@@ -185,28 +185,45 @@
         .admin-tab-btn { flex: 1; padding: 6px 8px; text-align: center; background: #e9ecef; cursor: pointer; font-weight: bold; border: none; color: #555; font-size: 11.5px; min-width: 80px; border-radius: 4px 4px 0 0; }
         .admin-tab-btn.active { background: #008080; color: white; }
 
-        /* TOKEN MEMANJANG DI ATAS (KIRI JUDUL + DRIVE, KANAN KOTAK TOKEN) */
-        .token-banner-long {
+        /* BARIS ATAS MONITORING AKUN: KIRI RATE LIMIT GIST, KANAN KARTU TOKEN */
+        .monitoring-top-split {
             display: flex;
-            align-items: center;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 8px;
+        }
+        .monitoring-left-quota {
+            flex: 1.45 1 0;
+            min-width: 0;
+            margin-bottom: 0 !important;
+            display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            gap: 12px;
+        }
+        .monitoring-right-token {
+            flex: 1 1 0;
+            min-width: 290px;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 6px;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
+            padding: 9px 11px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
         }
-        .token-banner-left {
+        .token-card-header {
             display: flex;
             flex-direction: column;
             gap: 3px;
-            min-width: 210px;
         }
-        .token-banner-right {
-            flex: 1 1 320px;
-            max-width: 440px;
+        @media (max-width: 860px) {
+            .monitoring-top-split {
+                flex-direction: column;
+            }
+            .monitoring-right-token {
+                min-width: 0;
+            }
         }
 
         /* DAFTAR PILIH MATA PELAJARAN SISWA */
@@ -728,17 +745,18 @@
             background: #e6f4f4;
             border: 1px solid #008080;
             border-radius: 5px;
-            padding: 6px 10px;
+            padding: 7px 10px;
         }
         .token-live-code {
             font-family: monospace;
-            font-size: 19px;
+            font-size: 20px;
             font-weight: bold;
             letter-spacing: 3px;
             color: #0056b3;
+            margin-top: 2px;
         }
         .token-live-timer {
-            font-size: 10.5px;
+            font-size: 11px;
             color: #006666;
             font-weight: bold;
             text-align: right;
@@ -1170,24 +1188,54 @@
             <button class="admin-tab-btn" onclick="switchAdminTab('settings')">Pengaturan</button>
         </div>
 
-        <!-- TAB 1: MONITORING AKUN (TOKEN MEMANJANG DI ATAS, DIBAWAHNYA KONTROL SESI) -->
+        <!-- TAB 1: MONITORING AKUN (KIRI: MONITOR KUOTA GIST, KANAN: KARTU TOKEN SESUAI GAMBAR) -->
         <div id="adminTabMonitoring" class="admin-view active">
-            <div class="token-banner-long">
-                <div class="token-banner-left">
-                    <h4 style="margin: 0; color: #008080; font-size: 13px;">Token Ujian Otomatis (Google Drive)</h4>
-                    <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:11px; color:#0056b3; text-decoration:underline; width:fit-content;">Folder Drive ↗</a>
+            <div class="monitoring-top-split">
+                <!-- SEBELAH KIRI: MONITOR KUOTA / RATE LIMIT GITHUB GIST API -->
+                <div class="admin-card monitoring-left-quota" style="border-color: #bee5eb; background: #f4fbfd;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                        <div>
+                            <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
+                            <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
+                        </div>
+                        <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 5px 10px; width:auto; font-size:11px;">🔄 Cek Limit Gist API</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
+                        <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:6px 8px;">
+                            <div style="font-size:10px; color:#666;">Sisa Kuota (Remaining)</div>
+                            <div id="gistLimitRemaining" style="font-size:14px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:6px 8px;">
+                            <div style="font-size:10px; color:#666;">Terpakai (Used)</div>
+                            <div id="gistLimitUsed" style="font-size:14px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:6px 8px;">
+                            <div style="font-size:10px; color:#666;">Reset Kuota Pada</div>
+                            <div id="gistLimitReset" style="font-size:12px; font-weight:bold; color:#333; font-family:monospace;">00 Jam 00 Menit 00 Detik</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:6px 8px;">
+                            <div style="font-size:10px; color:#666;">Status Mode Hemat</div>
+                            <div id="gistLimitStatus" style="font-size:11.5px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="token-banner-right">
+
+                <!-- SEBELAH KANAN: TOKEN UJIAN OTOMATIS (GOOGLE DRIVE) SESUAI GAMBAR -->
+                <div class="monitoring-right-token">
+                    <div class="token-card-header">
+                        <h4 style="margin: 0; color: #008080; font-size: 13.5px;">Token Ujian Otomatis (Google Drive)</h4>
+                        <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:11.5px; color:#0056b3; text-decoration:underline; width:fit-content;">Folder Drive ↗</a>
+                    </div>
                     <div class="token-live-box">
                         <div>
-                            <div style="font-size:10px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
+                            <div style="font-size:10.5px; color:#555;">Token Aktif (<code>token_cbt.xlsx</code>):</div>
                             <div class="token-live-code" id="adminTokenAktifDisplay">----</div>
                         </div>
                         <div class="token-live-timer">
                             <div>Berganti: <span id="adminTokenCountdown">05:00</span></div>
-                            <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:3px;">
-                                <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:2px 7px; font-size:10px;">📋 Salin</button>
-                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:2px 7px; font-size:10px;">Acak</button>
+                            <div style="display:flex; gap:4px; justify-content:flex-end; margin-top:4px;">
+                                <button type="button" id="btnSalinTokenDrive" onclick="salinTokenDrive()" class="btn-sm btn-info" style="margin:0; padding:3px 8px; font-size:10.5px;">📋 Salin</button>
+                                <button type="button" onclick="acakUlangTokenDrive()" class="btn-sm btn-warning" style="margin:0; padding:3px 8px; font-size:10.5px;">Acak</button>
                             </div>
                         </div>
                     </div>
@@ -1446,34 +1494,6 @@
 
         <!-- TAB 6: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                    <div>
-                        <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
-                        <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
-                    </div>
-                    <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 6px 12px; width:auto; font-size:11.5px;">🔄 Cek Limit Gist API</button>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Sisa Kuota (Remaining)</div>
-                        <div id="gistLimitRemaining" style="font-size:16px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Terpakai (Used)</div>
-                        <div id="gistLimitUsed" style="font-size:16px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Reset Kuota Pada</div>
-                        <div id="gistLimitReset" style="font-size:13px; font-weight:bold; color:#333; font-family:monospace;">00 Jam 00 Menit 00 Detik</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
-                        <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="settings-top-three-col">
                 <div class="admin-card">
                     <div>
@@ -2448,7 +2468,7 @@ function formatCountdownJamMenitDetik(totalSec) {
     const jam = Math.floor(sec / 3600);
     const menit = Math.floor((sec % 3600) / 60);
     const detik = sec % 60;
-    return `${String(jam).padStart(2, '0')} Jam ${String(menit).padStart(2, '0')} Menit ${String(detik).padStart(2, '0')} Detik`;
+    return `${String(jam).padStart(2, "0")} Jam ${String(menit).padStart(2, "0")} Menit ${String(detik).padStart(2, "0")} Detik`;
 }
 
 function updateCountdownResetKuotaGist() {
@@ -3294,6 +3314,7 @@ async function refreshSemuaDataAdmin() {
     isDataLoadedOnce = false;
     await fetchCbtDatabase(true, true);
     await fetchTokenDariDrive(true);
+    await cekRateLimitGistApi(true);
     await fetchLogLoginFromGAS();
     await fetchSesiFromGAS(true);
     hideLoading();
@@ -5179,6 +5200,7 @@ function switchAdminTab(tabName) {
     if(tabName === 'monitoring') {
         document.querySelector('.admin-tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('adminTabMonitoring').classList.add('active');
+        cekRateLimitGistApi(true);
         fetchTokenDariDrive(true);
         mulaiTimerTokenAdmin();
         fetchSesiFromGAS(true);
@@ -5206,7 +5228,6 @@ function switchAdminTab(tabName) {
         fetchTokenDariDrive(true);
         updateLabelJp();
         renderAdminPasswordDisplay();
-        cekRateLimitGistApi(true);
     }
 }
 
@@ -5721,268 +5742,192 @@ window.addEventListener('DOMContentLoaded', async () => {
             return tbl;
         }
 
-        let out = "";
-        Array.from(node.childNodes).forEach(c => { out += parseWordXmlNode(c, driveUrlMap); });
-        return out;
+        if (node.childNodes && node.childNodes.length > 0) {
+            let out = "";
+            Array.from(node.childNodes).forEach(c => { out += parseWordXmlNode(c, driveUrlMap); });
+            return out;
+        }
+        return "";
     }
 
     function parseWordShapeOrImage(node, driveUrlMap) {
-        const imgs = Array.from(node.getElementsByTagName("*")).filter(el => el.nodeName === "a:blip" || el.nodeName === "v:imagedata");
-        let imgHtml = "";
-        imgs.forEach(bl => {
-            const rId = bl.getAttribute("r:embed") || bl.getAttribute("r:id");
-            if (rId && driveUrlMap[rId]) {
-                imgHtml += `<img src="${driveUrlMap[rId]}" class="img-soal" alt="gambar_soal">`;
+        let out = "";
+        const blips = node.getElementsByTagName("a:blip");
+        const imagedatas = node.getElementsByTagName("v:imagedata");
+        const usedIds = new Set();
+
+        for (let i = 0; i < blips.length; i++) {
+            const rid = blips[i].getAttribute("r:embed");
+            if (rid && driveUrlMap[rid] && !usedIds.has(rid)) {
+                usedIds.add(rid);
+                out += `<img src="${driveUrlMap[rid]}" style="max-width:100%; height:auto; margin:4px 0; border-radius:4px;">`;
             }
-        });
-        const txbxParas = Array.from(node.getElementsByTagName("*")).filter(el => el.nodeName === "w:p");
-        let shapeText = "";
-        if (txbxParas.length > 0 && node.nodeName !== "w:drawing") {
-            const inner = txbxParas.map(p => parseWordXmlNode(p, driveUrlMap).replace(/<br>$/i, "")).filter(Boolean).join("<br>");
-            if (inner.trim()) shapeText = `<div class="shape-textbox">${inner}</div>`;
         }
-        return shapeText + imgHtml;
+        for (let i = 0; i < imagedatas.length; i++) {
+            const rid = imagedatas[i].getAttribute("r:id");
+            if (rid && driveUrlMap[rid] && !usedIds.has(rid)) {
+                usedIds.add(rid);
+                out += `<img src="${driveUrlMap[rid]}" style="max-width:100%; height:auto; margin:4px 0; border-radius:4px;">`;
+            }
+        }
+
+        const txbxList = node.getElementsByTagName("w:txbxContent");
+        if (txbxList.length > 0) {
+            const txbx = txbxList[0];
+            let inner = "";
+            Array.from(txbx.childNodes).forEach(c => { inner += parseWordXmlNode(c, driveUrlMap); });
+            if (inner.trim()) {
+                out += `<span class="shape-textbox">${inner.replace(/(<br>)+$/g, '')}</span>`;
+            }
+        }
+        return out;
     }
 
-    function parseWordMathOmml(omNode) {
-        if (!omNode) return "";
-        if (omNode.nodeName === "m:f") {
-            const num = omNode.getElementsByTagName("m:num")[0];
-            const den = omNode.getElementsByTagName("m:den")[0];
+    function parseWordMathOmml(node) {
+        if (!node) return "";
+        const name = node.nodeName;
+        if (name === "m:t") return node.textContent || "";
+        if (name === "m:f") {
+            const num = node.getElementsByTagName("m:num")[0];
+            const den = node.getElementsByTagName("m:den")[0];
             return `<span class="math-frac"><span>${parseWordMathOmml(num)}</span><span>${parseWordMathOmml(den)}</span></span>`;
         }
-        if (omNode.nodeName === "m:sSup") {
-            const e = omNode.getElementsByTagName("m:e")[0];
-            const sup = omNode.getElementsByTagName("m:sup")[0];
+        if (name === "m:sSup") {
+            const e = node.getElementsByTagName("m:e")[0];
+            const sup = node.getElementsByTagName("m:sup")[0];
             return `${parseWordMathOmml(e)}<sup>${parseWordMathOmml(sup)}</sup>`;
         }
-        if (omNode.nodeName === "m:sSub") {
-            const e = omNode.getElementsByTagName("m:e")[0];
-            const sub = omNode.getElementsByTagName("m:sub")[0];
+        if (name === "m:sSub") {
+            const e = node.getElementsByTagName("m:e")[0];
+            const sub = node.getElementsByTagName("m:sub")[0];
             return `${parseWordMathOmml(e)}<sub>${parseWordMathOmml(sub)}</sub>`;
         }
-        if (omNode.nodeName === "m:t") return omNode.textContent;
+        if (name === "m:rad") {
+            const deg = node.getElementsByTagName("m:deg")[0];
+            const e = node.getElementsByTagName("m:e")[0];
+            const degTxt = deg ? parseWordMathOmml(deg).trim() : "";
+            return `${degTxt ? `<sup>${degTxt}</sup>` : ""}√(${parseWordMathOmml(e)})`;
+        }
         let res = "";
-        Array.from(omNode.childNodes).forEach(c => { res += parseWordMathOmml(c); });
+        if (node.childNodes) {
+            Array.from(node.childNodes).forEach(c => { res += parseWordMathOmml(c); });
+        }
         return res;
-    }
-
-    async function ekstrakTeksDanGambarWord(file, folderNameDrive) {
-        if (typeof JSZip === "undefined") {
-            const mRes = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-            return mRes.value || "";
-        }
-        const zip = await JSZip.loadAsync(await file.arrayBuffer());
-        const docXmlStr = await zip.file("word/document.xml")?.async("string");
-        if (!docXmlStr) return "";
-
-        const relsMap = {};
-        const relsXmlStr = await zip.file("word/_rels/document.xml.rels")?.async("string");
-        if (relsXmlStr) {
-            const relsDoc = new DOMParser().parseFromString(relsXmlStr, "application/xml");
-            Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(rel => {
-                const id = rel.getAttribute("Id");
-                const target = rel.getAttribute("Target");
-                if (id && target) {
-                    relsMap[id] = target.startsWith("word/") ? target : ("word/" + target.replace(/^\/+/, ""));
-                }
-            });
-        }
-
-        const driveUrlMap = {};
-        for (const [rId, zipPath] of Object.entries(relsMap)) {
-            const imgFile = zip.file(zipPath);
-            if (!imgFile) continue;
-            const ext = (zipPath.split(".").pop() || "png").toLowerCase();
-            if (!["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) continue;
-
-            const b64Raw = await imgFile.async("base64");
-            const mimeAwal = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
-            const dataUrlAwal = `data:${mimeAwal};base64,${b64Raw}`;
-            const kompres = await kompresGambarSoalKeBawah50KB(dataUrlAwal, MAX_GAMBAR_SOAL_BYTES);
-            const finalMime = kompres.dataUrl.match(/^data:(.*?);/)?.[1] || mimeAwal;
-            const finalExt = finalMime.includes("webp") ? "webp" : (finalMime.includes("jpeg") ? "jpg" : ext);
-            const cleanName = `soal_${Date.now()}_${rId}.${finalExt}`;
-
-            try {
-                const upRes = await axios.post(GAS_URL, JSON.stringify({
-                    action: "uploadImage",
-                    folderName: folderNameDrive || "Soal_Umum",
-                    fileName: cleanName,
-                    fileData: kompres.dataUrl
-                }));
-                if (upRes.data && upRes.data.status === "success" && upRes.data.fileUrl) {
-                    driveUrlMap[rId] = upRes.data.fileUrl;
-                }
-            } catch (upErr) {
-                console.warn("Gagal upload gambar word ke Drive:", upErr);
-            }
-        }
-
-        const xmlDoc = new DOMParser().parseFromString(docXmlStr, "application/xml");
-        const bodyNode = xmlDoc.getElementsByTagName("w:body")[0];
-        if (!bodyNode) return "";
-
-        let outputLines = [];
-        Array.from(bodyNode.childNodes).forEach(child => {
-            const htmlPart = parseWordXmlNode(child, driveUrlMap);
-            if (htmlPart && htmlPart.trim()) {
-                outputLines.push(htmlPart.replace(/<br>$/i, "").trim());
-            }
-        });
-        return outputLines.join("\n");
     }
 
     window.bacaFileSoalOtomatis = async function(event) {
         const file = event.target.files[0];
         if (!file) return;
-        const mapelDipilih = document.getElementById('jadwalMapel')?.value || "Soal_Umum";
-        const kelasDipilih = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
-        const folderNameDrive = `${mapelDipilih.replace(/\s+/g, "_")}_${(kelasDipilih[0] || "Umum").replace(/\s+/g, "_")}`;
+        const fileName = file.name.toLowerCase();
 
-        const ext = (file.name.split(".").pop() || "").toLowerCase();
-        if (ext === "docx") {
-            showLoading("Mengekstrak teks, tabel, rumus & gambar Word (.docx)...");
+        if (fileName.endsWith('.txt')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('soalBatchText').value = e.target.result;
+                alert("Berhasil membaca file teks!");
+            };
+            reader.readAsText(file);
+            return;
+        }
+
+        if (fileName.endsWith('.docx')) {
+            showLoading("Mengekstrak XML Word (Teks, Tabel, Rumus, Shape & Gambar < 50 KB)...");
             try {
-                const teks = await ekstrakTeksDanGambarWord(file, folderNameDrive);
-                document.getElementById('soalBatchText').value = teks;
+                const arrayBuffer = await file.arrayBuffer();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+
+                const relsStr = await zip.file("word/_rels/document.xml.rels")?.async("string") || "";
+                const relsDoc = new DOMParser().parseFromString(relsStr, "application/xml");
+                const rIdToPath = {};
+                Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(rel => {
+                    const id = rel.getAttribute("Id");
+                    const target = rel.getAttribute("Target") || "";
+                    if (target.includes("media/")) {
+                        rIdToPath[id] = "word/" + target.replace(/^\/?word\//, "").replace(/^\.\.\//, "");
+                    }
+                });
+
+                const driveUrlMap = {};
+                const rIds = Object.keys(rIdToPath);
+                for (let i = 0; i < rIds.length; i++) {
+                    const rid = rIds[i];
+                    const mediaFile = zip.file(rIdToPath[rid]);
+                    if (!mediaFile) continue;
+
+                    const ext = rIdToPath[rid].split('.').pop().toLowerCase();
+                    let mime = "image/png";
+                    if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
+                    else if (ext === "gif") mime = "image/gif";
+                    else if (ext === "webp") mime = "image/webp";
+
+                    const b64Raw = await mediaFile.async("base64");
+                    const rawDataUrl = `data:${mime};base64,${b64Raw}`;
+
+                    showLoading(`Mengompres & mengunggah gambar ${i + 1}/${rIds.length} ke Drive (< 50 KB)...`);
+                    const hasilKompres = await kompresGambarSoalKeBawah50KB(rawDataUrl, MAX_GAMBAR_SOAL_BYTES);
+                    const finalDataUrl = hasilKompres.dataUrl;
+                    const finalMimeMatch = finalDataUrl.match(/^data:([^;]+);base64,/);
+                    const finalMime = finalMimeMatch ? finalMimeMatch[1] : "image/jpeg";
+                    const finalB64 = finalDataUrl.split(",")[1];
+                    const finalExt = finalMime.includes("webp") ? "webp" : (finalMime.includes("png") ? "png" : "jpg");
+
+                    try {
+                        const res = await axios.post(GAS_URL, JSON.stringify({
+                            action: "uploadImage",
+                            base64: finalB64,
+                            mimeType: finalMime,
+                            filename: `soal_xml_${Date.now()}_${i}.${finalExt}`
+                        }));
+                        driveUrlMap[rid] = (res.data && res.data.status === "success" && res.data.url)
+                            ? res.data.url
+                            : finalDataUrl;
+                    } catch (errUp) {
+                        driveUrlMap[rid] = finalDataUrl;
+                    }
+                }
+
+                const docXmlStr = await zip.file("word/document.xml").async("string");
+                const xmlDoc = new DOMParser().parseFromString(docXmlStr, "application/xml");
+                const body = xmlDoc.getElementsByTagName("w:body")[0];
+
+                let rawLines = [];
+                Array.from(body.childNodes).forEach(child => {
+                    const rendered = parseWordXmlNode(child, driveUrlMap);
+                    if (rendered) {
+                        rendered.split("<br>").forEach(seg => {
+                            const cleaned = seg.trim();
+                            if (cleaned) rawLines.push(cleaned);
+                        });
+                    }
+                });
+
+                const formattedLines = [];
+                rawLines.forEach(line => {
+                    const plain = line.replace(/<[^>]+>/g, '').trim();
+                    if (/^SOAL\b[:\.]?/i.test(plain) && plain.length <= 12) {
+                        formattedLines.push("SOAL");
+                        return;
+                    }
+                    if (/^JAWABAN\b[:\.]?/i.test(plain) && plain.length <= 15) {
+                        formattedLines.push("JAWABAN");
+                        return;
+                    }
+                    const mEndFlag = line.match(/^(.*?)(?:\s+|\t+|&nbsp;)([01])\s*$/);
+                    if (mEndFlag && mEndFlag[1].replace(/<[^>]+>/g, '').trim().length > 0 && plain !== "0" && plain !== "1") {
+                        formattedLines.push(`${mEndFlag[1].trim()} ||| ${mEndFlag[2]}`);
+                        return;
+                    }
+                    formattedLines.push(line);
+                });
+
+                document.getElementById('soalBatchText').value = formattedLines.join('\n');
                 hideLoading();
+                alert(`File Word berhasil diekstrak secara utuh (Teks, Tabel, Rumus, Shape & ${rIds.length} Gambar)!`);
             } catch (err) {
                 hideLoading();
                 alert("Gagal membaca file Word (.docx): " + err.message);
             }
-        } else {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('soalBatchText').value = e.target.result || "";
-            };
-            reader.readAsText(file);
         }
-    };
-})();
-</script>
-
-<script>
-// ================= OVERRIDE LOGIKA SESI & KUNCI PER MAPEL (ANTI-CHEAT & SELESAI) =================
-(function() {
-    function getStatusLogTerakhirUntukMapel(namaSiswa, kelasSiswa, mapelName) {
-        const namaNorm = normStr(namaSiswa);
-        const kelasNorm = normStr(kelasSiswa);
-        const mapelNorm = normStr(mapelName);
-        if (!mapelNorm) return "";
-
-        const logs = getLogsBersih();
-        for (let i = logs.length - 1; i >= 0; i--) {
-            const l = logs[i];
-            const cocokMapel = normStr(l.mapel) === mapelNorm;
-            const cocokNama = !namaNorm || normStr(l.nama) === namaNorm;
-            const cocokKelas = !kelasNorm || normStr(l.kelas) === kelasNorm;
-            if (cocokMapel && cocokNama && cocokKelas) {
-                return String(l.status || "").trim();
-            }
-        }
-        return "";
-    }
-
-    window.isMapelTerkunciUntukSiswa = function(username, namaSiswa, kelasSiswa, mapelName) {
-        const targetMapel = normStr(mapelName);
-        if (!targetMapel) return false;
-
-        const unlockedList = getUnlockedMapelList(username);
-        const unlockedEntry = unlockedList.find(item => normStr(item.mapel) === targetMapel);
-
-        const lastLogStatus = getStatusLogTerakhirUntukMapel(namaSiswa, kelasSiswa, mapelName);
-        if (lastLogStatus) {
-            const lowLog = lastLogStatus.toLowerCase();
-            if (lowLog === "direset" || lowLog.includes("reset")) {
-                bukaKunciMapelLokal(username, mapelName);
-                return false;
-            }
-            if (lowLog.includes("selesai") || lowLog.includes("curang") || lowLog.includes("waktu habis")) {
-                if (unlockedEntry) {
-                    const sess = sesiLoginSiswa[username];
-                    const sessSt = sess ? String(sess.status || "").trim().toLowerCase() : "";
-                    if (sessSt.includes("reset") || sessSt === "sedang ujian" || sessSt === "login aktif") {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        const sess = sesiLoginSiswa[username];
-        if (sess && normStr(sess.mapel) === targetMapel) {
-            const st = String(sess.status || "").trim();
-            const lowSt = st.toLowerCase();
-            if (lowSt.includes("reset") || lowSt === "login aktif") {
-                bukaKunciMapelLokal(username, mapelName);
-                return false;
-            }
-            if (lowSt.includes("selesai") || lowSt.includes("curang") || lowSt.includes("waktu habis")) {
-                return true;
-            }
-        }
-
-        if (unlockedEntry) {
-            return false;
-        }
-
-        const lockedLocal = bacaLockedMapelLokal(username);
-        if (lockedLocal.includes(targetMapel)) {
-            return true;
-        }
-
-        return false;
-    };
-
-    const origResetMapel = window.resetMapelSiswaAdmin;
-    window.resetMapelSiswaAdmin = async function(usernameEnc, mapelEnc) {
-        const username = decodeURIComponent(usernameEnc);
-        const mapel = decodeURIComponent(mapelEnc);
-
-        if (!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nKunci mapel & status pelanggaran/selesai untuk mapel ini akan dibuka agar siswa bisa mengerjakan ulang.`)) return;
-
-        showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
-        tandaiMapelDiresetLokal(username, mapel);
-
-        const sesiLama = sesiLoginSiswa[username] || {
-            username: username,
-            deviceId: "",
-            status: "Login Aktif",
-            nama: "",
-            kelas: "",
-            mapel: mapel
-        };
-
-        try {
-            await axios.post(GAS_URL, JSON.stringify({
-                action: "resetMapelSiswa",
-                sheetName: "DB_Log_login_CBT",
-                username: username,
-                nama: sesiLama.nama || "",
-                kelas: sesiLama.kelas || "",
-                mapel: mapel,
-                status: "Direset",
-                nilai: ""
-            }));
-        } catch (e) {
-            console.warn("Peringatan resetMapelSiswa:", e);
-        }
-
-        await setSesiToGAS({
-            username: username,
-            deviceId: sesiLama.deviceId || "",
-            status: `Reset-${mapel} (Direset)`,
-            nama: sesiLama.nama || "",
-            kelas: sesiLama.kelas || "",
-            mapel: mapel,
-            updatedAt: getLocalIsoNow()
-        });
-
-        await fetchLogLoginFromGAS();
-        await fetchSesiFromGAS(true);
-        hideLoading();
-        alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset dan tidak lagi terkunci!`);
     };
 })();
 </script>
