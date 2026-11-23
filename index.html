@@ -6439,5 +6439,135 @@ window.addEventListener('DOMContentLoaded', async () => {
 })();
 </script>
 
+<script>
+(function() {
+    // ================= SATU SUMBER DATA: DB_Log_login_CBT =================
+    function cariUsernameDariNamaKelas(nama, kelas) {
+        const namaNorm = normStr(nama);
+        const kelasNorm = normStr(kelas);
+        if (!Array.isArray(databaseSiswa) || databaseSiswa.length === 0) return "";
+        const found = databaseSiswa.find(s =>
+            normStr(s.nama) === namaNorm && (!kelasNorm || normStr(s.kelas) === kelasNorm)
+        );
+        return found ? String(found.username || "").trim() : "";
+    }
+
+    function sinkronkanSesiDariLogDanSesi() {
+        const merged = {};
+
+        // 1. Ambil sesi aktif dari GAS (memuat deviceId / perangkat & status sesi)
+        if (sesiLoginSiswa && typeof sesiLoginSiswa === "object") {
+            Object.keys(sesiLoginSiswa).forEach(key => {
+                const item = sesiLoginSiswa[key];
+                if (!item || typeof item !== "object") return;
+                const uname = String(item.username || key || "").trim();
+                if (!uname) return;
+                merged[uname] = {
+                    username: uname,
+                    deviceId: item.deviceId || item.perangkat || "",
+                    status: item.status || "Login Aktif",
+                    nama: item.nama || "",
+                    kelas: item.kelas || "",
+                    mapel: item.mapel || "-",
+                    updatedAt: item.updatedAt || ""
+                };
+            });
+        }
+
+        // 2. Sinkronkan & perkaya dari satu sumber utama: DB_Log_login_CBT
+        const logs = typeof getLogsBersih === "function" ? getLogsBersih() : (logSiswaLogin || []);
+        logs.forEach(row => {
+            const nama = String(row.nama || "").trim();
+            const kelas = String(row.kelas || "").trim();
+            const mapel = String(row.mapel || "").trim();
+            const statusRow = String(row.status || "").trim();
+            const waktuRow = String(row.waktu || row.timestamp || row.updatedAt || "").trim();
+            const devRow = String(row.deviceId || row.perangkat || "").trim();
+
+            let uname = String(row.username || row.nis || "").trim();
+            if (!uname) {
+                uname = cariUsernameDariNamaKelas(nama, kelas);
+            }
+            const key = uname || `${normStr(nama)}||${normStr(kelas)}`;
+            if (!key || key === "||") return;
+
+            if (!merged[key]) {
+                merged[key] = {
+                    username: uname || nama || "-",
+                    deviceId: devRow,
+                    status: statusRow || "Login Aktif",
+                    nama: nama || "-",
+                    kelas: kelas || "-",
+                    mapel: mapel || "-",
+                    updatedAt: waktuRow
+                };
+            } else {
+                if (nama) merged[key].nama = nama;
+                if (kelas) merged[key].kelas = kelas;
+                if (mapel) merged[key].mapel = mapel;
+                if (devRow) merged[key].deviceId = devRow;
+                if (waktuRow) merged[key].updatedAt = waktuRow;
+                if (statusRow) {
+                    merged[key].status = gabungRiwayatStatus(merged[key].status, statusRow);
+                }
+            }
+        });
+
+        sesiLoginSiswa = merged;
+        return sesiLoginSiswa;
+    }
+
+    window.fetchSesiFromGAS = async function(silent = false) {
+        try {
+            const rawRes = await axios.post(GAS_URL, JSON.stringify({ action: "getSesi" }));
+            if (rawRes && rawRes.data && rawRes.data.status === "success") {
+                sesiLoginSiswa = normalisasiSesiDariGAS(rawRes.data.data);
+            }
+        } catch (e) {
+            if (!silent) console.error("Gagal mengambil data sesi dari GAS:", e);
+        }
+        sinkronkanSesiDariLogDanSesi();
+        renderTabelSesiAktif();
+        return sesiLoginSiswa;
+    };
+
+    window.fetchLogLoginFromGAS = async function() {
+        try {
+            const res = await axios.post(GAS_URL, JSON.stringify({
+                action: "getLogLogin",
+                sheetName: "DB_Log_login_CBT"
+            }));
+            if (res.data && res.data.status === "success") {
+                const rawArr = Array.isArray(res.data.data) ? res.data.data : [];
+                logSiswaLogin = rawArr.filter(isBarisLogValid);
+            }
+        } catch (e) {
+            console.error("Gagal mengambil log login dari GAS (DB_Log_login_CBT):", e);
+        }
+        sinkronkanSesiDariLogDanSesi();
+        renderTabelSiswaLogin();
+        renderTabelSesiAktif();
+    };
+
+    window.refreshSemuaDataAdmin = async function() {
+        showLoading("Menghapus cache lokal & menyinkronkan satu data (DB_Log_login_CBT)...");
+        bersihkanCacheLokalLama();
+        isDataLoadedOnce = false;
+        await fetchCbtDatabase(true, true);
+        await fetchTokenDariDrive(true);
+        await fetchLogLoginFromGAS();
+        await fetchSesiFromGAS(true);
+        hideLoading();
+    };
+
+    const origResetMapelSiswaAdmin = window.resetMapelSiswaAdmin;
+    window.resetMapelSiswaAdmin = async function(usernameEnc, mapelEnc) {
+        await origResetMapelSiswaAdmin(usernameEnc, mapelEnc);
+        await fetchLogLoginFromGAS();
+        await fetchSesiFromGAS(true);
+    };
+})();
+</script>
 </body>
+
 </html>
