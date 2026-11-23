@@ -1631,7 +1631,7 @@
 const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxXMy0uqCdvg8NPl4G5MAk1kyk6svirpB5-vGa5-p1zJOp7tMSgI48DEwbMN_g2LvoI/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzlLxzIAySwV8oMAdI9mo78vZwLcLvMnDhtIoFiGbxn8s0U3Tq2d7ucnGrKK2eLLx-k/exec";
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
@@ -2524,13 +2524,92 @@ function toggleRoleLogin() {
     sinkronkanHeaderAdmin();
 }
 
+const ADMIN_ENC_STORAGE_KEY = "smantas_cbt_admin_pass_enc_v1";
+const ADMIN_SALT_STORAGE_KEY = "smantas_cbt_admin_pass_salt_v1";
+const ADMIN_PEPPER_KEY = "SMANTAS_CBT_2026_AES_KEY";
+
+function getAdminVaultKey() {
+    return CryptoJS.SHA256(ADMIN_PEPPER_KEY + "::" + (CBT_GIST_ID || "smantas")).toString();
+}
+
+function getOrCreateAdminSalt() {
+    let salt = localStorage.getItem(ADMIN_SALT_STORAGE_KEY);
+    if (!salt) {
+        salt = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+        localStorage.setItem(ADMIN_SALT_STORAGE_KEY, salt);
+    }
+    return salt;
+}
+
+function encryptAdminPassword(plainPass) {
+    const clean = String(plainPass || "");
+    const key = getAdminVaultKey();
+    return CryptoJS.AES.encrypt(clean, key).toString();
+}
+
+function decryptAdminPassword(cipherText) {
+    if (!cipherText) return "";
+    try {
+        const key = getAdminVaultKey();
+        const bytes = CryptoJS.AES.decrypt(String(cipherText), key);
+        const decoded = bytes.toString(CryptoJS.enc.Utf8);
+        return decoded || "";
+    } catch (e) {
+        return "";
+    }
+}
+
+function hashSaltedAdminPassword(plainPass, salt) {
+    return CryptoJS.SHA256(String(salt || "") + ":" + String(plainPass || "")).toString();
+}
+
+function syncEncryptedAdminPasswordStorage(plainPass) {
+    const clean = String(plainPass || "admin123");
+    const salt = getOrCreateAdminSalt();
+    const cipher = encryptAdminPassword(clean);
+    const saltedHash = hashSaltedAdminPassword(clean, salt);
+
+    localStorage.removeItem("adminPasswordPlain");
+    localStorage.setItem(ADMIN_ENC_STORAGE_KEY, cipher);
+    localStorage.setItem("adminPasswordHash", saltedHash);
+    pengaturanCbt.adminPasswordEnc = cipher;
+    pengaturanCbt.adminPasswordSalt = salt;
+    pengaturanCbt.adminPasswordHash = saltedHash;
+    delete pengaturanCbt.adminPasswordPlain;
+}
+
 function getAdminPasswordPlain() {
-    return localStorage.getItem("adminPasswordPlain") || pengaturanCbt.adminPasswordPlain || "admin123";
+    const localCipher = localStorage.getItem(ADMIN_ENC_STORAGE_KEY);
+    if (localCipher) {
+        const dec = decryptAdminPassword(localCipher);
+        if (dec) return dec;
+    }
+    if (pengaturanCbt && pengaturanCbt.adminPasswordEnc) {
+        const decCfg = decryptAdminPassword(pengaturanCbt.adminPasswordEnc);
+        if (decCfg) {
+            localStorage.setItem(ADMIN_ENC_STORAGE_KEY, pengaturanCbt.adminPasswordEnc);
+            return decCfg;
+        }
+    }
+    if (pengaturanCbt && pengaturanCbt.adminPasswordPlain) {
+        const migrated = String(pengaturanCbt.adminPasswordPlain);
+        syncEncryptedAdminPasswordStorage(migrated);
+        return migrated;
+    }
+    return "admin123";
 }
 
 function getAdminPasswordHash() {
     const plain = getAdminPasswordPlain();
-    return CryptoJS.SHA256(plain).toString();
+    const salt = getOrCreateAdminSalt();
+    return hashSaltedAdminPassword(plain, salt);
+}
+
+function getAdminEncryptedCipherDisplay() {
+    const localCipher = localStorage.getItem(ADMIN_ENC_STORAGE_KEY);
+    if (localCipher) return localCipher;
+    if (pengaturanCbt && pengaturanCbt.adminPasswordEnc) return pengaturanCbt.adminPasswordEnc;
+    return encryptAdminPassword(getAdminPasswordPlain());
 }
 
 function renderAdminPasswordDisplay() {
@@ -2538,11 +2617,14 @@ function renderAdminPasswordDisplay() {
     const btn = document.getElementById('btnTogglePassAdmin');
     if(!span || !btn) return;
     const plain = getAdminPasswordPlain();
+    const cipher = getAdminEncryptedCipherDisplay();
     if(isAdminPassVisible) {
         span.innerText = plain;
+        span.title = "Cipher AES-256: " + cipher;
         btn.innerText = "Sembunyikan";
     } else {
-        span.innerText = "•".repeat(plain.length);
+        span.innerText = cipher ? (cipher.slice(0, 18) + "…") : "•".repeat(plain.length);
+        span.title = "Terenkripsi AES-256 (Klik Lihat untuk mendekripsi)";
         btn.innerText = "Lihat";
     }
 }
@@ -2555,14 +2637,12 @@ function toggleLihatPasswordAdmin() {
 async function ubahPasswordAdmin() {
     const newPass = document.getElementById('newAdminPassword').value.trim();
     if(!newPass) { alert("Password baru kosong!"); return; }
-    showLoading("Menyimpan password admin baru...");
-    localStorage.setItem("adminPasswordPlain", newPass);
-    localStorage.setItem("adminPasswordHash", CryptoJS.SHA256(newPass).toString());
-    pengaturanCbt.adminPasswordPlain = newPass;
+    showLoading("Mengenkripsi & menyimpan password admin baru...");
+    syncEncryptedAdminPasswordStorage(newPass);
     await saveCbtDatabaseToGist();
     hideLoading();
     renderAdminPasswordDisplay();
-    alert("Password admin berhasil diubah!");
+    alert("Password admin berhasil dienkripsi & diubah!");
     document.getElementById('newAdminPassword').value = "";
 }
 
@@ -2693,8 +2773,14 @@ function terapkanDataCbtMaster(data) {
     if (Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
     if (data.db_pengaturan && typeof data.db_pengaturan === 'object') {
         pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
-        if (data.db_pengaturan.adminPasswordPlain) {
-            localStorage.setItem("adminPasswordPlain", data.db_pengaturan.adminPasswordPlain);
+        if (data.db_pengaturan.adminPasswordSalt) {
+            localStorage.setItem(ADMIN_SALT_STORAGE_KEY, String(data.db_pengaturan.adminPasswordSalt));
+        }
+        if (data.db_pengaturan.adminPasswordEnc) {
+            localStorage.setItem(ADMIN_ENC_STORAGE_KEY, String(data.db_pengaturan.adminPasswordEnc));
+            delete pengaturanCbt.adminPasswordPlain;
+        } else if (data.db_pengaturan.adminPasswordPlain) {
+            syncEncryptedAdminPasswordStorage(String(data.db_pengaturan.adminPasswordPlain));
         }
     }
 }
@@ -2786,12 +2872,17 @@ async function fetchCbtDatabase(forceRefresh = false, preferApi = false) {
 }
 
 async function saveCbtDatabaseToGist() {
+    const currentAdminPlain = getAdminPasswordPlain();
+    syncEncryptedAdminPasswordStorage(currentAdminPlain);
+    const safePengaturan = { ...pengaturanCbt };
+    delete safePengaturan.adminPasswordPlain;
+
     let payloadData = {
         db_kelas: daftarKelas,
         db_mapel: daftarMapel,
         db_siswa: databaseSiswa,
         db_jadwal: daftarJadwalUjian,
-        db_pengaturan: pengaturanCbt
+        db_pengaturan: safePengaturan
     };
 
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
@@ -3566,8 +3657,14 @@ function restoreDatabaseJson(event) {
             if(Array.isArray(parsed.db_jadwal)) daftarJadwalUjian = parsed.db_jadwal;
             if(parsed.db_pengaturan && typeof parsed.db_pengaturan === 'object') {
                 pengaturanCbt = { ...pengaturanCbt, ...parsed.db_pengaturan };
-                if(parsed.db_pengaturan.adminPasswordPlain) {
-                    localStorage.setItem("adminPasswordPlain", parsed.db_pengaturan.adminPasswordPlain);
+                if(parsed.db_pengaturan.adminPasswordEnc) {
+                    if(parsed.db_pengaturan.adminPasswordSalt) {
+                        localStorage.setItem(ADMIN_SALT_STORAGE_KEY, String(parsed.db_pengaturan.adminPasswordSalt));
+                    }
+                    localStorage.setItem(ADMIN_ENC_STORAGE_KEY, String(parsed.db_pengaturan.adminPasswordEnc));
+                    delete pengaturanCbt.adminPasswordPlain;
+                } else if(parsed.db_pengaturan.adminPasswordPlain) {
+                    syncEncryptedAdminPasswordStorage(String(parsed.db_pengaturan.adminPasswordPlain));
                 }
             }
 
@@ -5511,10 +5608,12 @@ document.addEventListener("keydown", function(e) {
 
 function prosesLoginAdmin() {
     let pass = document.getElementById('adminPassword').value;
-    let hashInput = CryptoJS.SHA256(pass).toString();
+    const salt = getOrCreateAdminSalt();
+    let hashInput = hashSaltedAdminPassword(pass, salt);
     let hashSaved = getAdminPasswordHash();
+    const decryptedPass = getAdminPasswordPlain();
     
-    if(hashInput === hashSaved || pass === "admin123") {
+    if(hashInput === hashSaved || pass === decryptedPass) {
         localStorage.setItem("isAdminLoggedIn", "true");
         setCompactMode(false);
         document.getElementById('viewLoginAdmin').classList.remove('active');
