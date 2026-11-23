@@ -1389,7 +1389,36 @@
 
         <!-- TAB 5: PENGATURAN -->
         <div id="adminTabSettings" class="admin-view">
-            <!-- 1 BARIS: PENGATURAN TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
+            <!-- BAGIAN PALING ATAS: CEK KUOTA / RATE LIMIT GITHUB GIST API -->
+            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                    <div>
+                        <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
+                        <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
+                    </div>
+                    <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 6px 12px; width:auto; font-size:11.5px;">🔄 Cek Limit Gist API</button>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Sisa Kuota (Remaining)</div>
+                        <div id="gistLimitRemaining" style="font-size:16px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Terpakai (Used)</div>
+                        <div id="gistLimitUsed" style="font-size:16px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Reset Kuota Pada</div>
+                        <div id="gistLimitReset" style="font-size:13px; font-weight:bold; color:#333; font-family:monospace;">00 Jam 00 Menit 00 Detik</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
+                        <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
+                        <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARIS 2: PENGATURAN TOKEN GOOGLE DRIVE, DURASI JP, & PASSWORD ADMIN -->
             <div class="settings-top-three-col">
                 <!-- KOLOM 1: PENGATURAN TOKEN GOOGLE DRIVE -->
                 <div class="admin-card">
@@ -1447,10 +1476,10 @@
                 </div>
             </div>
 
-            <!-- BARIS 2 SEJAJAR: BACKUP/RESTORE DB & ZONA BERBAHAYA -->
-            <div class="settings-backup-danger-row">
+            <!-- BARIS 3 SEJAJAR: BACKUP/RESTORE DB & ZONA BERBAHAYA -->
+            <div class="settings-backup-danger-row" style="margin-bottom:0;">
                 <!-- KIRI: BACKUP & RESTORE -->
-                <div class="admin-card">
+                <div class="admin-card" style="margin-bottom:0;">
                     <div>
                         <h4 style="margin: 0 0 8px 0; color: #008080;">Backup & Restore Database (db_cbt.json)</h4>
                         <div class="row-flex">
@@ -1467,41 +1496,12 @@
                 </div>
 
                 <!-- KANAN: ZONA BERBAHAYA -->
-                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5;">
+                <div class="admin-card" style="border-color: #f5c6cb; background: #fff5f5; margin-bottom:0;">
                     <div>
                         <h4 style="margin: 0 0 6px 0; color: #dc3545;">Zona Berbahaya — Hapus / Reset Database</h4>
                         <p style="font-size: 11.5px; color: #555; margin: 0 0 8px 0;">Menghapus seluruh data siswa, jadwal ujian Gist, sesi/log GAS, hasil ujian & gambar soal di Drive. Pastikan sudah Backup terlebih dahulu.</p>
                     </div>
                     <button onclick="hapusDatabaseGist()" style="background: #dc3545; padding: 7px 12px;">Hapus Seluruh Database (Reset DB)</button>
-                </div>
-            </div>
-
-            <!-- BARIS 3: CEK KUOTA / RATE LIMIT GITHUB GIST API -->
-            <div class="admin-card" style="border-color: #bee5eb; background: #f4fbfd; margin-bottom:0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                    <div>
-                        <h4 style="margin: 0 0 2px 0; color: #0056b3;">Monitor Kuota / Rate Limit GitHub Gist API</h4>
-                        <span style="font-size: 11px; color: #555;">Cek sisa kuota request API GitHub secara real-time (tidak mengurangi kuota rate limit).</span>
-                    </div>
-                    <button type="button" onclick="cekRateLimitGistApi(false)" style="background: #0056b3; padding: 6px 12px; width:auto; font-size:11.5px;">🔄 Cek Limit Gist API</button>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Sisa Kuota (Remaining)</div>
-                        <div id="gistLimitRemaining" style="font-size:16px; font-weight:bold; color:#28a745; font-family:monospace;">- / -</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Terpakai (Used)</div>
-                        <div id="gistLimitUsed" style="font-size:16px; font-weight:bold; color:#0056b3; font-family:monospace;">-</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Reset Kuota Pada</div>
-                        <div id="gistLimitReset" style="font-size:13px; font-weight:bold; color:#333; font-family:monospace;">-</div>
-                    </div>
-                    <div style="background:#fff; border:1px solid #d1e7ed; border-radius:4px; padding:7px 9px;">
-                        <div style="font-size:10.5px; color:#666;">Status Mode Hemat</div>
-                        <div id="gistLimitStatus" style="font-size:12px; font-weight:bold; color:#008080;">Raw-First Aktif</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1962,6 +1962,10 @@ let isSubmittingExam = false;
 let examCountdownIntervalId = null;
 let examEndTimestampMs = 0;
 
+// Timer Countdown Reset Kuota GitHub Gist API
+let gistResetEpochSec = 0;
+let gistResetCountdownIntervalId = null;
+
 // ================= FUNGSI BERSIHKAN CACHE LOCAL STORAGE LAMA =================
 function bersihkanCacheLokalLama(usernameOpsional = null) {
     try {
@@ -2076,11 +2080,15 @@ function tandaiMapelDiresetLokal(username, mapelName) {
     } catch (e) {}
 }
 
+function getLogsBersih() {
+    return Array.isArray(logSiswaLogin) ? logSiswaLogin.filter(isBarisLogValid) : [];
+}
+
 function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const targetMapel = normStr(mapelName);
     if (!targetMapel) return false;
 
-    const logs = Array.isArray(logSiswaLogin) ? logSiswaLogin : [];
+    const logs = getLogsBersih();
     const namaNorm = normStr(namaSiswa || "");
     const kelasNorm = normStr(kelasSiswa || "");
 
@@ -2132,6 +2140,22 @@ function parseJadwalDateTimeMs(isoLocalStr) {
     if (!isoLocalStr) return NaN;
     const d = new Date(isoLocalStr);
     return d.getTime();
+}
+
+function isJadwalMapelAktifSekarang(mapelName, kelasName = "") {
+    const targetMapel = normStr(mapelName);
+    if (!targetMapel) return false;
+    const targetKelas = normStr(kelasName);
+    const nowMs = Date.now();
+
+    return daftarJadwalUjian.some(j => {
+        if (normStr(j.mapel) !== targetMapel) return false;
+        if (targetKelas && normStr(j.kelas) !== targetKelas) return false;
+        const startMs = parseJadwalDateTimeMs(j.mulai);
+        const endMs = parseJadwalDateTimeMs(j.selesai);
+        if (isNaN(startMs) || isNaN(endMs)) return false;
+        return nowMs >= startMs && nowMs <= endMs;
+    });
 }
 
 function renderOpsiMapelUntukSiswa(siswa) {
@@ -2357,7 +2381,37 @@ function hitungWaktuSelesaiOtomatis() {
     document.getElementById('waktuSelesai').value = formattedEnd;
 }
 
-// ================= MONITOR RATE LIMIT GIST API =================
+// ================= MONITOR RATE LIMIT GIST API (COUNTDOWN RESET KUOTA) =================
+function formatCountdownJamMenitDetik(totalSec) {
+    const sec = Math.max(0, Math.floor(totalSec));
+    const jam = Math.floor(sec / 3600);
+    const menit = Math.floor((sec % 3600) / 60);
+    const detik = sec % 60;
+    return `${String(jam).padStart(2, '0')} Jam ${String(menit).padStart(2, '0')} Menit ${String(detik).padStart(2, '0')} Detik`;
+}
+
+function updateCountdownResetKuotaGist() {
+    const resetEl = document.getElementById('gistLimitReset');
+    if (!resetEl) return;
+
+    if (!gistResetEpochSec || gistResetEpochSec <= 0) {
+        resetEl.innerText = "00 Jam 00 Menit 00 Detik";
+        return;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const diffSec = Math.max(0, gistResetEpochSec - nowSec);
+    resetEl.innerText = formatCountdownJamMenitDetik(diffSec);
+}
+
+function mulaiCountdownResetKuotaGist() {
+    if (gistResetCountdownIntervalId) {
+        clearInterval(gistResetCountdownIntervalId);
+    }
+    updateCountdownResetKuotaGist();
+    gistResetCountdownIntervalId = setInterval(updateCountdownResetKuotaGist, 1000);
+}
+
 async function cekRateLimitGistApi(silent = false) {
     const remEl = document.getElementById('gistLimitRemaining');
     const usedEl = document.getElementById('gistLimitUsed');
@@ -2375,19 +2429,15 @@ async function cekRateLimitGistApi(silent = false) {
         const used = Number(core.used ?? (limit - remaining));
         const resetEpoch = Number(core.reset || 0);
 
-        let resetStr = "-";
-        if (resetEpoch > 0) {
-            const d = new Date(resetEpoch * 1000);
-            const pad = (n) => String(n).padStart(2, '0');
-            resetStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} WIB`;
-        }
+        gistResetEpochSec = resetEpoch;
+        mulaiCountdownResetKuotaGist();
 
         if (remEl) {
             remEl.innerText = `${remaining} / ${limit}`;
             remEl.style.color = remaining > 500 ? "#28a745" : (remaining > 100 ? "#fd7e14" : "#dc3545");
         }
         if (usedEl) usedEl.innerText = `${used} req`;
-        if (resetEl) resetEl.innerText = resetStr;
+        if (!resetEpoch && resetEl) resetEl.innerText = "00 Jam 00 Menit 00 Detik";
         if (statusEl) {
             statusEl.innerText = remaining > 500 ? "Aman (Raw-First Aktif)" : "Waspada Kuota Menipis";
             statusEl.style.color = remaining > 500 ? "#008080" : "#dc3545";
@@ -2646,7 +2696,7 @@ function renderStatusBadgesHtml(statusStr) {
             cls = "status-pill-selesai";
         } else if (low.includes("curang")) {
             cls = "status-pill-curang";
-        } else if (low.includes("reset")) {
+        } else if (low.includes("reset") || low.includes("direset")) {
             cls = "status-pill-reset";
         } else if (low.includes("sedang")) {
             cls = "status-pill-ujian";
@@ -2846,6 +2896,42 @@ async function fetchAllSoalFromGist(options = {}) {
     }
 }
 
+// ================= FILTER & VALIDASI BARIS LOG (DB_Log_login_CBT) =================
+function isBarisLogValid(row) {
+    if (!row || typeof row !== "object") return false;
+    const nama = String(row.nama ?? "").trim();
+    const kelas = String(row.kelas ?? "").trim();
+    const mapel = String(row.mapel ?? "").trim();
+    const status = String(row.status ?? "").trim();
+    const nilaiRaw = row.nilai;
+
+    // Abaikan baris yang seluruh kolom utamanya kosong
+    if (!nama && !kelas && !mapel && !status && (nilaiRaw === null || nilaiRaw === undefined || String(nilaiRaw).trim() === "")) {
+        return false;
+    }
+
+    // Abaikan baris judul / header sheet yang terbaca sebagai data
+    const namaLow = nama.toLowerCase();
+    const kelasLow = kelas.toLowerCase();
+    const mapelLow = mapel.toLowerCase();
+    const statusLow = status.toLowerCase();
+
+    if (
+        namaLow.includes("log login") ||
+        namaLow.includes("pengerjaan ujian") ||
+        (namaLow === "nama" && kelasLow === "kelas") ||
+        (kelasLow === "kelas" && mapelLow === "mata pelajaran") ||
+        (!nama && kelasLow === "x-1" && mapelLow === "simulasi" && statusLow === "reset-simulasi (direset), selesai")
+    ) {
+        return false;
+    }
+
+    // Harus memiliki minimal nama atau mapel yang bermakna
+    if (!nama && !mapel) return false;
+
+    return true;
+}
+
 async function fetchLogLoginFromGAS() {
     try {
         let res = await axios.post(GAS_URL, JSON.stringify({
@@ -2853,7 +2939,8 @@ async function fetchLogLoginFromGAS() {
             sheetName: "DB_Log_login_CBT"
         }));
         if(res.data && res.data.status === "success") {
-            logSiswaLogin = Array.isArray(res.data.data) ? res.data.data : [];
+            const rawArr = Array.isArray(res.data.data) ? res.data.data : [];
+            logSiswaLogin = rawArr.filter(isBarisLogValid);
         }
     } catch(e) {
         console.error("Gagal mengambil log login dari GAS (DB_Log_login_CBT):", e);
@@ -2867,8 +2954,9 @@ function isWaitLockError(errMsg) {
 }
 
 async function hapusBarisLogSpreadsheet(index) {
-    if (!Array.isArray(logSiswaLogin) || index < 0 || index >= logSiswaLogin.length) return;
-    const row = logSiswaLogin[index];
+    const bersih = getLogsBersih();
+    if (index < 0 || index >= bersih.length) return;
+    const row = bersih[index];
     const infoLabel = `${row.nama || "-"} (${row.kelas || "-"} - ${row.mapel || "-"})`;
 
     if (!confirm(`Hapus baris log untuk ${infoLabel}?`)) return;
@@ -2891,7 +2979,7 @@ async function hapusBarisLogSpreadsheet(index) {
             hideLoading();
         } else {
             const errMsg = data?.message || "Unknown error";
-            logSiswaLogin.splice(index, 1);
+            logSiswaLogin = bersih.filter((_, i) => i !== index);
             renderTabelSiswaLogin();
             hideLoading();
             if (isWaitLockError(errMsg)) {
@@ -2905,7 +2993,7 @@ async function hapusBarisLogSpreadsheet(index) {
         }
     } catch (e) {
         const errMsg = e.message || "";
-        logSiswaLogin.splice(index, 1);
+        logSiswaLogin = bersih.filter((_, i) => i !== index);
         renderTabelSiswaLogin();
         hideLoading();
         if (isWaitLockError(errMsg)) {
@@ -2920,7 +3008,8 @@ async function hapusBarisLogSpreadsheet(index) {
 }
 
 async function hapusSemuaLogSpreadsheet() {
-    const jumlahLog = Array.isArray(logSiswaLogin) ? logSiswaLogin.length : 0;
+    const bersih = getLogsBersih();
+    const jumlahLog = bersih.length;
     if (jumlahLog === 0) {
         alert("Tidak ada data log pengerjaan & nilai untuk dihapus.");
         return;
@@ -2986,7 +3075,7 @@ async function hapusSemuaLogSpreadsheet() {
     }
 }
 
-// ================= KONTROL SESI, RESET MAPEL & RESET PERANGKAT ADMIN (GAS) =================
+// ================= KONTROL SESI, RESET MAPEL (HANYA MAPEL AKTIF) & RESET PERANGKAT =================
 function resetCariNamaSesi() {
     const inp = document.getElementById('inputCariNamaSesi');
     if (inp) inp.value = "";
@@ -2995,39 +3084,46 @@ function resetCariNamaSesi() {
 
 function kumpulkanMapelAktifSiswa(username, sesiObj) {
     const mapelSet = new Map();
-    const addMapel = (m) => {
+    const kelasSiswa = sesiObj && sesiObj.kelas ? sesiObj.kelas : "";
+
+    const addIfActive = (m) => {
         const clean = String(m || "").trim();
         if (!clean || clean === "-") return;
         const key = normStr(clean);
-        if (!mapelSet.has(key)) mapelSet.set(key, clean);
+        if (mapelSet.has(key)) return;
+        if (isJadwalMapelAktifSekarang(clean, kelasSiswa)) {
+            mapelSet.set(key, clean);
+        }
     };
 
     if (sesiObj && sesiObj.mapel) {
-        addMapel(sesiObj.mapel);
+        addIfActive(sesiObj.mapel);
     }
 
     const lockedArr = bacaLockedMapelLokal(username);
     lockedArr.forEach(mNorm => {
         const matched = daftarMapel.find(dm => normStr(dm) === mNorm);
-        addMapel(matched || mNorm);
+        addIfActive(matched || mNorm);
     });
 
     const namaNorm = normStr(sesiObj && sesiObj.nama ? sesiObj.nama : "");
-    const kelasNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
-    if (Array.isArray(logSiswaLogin) && (namaNorm || kelasNorm)) {
-        logSiswaLogin.forEach(l => {
+    const kelasNorm = normStr(kelasSiswa);
+    const logs = getLogsBersih();
+    if (logs.length > 0 && (namaNorm || kelasNorm)) {
+        logs.forEach(l => {
             const cocokNama = !namaNorm || normStr(l.nama) === namaNorm;
             const cocokKelas = !kelasNorm || normStr(l.kelas) === kelasNorm;
             if (cocokNama && cocokKelas && l.mapel) {
-                addMapel(l.mapel);
+                addIfActive(l.mapel);
             }
         });
     }
 
+    // Jika belum ada yang cocok dari riwayat, tetap cek jadwal aktif untuk kelasnya
     if (mapelSet.size === 0 && kelasNorm) {
         daftarJadwalUjian.forEach(j => {
-            if (normStr(j.kelas) === kelasNorm && j.mapel) {
-                addMapel(j.mapel);
+            if (normStr(j.kelas) === kelasNorm && j.mapel && isJadwalMapelAktifSekarang(j.mapel, j.kelas)) {
+                addIfActive(j.mapel);
             }
         });
     }
@@ -3114,7 +3210,9 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
             username: username,
             nama: sesiLama.nama || "",
             kelas: sesiLama.kelas || "",
-            mapel: mapel
+            mapel: mapel,
+            status: "Direset",
+            nilai: ""
         }));
     } catch (e) {
         console.warn("Peringatan saat memanggil resetMapelSiswa ke GAS:", e);
@@ -4493,7 +4591,7 @@ async function bukaModalExportHasil(mapelEnc, kelasJson) {
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
 
-    if (!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+    if (getLogsBersih().length === 0) {
         showLoading("Mengambil data nilai dari Spreadsheet...");
         await fetchLogLoginFromGAS();
         hideLoading();
@@ -4536,7 +4634,7 @@ function susunBarisRekapKelas(mapel, kelasTarget) {
 
     const siswaDiKelas = databaseSiswa.filter(s => String(s.kelas || "").trim().toLowerCase() === klsNorm);
 
-    const logMatch = (Array.isArray(logSiswaLogin) ? logSiswaLogin : []).filter(l =>
+    const logMatch = getLogsBersih().filter(l =>
         String(l.kelas || "").trim().toLowerCase() === klsNorm &&
         String(l.mapel || "").trim().toLowerCase() === mapelNorm
     );
@@ -4778,27 +4876,28 @@ function renderTabelSiswaLogin() {
     if(!tbody) return;
     tbody.innerHTML = "";
 
+    const bersih = getLogsBersih();
     const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
 
-    if(!Array.isArray(logSiswaLogin) || logSiswaLogin.length === 0) {
+    if(bersih.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
         return;
     }
 
     let tampilCount = 0;
-    logSiswaLogin.forEach((l, idx) => {
-        if (!l) return;
+    bersih.forEach((l, idx) => {
         if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
             return;
         }
         tampilCount++;
         let badgeStatus = renderStatusBadgesHtml(l.status);
+        const nilaiTampil = (l.nilai !== null && l.nilai !== undefined && String(l.nilai).trim() !== "") ? l.nilai : "-";
         tbody.innerHTML += `<tr>
-            <td>${l.nama}</td>
-            <td>${l.kelas}</td>
-            <td>${l.mapel}</td>
+            <td>${l.nama || '-'}</td>
+            <td>${l.kelas || '-'}</td>
+            <td>${l.mapel || '-'}</td>
             <td>${badgeStatus}</td>
-            <td>${l.nilai !== null && l.nilai !== undefined ? l.nilai : "-"}</td>
+            <td>${nilaiTampil}</td>
             <td>
                 <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
             </td>
@@ -5069,7 +5168,7 @@ async function mulaiUjianPilihan() {
             kelas: kelasSiswaLogin,
             mapel: mapel,
             status: riwayatStatusSaatIni,
-            nilai: null
+            nilai: ""
         }));
     } catch(e) {
         console.error("Gagal mengirim log login ke server:", e);
@@ -5598,13 +5697,27 @@ function switchAdminTab(tabName) {
     }
 }
 
-function prosesLoginAdmin() {
-    let pass = document.getElementById('adminPassword').value;
-    if(CryptoJS.SHA256(pass).toString() === getAdminPasswordHash()) {
+async function prosesLoginAdmin() {
+    let pass = document.getElementById('adminPassword').value.trim();
+    if(!pass) { alert("Password admin harus diisi!"); return; }
+
+    showLoading("Memverifikasi password admin & memuat database...");
+    await fetchCbtDatabase(false);
+    await fetchTokenDariDrive(true);
+    hideLoading();
+
+    let hashInput = CryptoJS.SHA256(pass).toString();
+    let validHash = getAdminPasswordHash();
+    let validPlain = getAdminPasswordPlain();
+
+    if(hashInput === validHash || pass === validPlain) {
         localStorage.setItem("isAdminLoggedIn", "true");
-        setCompactMode(false);
-        document.getElementById('tabMenu').style.display = 'none';
+        localStorage.setItem("adminPasswordHash", validHash);
+        localStorage.setItem("adminPasswordPlain", validPlain);
+        document.getElementById('errorAdmin').style.display = 'none';
         document.getElementById('viewLoginAdmin').classList.remove('active');
+        document.getElementById('tabMenu').style.display = 'none';
+        setCompactMode(false);
         document.getElementById('viewPanelAdmin').classList.add('active');
         sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
@@ -5615,11 +5728,38 @@ function prosesLoginAdmin() {
 
 function logoutAdmin() {
     localStorage.removeItem("isAdminLoggedIn");
-    location.reload();
+    if (tokenCountdownTimerId) {
+        clearInterval(tokenCountdownTimerId);
+        tokenCountdownTimerId = null;
+    }
+    if (gistResetCountdownIntervalId) {
+        clearInterval(gistResetCountdownIntervalId);
+        gistResetCountdownIntervalId = null;
+    }
+    bersihkanCacheSoal();
+    document.getElementById('adminPassword').value = "";
+    document.getElementById('viewPanelAdmin').classList.remove('active');
+    
+    currentLoginRole = 'siswa';
+    const btn = document.getElementById('btnRoleToggle');
+    btn.innerText = "Login Siswa";
+    btn.classList.remove('admin-mode');
+
+    setCompactMode(true);
+    document.getElementById('tabMenu').style.display = 'block';
+    sinkronkanHeaderAdmin();
+
+    if (currentSiswaObj) {
+        renderOpsiMapelUntukSiswa(currentSiswaObj);
+        sinkronkanTampilanInputTokenSiswa();
+        document.getElementById('viewPilihUjianSiswa').classList.add('active');
+    } else {
+        document.getElementById('viewLoginSiswa').classList.add('active');
+    }
 }
 
-function showLoading(text) {
-    document.getElementById('loadingText').innerText = text;
+function showLoading(msg = "Sedang memproses...") {
+    document.getElementById('loadingText').innerText = msg;
     document.getElementById('loadingOverlay').style.display = 'flex';
 }
 
@@ -5627,46 +5767,42 @@ function hideLoading() {
     document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-window.addEventListener("online", () => {
-    prosesAntreanSubmitTertunda(false);
-});
-
-window.onload = async function() {
-    showLoading("Memuat data sistem...");
-    await prosesAntreanSubmitTertunda(false);
+window.addEventListener('DOMContentLoaded', async () => {
+    setCompactMode(true);
+    sinkronkanHeaderAdmin();
     await fetchCbtDatabase(false);
-    await fetchSesiFromGAS(true);
     await fetchTokenDariDrive(true);
-    hideLoading();
+    await prosesAntreanSubmitTertunda(false);
 
-    if(localStorage.getItem("isAdminLoggedIn") === "true") {
-        setCompactMode(false);
-        document.getElementById('tabMenu').style.display = 'none';
-        document.getElementById('viewLoginSiswa').classList.remove('active');
-        document.getElementById('viewLoginAdmin').classList.remove('active');
-        document.getElementById('viewPanelAdmin').classList.add('active');
-        sinkronkanHeaderAdmin();
-        switchAdminTab('monitoring');
-        return;
-    }
-
-    const savedSiswaSess = bacaSesiSiswaLokal();
-    if(savedSiswaSess && savedSiswaSess.username) {
-        const siswaCocok = databaseSiswa.find(s => String(s.username) === String(savedSiswaSess.username));
-        const sesiServer = sesiLoginSiswa[savedSiswaSess.username];
-        const perangkatSama = !sesiServer || !sesiServer.deviceId || sesiServer.deviceId === getOrCreateDeviceId();
-
-        if(siswaCocok && perangkatSama) {
+    const savedSiswaSession = bacaSesiSiswaLokal();
+    if (savedSiswaSession && savedSiswaSession.username && localStorage.getItem("isAdminLoggedIn") !== "true") {
+        let siswaCocok = databaseSiswa.find(s => String(s.username).trim() === String(savedSiswaSession.username).trim());
+        if (!siswaCocok && savedSiswaSession.nama && savedSiswaSession.kelas) {
+            siswaCocok = {
+                username: savedSiswaSession.username,
+                nama: savedSiswaSession.nama,
+                kelas: savedSiswaSession.kelas
+            };
+        }
+        if (siswaCocok) {
             await tampilkanHalamanPilihUjianSiswa(siswaCocok);
             return;
-        } else {
-            hapusSesiSiswaLokal();
         }
     }
 
-    setCompactMode(true);
-    sinkronkanHeaderAdmin();
-};
+    if(localStorage.getItem("isAdminLoggedIn") === "true") {
+        currentLoginRole = 'admin';
+        const btn = document.getElementById('btnRoleToggle');
+        btn.innerText = "Login Admin";
+        btn.classList.add('admin-mode');
+        setCompactMode(false);
+        document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
+        document.getElementById('tabMenu').style.display = 'none';
+        document.getElementById('viewPanelAdmin').classList.add('active');
+        sinkronkanHeaderAdmin();
+        switchAdminTab('monitoring');
+    }
+});
 </script>
 </body>
 </html>
