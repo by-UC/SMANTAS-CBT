@@ -1177,9 +1177,9 @@
             <input type="text" id="inputTokenSiswa" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Masukkan 4 digit token dari pengawas..." style="font-family:monospace; font-size:15px; letter-spacing:3px; text-align:center;">
         </div>
         <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 10px; border-radius:4px; font-size:11.5px; margin-bottom:10px;">
-            <b>PERHATIAN:</b> Klik <b>MULAI UJIAN</b> akan memaksa layar menjadi <b>Full Screen</b>. Keluar dari Full Screen, membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan mapel langsung terkunci hingga direset Admin!
+            <b>PERHATIAN:</b> Keluar dari layar penuh (di perangkat yang mendukung), membuka tab baru, atau berpindah aplikasi otomatis dianggap <b>CURANG / SELESAI</b> dan mapel langsung terkunci hingga direset Admin!
         </div>
-        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN (FULL SCREEN)</button>
+        <button onclick="mulaiUjianPilihan()" style="background: #28a745;">MULAI UJIAN</button>
         <button onclick="logoutSiswa()" style="background: #dc3545; margin-top: 8px;">Logout / Ganti Perangkat</button>
     </div>
 
@@ -1196,8 +1196,8 @@
     <!-- 3. VIEW HALAMAN SOAL UJIAN SISWA -->
     <div id="viewUjianSiswa" class="section-view">
         <div class="exam-security-bar">
-            <span>MODE UJIAN TERKUNCI (FULL SCREEN) — Jangan keluar layar penuh atau membuka tab lain!</span>
-            <button type="button" onclick="masukFullscreenWajib()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#856404; color:#fff;">⛶ Layar Penuh</button>
+            <span>MODE UJIAN TERKUNCI — Jangan membuka tab lain atau berpindah aplikasi!</span>
+            <button type="button" id="btnLayarPenuhManual" onclick="masukFullscreenWajib()" style="width:auto; padding:2px 8px; font-size:10.5px; background:#856404; color:#fff;">⛶ Layar Penuh</button>
         </div>
         <div class="exam-header-info-bar">
             <span id="infoUjianText">Mata Pelajaran: Memuat...</span>
@@ -4668,7 +4668,24 @@ function getLocalIsoNow() {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
+function isMobileOrNoFullscreenSupport() {
+    const ua = navigator.userAgent || "";
+    const isTouchMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1 && window.innerWidth <= 900);
+    const hasFsApi = !!(
+        document.documentElement.requestFullscreen ||
+        document.documentElement.webkitRequestFullscreen ||
+        document.documentElement.msRequestFullscreen
+    );
+    return isTouchMobile || !hasFsApi;
+}
+
 async function masukFullscreenWajib() {
+    const guard = document.getElementById('fullscreenGuardOverlay');
+    if (isMobileOrNoFullscreenSupport()) {
+        if (guard) guard.style.display = 'none';
+        return;
+    }
+
     const elem = document.documentElement;
     try {
         if (elem.requestFullscreen) {
@@ -4678,15 +4695,23 @@ async function masukFullscreenWajib() {
         } else if (elem.msRequestFullscreen) {
             await elem.msRequestFullscreen();
         }
-        const guard = document.getElementById('fullscreenGuardOverlay');
         if (guard && isCurrentlyFullscreen()) guard.style.display = 'none';
     } catch (e) {
-        console.warn("Fullscreen request warning:", e);
+        if (guard) guard.style.display = 'none';
     }
 }
 
 function aktifkanFullscreenDariOverlay() {
-    masukFullscreenWajib();
+    const guard = document.getElementById('fullscreenGuardOverlay');
+    if (isMobileOrNoFullscreenSupport()) {
+        if (guard) guard.style.display = 'none';
+        return;
+    }
+    masukFullscreenWajib().then(() => {
+        if (!isCurrentlyFullscreen() && guard) {
+            guard.style.display = 'none';
+        }
+    });
 }
 
 function isCurrentlyFullscreen() {
@@ -4968,7 +4993,7 @@ function mulaiTimerUjian(jadwalObj) {
 }
 
 async function loadSoalUjian(jadwalObj = null) {
-    showLoading("Mengunduh paket soal & mengaktifkan mode layar penuh...");
+    showLoading("Mengunduh paket soal & menyiapkan ujian...");
     try {
         const cadangan = currentSiswaObj
             ? bacaCadanganJawabanLokal(currentSiswaObj.username, mapelSiswaLogin, kelasSiswaLogin)
@@ -5024,8 +5049,10 @@ async function loadSoalUjian(jadwalObj = null) {
         mulaiTimerUjian(jadwalObj);
         hideLoading();
         await masukFullscreenWajib();
-        if (!isCurrentlyFullscreen()) {
+        if (!isMobileOrNoFullscreenSupport() && !isCurrentlyFullscreen()) {
             document.getElementById('fullscreenGuardOverlay').style.display = 'flex';
+        } else {
+            document.getElementById('fullscreenGuardOverlay').style.display = 'none';
         }
     } catch(e) { 
         hideLoading();
@@ -5243,13 +5270,13 @@ document.addEventListener("visibilitychange", function() {
 });
 
 window.addEventListener("blur", function() {
-    if (isExamInProgress && !isSubmittingExam) {
+    if (!isMobileOrNoFullscreenSupport() && isExamInProgress && !isSubmittingExam) {
         selesaiUjian(true, "Berpindah ke aplikasi / jendela lain saat ujian berlangsung");
     }
 });
 
 function handleFullscreenChange() {
-    if (isExamInProgress && !isSubmittingExam && !isCurrentlyFullscreen()) {
+    if (!isMobileOrNoFullscreenSupport() && isExamInProgress && !isSubmittingExam && !isCurrentlyFullscreen()) {
         selesaiUjian(true, "Keluar dari mode Full Screen saat ujian berlangsung");
     }
 }
@@ -5647,7 +5674,6 @@ async function parseDocxRichToStructuredLines(arrayBuffer) {
         } else if (bName === "tbl") {
             const rows = Array.from(block.children).filter(c => (c.localName || c.nodeName.split(":").pop()) === "tr");
 
-            // Deteksi apakah tabel merupakan template import soal (2 kolom atau 3 kolom Jenis | Isi | Jawaban)
             let isTemplate3Col = false;
             let isTemplate2Col = false;
 
@@ -5683,28 +5709,34 @@ async function parseDocxRichToStructuredLines(arrayBuffer) {
                         if (isiHtml) lines.push(isiHtml);
                     } else if (jenisText === "JAWABAN") {
                         lines.push("JAWABAN");
-                        if (isiHtml && (bobotText === "0" || bobotText === "1")) {
-                            lines.push(`${isiHtml} ||| ${bobotText}`);
-                        } else if (isiHtml) {
-                            lines.push(isiHtml);
+                        if (isiHtml) lines.push(isiHtml);
+                        if (bobotText === "0" || bobotText === "1") {
+                            lines.push(bobotText);
                         }
                     }
                 }
             } else if (isTemplate2Col) {
+                let firstRow = true;
                 for (const tr of rows) {
                     const cells = Array.from(tr.children).filter(c => (c.localName || c.nodeName.split(":").pop()) === "tc");
-                    if (cells.length >= 2) {
-                        const teksOpsi = await renderCellContent(cells[0]);
-                        const bobotText = (cells[1].textContent || "").trim();
-                        if (teksOpsi && (bobotText === "0" || bobotText === "1")) {
-                            lines.push(`${teksOpsi} ||| ${bobotText}`);
-                        } else if (teksOpsi) {
-                            lines.push(teksOpsi);
+                    if (cells.length < 2) continue;
+                    const col0Html = await renderCellContent(cells[0]);
+                    const col1Text = (cells[1].textContent || "").trim();
+                    if (firstRow) {
+                        firstRow = false;
+                        lines.push("SOAL");
+                        if (col0Html) lines.push(col0Html);
+                    } else {
+                        lines.push("JAWABAN");
+                        if (col0Html) lines.push(col0Html);
+                        if (col1Text === "0" || col1Text === "1") {
+                            lines.push(col1Text);
                         }
                     }
                 }
             } else {
-                lines.push(await renderTableNode(block));
+                const tblHtml = await renderTableNode(block);
+                if (tblHtml) lines.push(tblHtml);
             }
         }
     }
@@ -5713,164 +5745,147 @@ async function parseDocxRichToStructuredLines(arrayBuffer) {
 }
 
 function bacaFileSoalOtomatis(event) {
-    const file = event.target.files[0];
+    let file = event.target.files[0];
     if(!file) return;
-    
-    showLoading("Membaca dokumen soal (teks, tabel, gambar & rumus)...");
-    const reader = new FileReader();
+    let fileName = file.name.toLowerCase();
 
-    if(file.name.toLowerCase().endsWith('.docx')) {
+    if(fileName.endsWith(".docx")) {
+        showLoading("Mengekstrak teks, persamaan, tabel & gambar dari file Word (.docx)...");
+        let reader = new FileReader();
         reader.onload = async function(e) {
             try {
-                const arrayBuf = e.target.result;
-                let structuredText = "";
-
-                if (typeof JSZip !== "undefined") {
-                    structuredText = await parseDocxRichToStructuredLines(arrayBuf);
+                const structuredText = await parseDocxRichToStructuredLines(e.target.result);
+                if (!structuredText || !structuredText.trim()) {
+                    const res = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                    document.getElementById('soalBatchText').value = res.value;
+                } else {
+                    document.getElementById('soalBatchText').value = structuredText;
                 }
-
-                if (!structuredText || !/SOAL/i.test(structuredText)) {
-                    const result = await mammoth.convertToHtml({arrayBuffer: arrayBuf}, {
-                        convertImage: mammoth.images.imgElement(function(image) {
-                            return image.read("base64").then(function(imageBuffer) {
-                                return { src: "data:" + image.contentType + ";base64," + imageBuffer, class: "img-soal" };
-                            });
-                        })
-                    });
-
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = result.value;
-
-                    const lines = [];
-                    tempDiv.childNodes.forEach(node => {
-                        if(node.nodeName === 'P') {
-                            const txt = node.textContent.trim();
-                            if(txt === 'SOAL' || txt === 'JAWABAN') {
-                                lines.push(txt);
-                            } else if(node.innerHTML.trim() !== '') {
-                                lines.push(node.innerHTML.trim());
-                            }
-                        } else if(node.nodeName === 'TABLE') {
-                            const rows = node.querySelectorAll('tr');
-                            rows.forEach(tr => {
-                                const tds = tr.querySelectorAll('td, th');
-                                if (tds.length >= 3) {
-                                    const col0 = tds[0].textContent.replace(/\s+/g, ' ').trim().toUpperCase();
-                                    const col1 = tds[1].innerHTML.trim();
-                                    const col2 = tds[2].textContent.trim();
-                                    if (col0 === 'SOAL') {
-                                        lines.push('SOAL');
-                                        if (col1) lines.push(col1);
-                                    } else if (col0 === 'JAWABAN') {
-                                        lines.push('JAWABAN');
-                                        if (col1 && (col2 === '0' || col2 === '1')) {
-                                            lines.push(`${col1} ||| ${col2}`);
-                                        } else if (col1) {
-                                            lines.push(col1);
-                                        }
-                                    }
-                                } else if(tds.length === 2) {
-                                    const col1 = tds[0].innerHTML.trim();
-                                    const col2 = tds[1].textContent.trim();
-                                    if(col1 && (col2 === '0' || col2 === '1')) {
-                                        lines.push(`${col1} ||| ${col2}`);
-                                    } else {
-                                        if(col1) lines.push(col1);
-                                        if(col2) lines.push(col2);
-                                    }
-                                } else if(tds.length === 1) {
-                                    const col1 = tds[0].innerHTML.trim();
-                                    if(col1) lines.push(col1);
-                                }
-                            });
-                        }
-                    });
-                    structuredText = lines.join('\n');
-                }
-
-                document.getElementById('soalBatchText').value = structuredText;
                 hideLoading();
             } catch(err) {
                 hideLoading();
                 alert("Gagal membaca file Word (.docx): " + err.message);
             }
+            event.target.value = "";
         };
         reader.readAsArrayBuffer(file);
     } else {
+        let reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById('soalBatchText').value = e.target.result;
-            hideLoading();
+            event.target.value = "";
         };
         reader.readAsText(file);
     }
 }
 
-async function prosesUploadGambarKeDrive(htmlString, namaUjian) {
-    let tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlString;
-    let images = tempDiv.querySelectorAll('img');
-    
-    for (let i = 0; i < images.length; i++) {
-        let src = images[i].getAttribute('src');
-        if (src && src.startsWith('data:image')) {
-            try {
-                const compressedResult = await kompresGambarSoalKeBawah50KB(src, MAX_GAMBAR_SOAL_BYTES);
-                const optimizedSrc = compressedResult.dataUrl;
+async function uploadGambarBase64KeDrive(base64DataUrl, mapel, kelas, indexSoal, indexImg) {
+    try {
+        const compressed = await kompresGambarSoalKeBawah50KB(base64DataUrl, MAX_GAMBAR_SOAL_BYTES);
+        const finalDataUrl = compressed.dataUrl || base64DataUrl;
 
-                let res = await axios.post(GAS_URL, JSON.stringify({
-                    action: "uploadImage",
-                    base64: optimizedSrc,
-                    namaUjian: namaUjian,
-                    fileName: `soal_${Date.now()}_${i}.webp`
-                }));
-                if (res.data && res.data.status === "success") {
-                    images[i].setAttribute('src', res.data.url);
-                } else {
-                    images[i].setAttribute('src', optimizedSrc);
-                }
-            } catch(e) {
-                console.error("Gagal upload/kompres gambar:", e);
-            }
+        const match = finalDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+        if (!match) return base64DataUrl;
+
+        const mimeType = match[1];
+        const base64Clean = match[2];
+        const ext = mimeType.split("/")[1] || "jpg";
+        const fileName = `soal_${String(mapel || "mapel").replace(/[^a-zA-Z0-9_-]/g, "_")}_${String(kelas || "kelas").replace(/[^a-zA-Z0-9_-]/g, "_")}_q${indexSoal}_img${indexImg}_${Date.now()}.${ext}`;
+
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "uploadImage",
+            fileName: fileName,
+            mimeType: mimeType,
+            base64Data: base64Clean
+        }));
+
+        if (res.data && res.data.status === "success" && res.data.url) {
+            return res.data.url;
         }
+    } catch (err) {
+        console.error("Gagal upload gambar ke Google Drive:", err);
     }
-    return tempDiv.innerHTML;
+    return base64DataUrl;
 }
 
-function editJadwalGroup(indicesJson, mapelEnc, kelasJson, mulai, selesai, jp, timerMenit) {
+async function prosesGambarDalamSoalItem(soalItem, mapel, kelasFirst, indexSoal) {
+    let imgCounter = 0;
+
+    async function replaceDataUrlsInHtml(htmlStr) {
+        if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
+        const regex = /<img([^>]*?)src=["'](data:image\/[^"']+)["']([^>]*?)>/gi;
+        const matches = [];
+        let m;
+        while ((m = regex.exec(htmlStr)) !== null) {
+            matches.push({
+                fullMatch: m[0],
+                beforeSrc: m[1] || "",
+                dataUrl: m[2],
+                afterSrc: m[3] || ""
+            });
+        }
+        if (matches.length === 0) return htmlStr;
+
+        let result = htmlStr;
+        for (const item of matches) {
+            imgCounter++;
+            const driveUrl = await uploadGambarBase64KeDrive(item.dataUrl, mapel, kelasFirst, indexSoal, imgCounter);
+            const cleanedBefore = item.beforeSrc.replace(/\s*class=["'][^"']*["']/gi, "");
+            const cleanedAfter = item.afterSrc.replace(/\s*class=["'][^"']*["']/gi, "");
+            const newTag = `<img class="img-soal"${cleanedBefore} src="${driveUrl}"${cleanedAfter} referrerpolicy="no-referrer">`;
+            result = result.replace(item.fullMatch, newTag);
+        }
+        return result;
+    }
+
+    soalItem.soal = await replaceDataUrlsInHtml(soalItem.soal);
+    if (soalItem.options && typeof soalItem.options === "object") {
+        for (const optKey of Object.keys(soalItem.options)) {
+            soalItem.options[optKey] = await replaceDataUrlsInHtml(soalItem.options[optKey]);
+        }
+    }
+    return soalItem;
+}
+
+function mulaiEditJadwal(indicesJson, mapelEnc, kelasJson) {
     const indices = JSON.parse(decodeURIComponent(indicesJson));
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
 
-    document.getElementById('editJadwalOrigIndices').value = JSON.stringify(indices);
+    const firstJadwal = daftarJadwalUjian[indices[0]];
+    if (!firstJadwal) return;
+
+    document.getElementById('editJadwalOrigIndices').value = encodeURIComponent(JSON.stringify(indices));
     document.getElementById('editJadwalOrigMapel').value = mapel;
-    document.getElementById('editJadwalOrigKelas').value = JSON.stringify(kelasList);
+    document.getElementById('editJadwalOrigKelas').value = encodeURIComponent(JSON.stringify(kelasList));
 
     const selMapel = document.getElementById('jadwalMapel');
-    if (!Array.from(selMapel.options).some(opt => opt.value === mapel)) {
-        selMapel.innerHTML += `<option value="${mapel}">${mapel}</option>`;
+    if (selMapel) {
+        if (!Array.from(selMapel.options).some(o => o.value === mapel)) {
+            selMapel.innerHTML += `<option value="${mapel}">${mapel}</option>`;
+        }
+        selMapel.value = mapel;
     }
-    selMapel.value = mapel;
 
-    const kelasSet = new Set(kelasList.map(k => normStr(k)));
-    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
-        cb.checked = kelasSet.has(normStr(cb.value));
+    const checkboxes = Array.from(document.querySelectorAll('input[name="kelasCheck"]'));
+    const targetSet = new Set(kelasList.map(k => normStr(k)));
+    checkboxes.forEach(cb => {
+        cb.checked = targetSet.has(normStr(cb.value));
     });
-    const totalRows = Math.ceil(daftarKelas.length / 7);
-    for (let r = 0; r < totalRows; r++) {
-        sinkronkanTombolPilihBaris(r);
-    }
 
-    document.getElementById('waktuMulai').value = mulai || "";
-    document.getElementById('waktuSelesai').value = selesai || "";
-    document.getElementById('jumlahJp').value = jp || 1;
-    document.getElementById('timerMenit').value = timerMenit || pengaturanCbt.defaultTimerMenit || 60;
+    const rowIndices = new Set(checkboxes.map(cb => cb.getAttribute('data-row-idx')).filter(Boolean));
+    rowIndices.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
 
-    document.getElementById('judulFormJadwal').innerText = `Edit Jadwal: ${mapel}`;
-    document.getElementById('labelSoalUploadJadwal').innerText = "Ganti / Upload Ulang Soal (Opsional - kosongkan jika soal tetap):";
-    document.getElementById('btnSimpanJadwal').innerText = "Update Jadwal";
+    if (firstJadwal.mulai) document.getElementById('waktuMulai').value = firstJadwal.mulai;
+    if (firstJadwal.selesai) document.getElementById('waktuSelesai').value = firstJadwal.selesai;
+    document.getElementById('jumlahJp').value = firstJadwal.jp || 1;
+    document.getElementById('timerMenit').value = firstJadwal.timerMenit || pengaturanCbt.defaultTimerMenit || 60;
+    document.getElementById('soalBatchText').value = "";
+
+    document.getElementById('judulFormJadwal').innerText = `Edit Jadwal: ${mapel} (${kelasList.join(', ')})`;
+    document.getElementById('btnSimpanJadwal').innerText = "Update Jadwal & Soal";
     document.getElementById('btnSimpanJadwal').style.background = "#0056b3";
     document.getElementById('btnBatalEditJadwal').style.display = "block";
-
     document.getElementById('cardFormJadwal').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -5878,23 +5893,8 @@ function batalEditJadwal() {
     document.getElementById('editJadwalOrigIndices').value = "";
     document.getElementById('editJadwalOrigMapel').value = "";
     document.getElementById('editJadwalOrigKelas').value = "";
-
-    document.getElementById('jadwalMapel').value = "";
-    document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => cb.checked = false);
-    const totalRows = Math.ceil(daftarKelas.length / 7);
-    for (let r = 0; r < totalRows; r++) {
-        sinkronkanTombolPilihBaris(r);
-    }
-
-    document.getElementById('waktuMulai').value = "";
-    document.getElementById('waktuSelesai').value = "";
-    document.getElementById('jumlahJp').value = 1;
-    document.getElementById('timerMenit').value = pengaturanCbt.defaultTimerMenit || 60;
     document.getElementById('soalBatchText').value = "";
-    document.getElementById('fileSoalAny').value = "";
-
     document.getElementById('judulFormJadwal').innerText = "Buat Jadwal";
-    document.getElementById('labelSoalUploadJadwal').innerText = "Upload File Word (.docx) / Text (.txt) atau Paste Format Soal:";
     document.getElementById('btnSimpanJadwal').innerText = "Simpan Jadwal & Upload Soal";
     document.getElementById('btnSimpanJadwal').style.background = "#28a745";
     document.getElementById('btnBatalEditJadwal').style.display = "none";
@@ -5903,103 +5903,144 @@ function batalEditJadwal() {
 async function simpanJadwalDanSoal() {
     let mapel = document.getElementById('jadwalMapel').value;
     let checkboxes = document.querySelectorAll('input[name="kelasCheck"]:checked');
-    let selectedKelas = Array.from(checkboxes).map(cb => cb.value);
+    let kelasTerpilih = Array.from(checkboxes).map(cb => cb.value);
+
     let mulai = document.getElementById('waktuMulai').value;
-    let jp = parseInt(document.getElementById('jumlahJp').value, 10) || 1;
     let selesai = document.getElementById('waktuSelesai').value;
-    let timerMenit = parseInt(document.getElementById('timerMenit').value, 10) || parseInt(pengaturanCbt.defaultTimerMenit, 10) || 60;
-    let text = document.getElementById('soalBatchText').value.trim();
+    let jp = parseInt(document.getElementById('jumlahJp').value, 10) || 1;
+    let timerMenit = parseInt(document.getElementById('timerMenit').value, 10) || pengaturanCbt.defaultTimerMenit || 60;
+    let soalText = document.getElementById('soalBatchText').value.trim();
 
-    const origIndicesRaw = document.getElementById('editJadwalOrigIndices').value;
-    const isEditMode = Boolean(origIndicesRaw);
+    const editOrigIndicesEnc = document.getElementById('editJadwalOrigIndices').value;
+    const editOrigMapel = document.getElementById('editJadwalOrigMapel').value;
+    const editOrigKelasEnc = document.getElementById('editJadwalOrigKelas').value;
+    const isEditing = Boolean(editOrigIndicesEnc);
 
-    if(!mapel || selectedKelas.length === 0 || !mulai || !selesai) { 
-        alert("Pilih Mapel, minimal 1 Kelas, Waktu Mulai, dan Waktu Selesai terlebih dahulu!"); 
-        return; 
+    if(!mapel || kelasTerpilih.length === 0 || !mulai || !selesai) {
+        alert("Pilih Mapel, minimal 1 Kelas, Waktu Mulai, dan Waktu Selesai!");
+        return;
     }
 
-    showLoading(isEditMode ? "Memperbarui jadwal ujian..." : "Menyimpan jadwal & mengunggah soal...");
+    if(!isEditing && !soalText) {
+        alert("Harap upload file soal (.docx/.txt) atau paste format soal!");
+        return;
+    }
 
-    if (isEditMode) {
-        const origIndices = JSON.parse(origIndicesRaw);
-        const origMapel = document.getElementById('editJadwalOrigMapel').value;
-        const origKelasList = JSON.parse(document.getElementById('editJadwalOrigKelas').value || "[]");
-
-        origIndices.sort((a, b) => b - a).forEach(idx => {
-            daftarJadwalUjian.splice(idx, 1);
-        });
-
-        selectedKelas.forEach(kls => {
-            daftarJadwalUjian.push({ mapel, kelas: kls, jp, mulai, selesai, timerMenit });
-        });
-
-        await saveCbtDatabaseToGist();
-
-        if (!text) {
-            try {
-                await sinkronkanKelasSoalSaatEditJadwal(origMapel, origKelasList, mapel, selectedKelas);
-            } catch (syncErr) {
-                console.error("Gagal menyinkronkan kelas soal saat edit jadwal:", syncErr);
-            }
-            renderTabelJadwal();
-            batalEditJadwal();
-            hideLoading();
-            alert("Jadwal ujian berhasil diperbarui!");
+    let soalBaru = [];
+    if (soalText) {
+        soalBaru = parseSoalDariTeks(soalText, mapel, kelasTerpilih);
+        if(soalBaru.length === 0) {
+            alert("Format soal tidak dikenali! Pastikan menggunakan format SOAL ... JAWABAN ... 0/1");
             return;
         }
-    } else {
-        selectedKelas.forEach(kls => {
-            daftarJadwalUjian.push({ mapel, kelas: kls, jp, mulai, selesai, timerMenit });
-        });
-        await saveCbtDatabaseToGist();
     }
 
-    if(!text) {
-        renderTabelJadwal();
-        hideLoading();
-        alert(`Jadwal untuk ${selectedKelas.length} kelas berhasil disimpan ke Gist (tanpa soal baru)!`);
-        return;
-    }
+    showLoading(isEditing ? "Memperbarui jadwal ujian..." : "Mengompres & mengunggah gambar soal ke Google Drive...");
 
-    const parsedQuestions = parseSoalDariTeks(text, mapel, selectedKelas);
-
-    if(parsedQuestions.length === 0) {
-        renderTabelJadwal();
-        if (isEditMode) batalEditJadwal();
-        hideLoading();
-        alert("Format soal tidak dikenali! Pastikan menggunakan format SOAL, JAWABAN, dan bobot 0 atau 1.");
-        return;
-    }
-
-    showLoading("Mengompres (< 50 KB) & mengunggah gambar soal ke Drive...");
-    const folderDriveName = `${mapel.replace(/\s+/g, '_')}_${selectedKelas.join('-')}`;
-    const finalQuestions = [];
-
-    for (const qItem of parsedQuestions) {
-        const processedSoal = await prosesUploadGambarKeDrive(qItem.soal, folderDriveName);
-        const processedOptions = {};
-        for (const optKey of Object.keys(qItem.options)) {
-            processedOptions[optKey] = await prosesUploadGambarKeDrive(qItem.options[optKey], folderDriveName);
+    if (soalBaru.length > 0) {
+        for (let i = 0; i < soalBaru.length; i++) {
+            showLoading(`Memproses & mengunggah gambar soal ke Drive (${i + 1}/${soalBaru.length})...`);
+            soalBaru[i] = await prosesGambarDalamSoalItem(soalBaru[i], mapel, kelasTerpilih[0], i + 1);
         }
-        finalQuestions.push({
-            ...qItem,
-            soal: processedSoal,
-            options: processedOptions
-        });
     }
 
+    showLoading("Menyimpan jadwal ke Gist...");
+
+    if (isEditing) {
+        const origIndices = JSON.parse(decodeURIComponent(editOrigIndicesEnc));
+        const origKelasList = editOrigKelasEnc ? JSON.parse(decodeURIComponent(editOrigKelasEnc)) : [];
+        const origSet = new Set(origIndices);
+
+        const jadwalUpdated = [];
+        daftarJadwalUjian.forEach((j, idx) => {
+            if (!origSet.has(idx)) {
+                jadwalUpdated.push(j);
+            }
+        });
+
+        kelasTerpilih.forEach(kls => {
+            jadwalUpdated.push({
+                mapel: mapel,
+                kelas: kls,
+                mulai: mulai,
+                selesai: selesai,
+                jp: jp,
+                timerMenit: timerMenit
+            });
+        });
+
+        daftarJadwalUjian = jadwalUpdated;
+        await saveCbtDatabaseToGist();
+
+        if (soalBaru.length > 0) {
+            showLoading(`Mengunggah ${soalBaru.length} butir soal baru ke soal.json...`);
+            try {
+                const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+                const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+                const files = gistRes.data.files || {};
+                const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+                let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
+
+                const cleaned = hapusKelasDariSoalList(contentSoal, editOrigMapel || mapel, origKelasList.length > 0 ? origKelasList : kelasTerpilih);
+                const combinedSoal = [...cleaned.updated, ...soalBaru];
+                const serialized = serializeSoalJsonOneMapelPerLine(combinedSoal);
+
+                await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+                    files: { [filename]: { content: serialized } }
+                }, githubHeaders);
+                bersihkanCacheSoal();
+            } catch (err) {
+                console.error("Gagal mengupdate soal.json saat edit jadwal:", err);
+            }
+        } else {
+            try {
+                await sinkronkanKelasSoalSaatEditJadwal(editOrigMapel || mapel, origKelasList, mapel, kelasTerpilih);
+            } catch (err) {
+                console.error("Gagal menyinkronkan kelas soal saat edit jadwal:", err);
+            }
+        }
+
+        renderTabelJadwal();
+        batalEditJadwal();
+        hideLoading();
+        alert(`Jadwal ${mapel} untuk kelas ${kelasTerpilih.join(', ')} berhasil diperbarui!`);
+        return;
+    }
+
+    kelasTerpilih.forEach(kls => {
+        const existingIdx = daftarJadwalUjian.findIndex(j =>
+            normStr(j.mapel) === normStr(mapel) && normStr(j.kelas) === normStr(kls)
+        );
+        const jadwalObj = {
+            mapel: mapel,
+            kelas: kls,
+            mulai: mulai,
+            selesai: selesai,
+            jp: jp,
+            timerMenit: timerMenit
+        };
+        if (existingIdx !== -1) {
+            daftarJadwalUjian[existingIdx] = jadwalObj;
+        } else {
+            daftarJadwalUjian.push(jadwalObj);
+        }
+    });
+
+    await saveCbtDatabaseToGist();
+    renderTabelJadwal();
+
+    showLoading(`Mengunggah ${soalBaru.length} butir soal ke soal.json di Gist...`);
     try {
-        showLoading("Menyimpan soal ke soal.json di Gist...");
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
         let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
-        let files = gistRes.data.files || {};
+        const files = gistRes.data.files || {};
         let filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
         let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
 
-        const hasilBersihLama = hapusKelasDariSoalList(contentSoal, mapel, selectedKelas);
-        contentSoal = hasilBersihLama.updated.concat(finalQuestions);
+        const cleaned = hapusKelasDariSoalList(contentSoal, mapel, kelasTerpilih);
+        const combinedSoal = [...cleaned.updated, ...soalBaru];
+        const serialized = serializeSoalJsonOneMapelPerLine(combinedSoal);
 
-        const serialized = serializeSoalJsonOneMapelPerLine(contentSoal);
         await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
             files: { [filename]: { content: serialized } }
         }, githubHeaders);
@@ -6009,13 +6050,12 @@ async function simpanJadwalDanSoal() {
         simpanCacheSoal("admin_api", parsedFresh);
         simpanCacheSoal("raw_exam", parsedFresh);
 
-        renderTabelJadwal();
-        batalEditJadwal();
         hideLoading();
-        alert(`Berhasil! ${finalQuestions.length} soal disimpan ke soal.json untuk kelas: ${selectedKelas.join(', ')}.`);
-    } catch(err) { 
+        alert(`Berhasil menyimpan jadwal & mengunggah ${soalBaru.length} soal ke soal.json untuk kelas: ${kelasTerpilih.join(', ')}!`);
+        document.getElementById('soalBatchText').value = "";
+    } catch(err) {
         hideLoading();
-        alert("Gagal menyimpan soal ke soal.json: " + err.message); 
+        alert("Jadwal tersimpan, namun gagal mengunggah soal ke Gist: " + err.message);
     }
 }
 
@@ -6028,62 +6068,62 @@ function renderTabelJadwal() {
         return;
     }
 
-    const groupedMap = new Map();
+    const groups = [];
+    const groupMap = new Map();
+
     daftarJadwalUjian.forEach((j, idx) => {
-        const timerVal = parseInt(j.timerMenit, 10) || parseInt(pengaturanCbt.defaultTimerMenit, 10) || 60;
-        const key = `${j.mapel}|||${j.jp || ''}|||${j.mulai}|||${j.selesai}|||${timerVal}`;
-        if(!groupedMap.has(key)) {
-            groupedMap.set(key, {
+        const key = `${j.mapel}||${j.mulai}||${j.selesai}||${j.jp || 1}||${j.timerMenit || pengaturanCbt.defaultTimerMenit || 60}`;
+        if (!groupMap.has(key)) {
+            const grp = {
                 mapel: j.mapel,
-                jp: j.jp || '-',
                 mulai: j.mulai,
                 selesai: j.selesai,
-                timerMenit: timerVal,
+                jp: j.jp || 1,
+                timerMenit: j.timerMenit || pengaturanCbt.defaultTimerMenit || 60,
                 kelasList: [],
                 indices: []
-            });
+            };
+            groupMap.set(key, grp);
+            groups.push(grp);
         }
-        const grp = groupedMap.get(key);
-        if(!grp.kelasList.includes(j.kelas)) grp.kelasList.push(j.kelas);
+        const grp = groupMap.get(key);
+        if (!grp.kelasList.includes(j.kelas)) grp.kelasList.push(j.kelas);
         grp.indices.push(idx);
     });
 
-    groupedMap.forEach(grp => {
-        const kelasText = grp.kelasList.join(', ');
+    groups.forEach(grp => {
         const mapelEnc = encodeURIComponent(grp.mapel);
-        const kelasJson = encodeURIComponent(JSON.stringify(grp.kelasList));
-        const indicesJson = encodeURIComponent(JSON.stringify(grp.indices));
+        const kelasJsonEnc = encodeURIComponent(JSON.stringify(grp.kelasList));
+        const indicesJsonEnc = encodeURIComponent(JSON.stringify(grp.indices));
+        const mulaiFmt = formatWaktuRingkasTabel(grp.mulai);
+        const selesaiFmt = formatWaktuRingkasTabel(grp.selesai);
 
         tbody.innerHTML += `<tr>
             <td class="col-mapel"><b>${grp.mapel}</b></td>
-            <td class="col-kelas">${kelasText}</td>
+            <td class="col-kelas">${grp.kelasList.join(', ')}</td>
             <td class="col-jp">${grp.jp}</td>
-            <td class="col-waktu">${formatWaktuRingkasTabel(grp.mulai)}</td>
-            <td class="col-waktu">${formatWaktuRingkasTabel(grp.selesai)}</td>
+            <td class="col-waktu">${mulaiFmt}</td>
+            <td class="col-waktu">${selesaiFmt}</td>
             <td class="col-timer">${grp.timerMenit}m</td>
             <td class="col-aksi">
                 <div class="jadwal-aksi-stack">
                     <div class="jadwal-aksi-top-row">
-                        <button onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-info btn-jadwal-act">Soal</button>
-                        <button onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-sm btn-success btn-jadwal-act">Hasil</button>
+                        <button onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJsonEnc}')" class="btn-info btn-jadwal-act" title="Lihat Soal">Soal</button>
+                        <button onclick="mulaiEditJadwal('${indicesJsonEnc}', '${mapelEnc}', '${kelasJsonEnc}')" class="btn-warning btn-jadwal-act" title="Edit Jadwal & Soal">Edit</button>
+                        <button onclick="hapusJadwalGroup('${indicesJsonEnc}', '${mapelEnc}', '${kelasJsonEnc}')" class="btn-danger btn-jadwal-act" title="Hapus Jadwal">Hapus</button>
                     </div>
-                    <div class="jadwal-aksi-top-row">
-                        <button onclick="editJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}', '${grp.mulai}', '${grp.selesai}', '${grp.jp}', '${grp.timerMenit}')" class="btn-sm btn-warning btn-jadwal-act">Edit</button>
-                        <button onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-sm btn-danger btn-jadwal-act">Hapus</button>
-                    </div>
+                    <button onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJsonEnc}')" class="btn-success btn-jadwal-full" title="Export Hasil Excel">Export</button>
                 </div>
             </td>
         </tr>`;
     });
 }
 
-window.onload = async function() {
-    bersihkanCacheLokalLama();
-    prosesAntreanKirimTertunda();
-    fetchTokenDariDrive(true);
+window.addEventListener("DOMContentLoaded", async () => {
+    const nowIso = getLocalIsoNow();
+    document.getElementById('waktuMulai').value = nowIso;
+    hitungWaktuSelesaiOtomatis();
     mulaiTimerTokenAdmin();
-    await fetchCbtDatabase(true);
-    const savedSiswaSession = bacaSesiSiswaLokal();
 
     if(localStorage.getItem("isAdminLoggedIn") === "true") {
         currentLoginRole = 'admin';
@@ -6095,26 +6135,30 @@ window.onload = async function() {
         document.getElementById('tabMenu').style.display = 'none';
         sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
-    } else if (savedSiswaSession && savedSiswaSession.username) {
-        const siswaFound = databaseSiswa.find(s => s.username === savedSiswaSession.username);
-        if (siswaFound) {
-            await fetchSesiFromGAS(true);
-            const myDev = getOrCreateDeviceId();
-            const existingSess = sesiLoginSiswa[siswaFound.username];
-            if (!existingSess || !existingSess.deviceId || existingSess.deviceId === myDev) {
-                await tampilkanHalamanPilihUjianSiswa(siswaFound);
-                return;
-            } else {
-                hapusSesiSiswaLokal();
-            }
-        } else {
-            hapusSesiSiswaLokal();
-        }
-        setCompactMode(true);
-    } else {
-        setCompactMode(true);
+        return;
     }
-};
+
+    const savedSiswaSession = bacaSesiSiswaLokal();
+    if (savedSiswaSession && savedSiswaSession.username) {
+        showLoading("Memulihkan sesi login siswa...");
+        await fetchCbtDatabase(false);
+        await fetchSesiFromGAS(true);
+        await fetchTokenDariDrive(true);
+        const foundSiswa = databaseSiswa.find(s => String(s.username).trim() === String(savedSiswaSession.username).trim());
+        const activeGasSesi = sesiLoginSiswa[savedSiswaSession.username];
+        if (foundSiswa && (!activeGasSesi || !activeGasSesi.deviceId || activeGasSesi.deviceId === getOrCreateDeviceId())) {
+            hideLoading();
+            await tampilkanHalamanPilihUjianSiswa(foundSiswa);
+            return;
+        }
+        hideLoading();
+    }
+
+    fetchTokenDariDrive(true);
+    prosesAntreanKirimTertunda();
+    setCompactMode(true);
+    sinkronkanHeaderAdmin();
+});
 </script>
 </body>
 </html>
