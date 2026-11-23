@@ -9,6 +9,60 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        .soal-box table, .option-label table, .preview-item table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 6px 0;
+            background: #ffffff;
+        }
+        .soal-box td, .soal-box th,
+        .option-label td, .option-label th,
+        .preview-item td, .preview-item th {
+            border: 1px solid #555555;
+            padding: 4px 6px;
+            font-size: 12.5px;
+            vertical-align: top;
+        }
+        .math-frac {
+            display: inline-flex;
+            flex-direction: column;
+            vertical-align: middle;
+            text-align: center;
+            margin: 0 2px;
+            font-size: 0.9em;
+            line-height: 1.1;
+        }
+        .math-frac > span:first-child {
+            border-bottom: 1px solid currentColor;
+            padding: 0 3px;
+        }
+        .math-frac > span:last-child {
+            padding: 0 3px;
+        }
+        .shape-textbox {
+            display: inline-block;
+            border: 1.5px solid #333333;
+            padding: 4px 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .table-jadwal-aktif .col-mapel { width: 16%; }
+        .table-jadwal-aktif .col-kelas { width: 25%; }
+        .table-jadwal-aktif .col-jp { width: 6%; }
+        .table-jadwal-aktif .col-waktu { width: 15%; }
+        .table-jadwal-aktif .col-timer {
+            width: 10%;
+            text-align: center;
+            font-weight: bold;
+            color: #0056b3;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+        .table-jadwal-aktif .col-aksi { width: 13%; }
+    </style>
     <style>
         * { box-sizing: border-box; }
         html, body {
@@ -1216,7 +1270,7 @@
                         <div class="checkbox-grid" id="checkboxKelasContainer"></div>
                     </div>
 
-                    <!-- 1 BARIS: WAKTU MULAI, JP, DAN WAKTU SELESAI -->
+                    <!-- 1 BARIS: WAKTU MULAI, JP, WAKTU SELESAI (EDITABLE), DAN TIMER -->
                     <div class="jadwal-time-row form-group">
                         <div class="time-col">
                             <label>Waktu Mulai Ujian:</label>
@@ -1227,8 +1281,12 @@
                             <input type="number" id="jumlahJp" min="1" max="20" value="1" oninput="hitungWaktuSelesaiOtomatis()" onchange="hitungWaktuSelesaiOtomatis()">
                         </div>
                         <div class="time-col">
-                            <label>Waktu Selesai (Terkunci):</label>
-                            <input type="datetime-local" id="waktuSelesai" class="locked-input" readonly tabindex="-1">
+                            <label>Waktu Selesai (Bisa Edit):</label>
+                            <input type="datetime-local" id="waktuSelesai">
+                        </div>
+                        <div class="jp-inline-col">
+                            <label id="labelTimerUjian">Timer (m):</label>
+                            <input type="number" id="timerMenit" min="1" max="300" value="60">
                         </div>
                     </div>
 
@@ -1258,6 +1316,7 @@
                                     <th class="col-jp">JP</th>
                                     <th class="col-waktu">Mulai</th>
                                     <th class="col-waktu">Selesai</th>
+                                    <th class="col-timer">Timer</th>
                                     <th class="col-aksi">Aksi</th>
                                 </tr>
                             </thead>
@@ -1445,17 +1504,23 @@
                     <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 7px 10px;">Simpan Token ke Drive</button>
                 </div>
 
-                <!-- KOLOM 2: PENGATURAN JP -->
+                <!-- KOLOM 2: PENGATURAN JP & TIMER UJIAN (DISATUKAN) -->
                 <div class="admin-card">
                     <div>
-                        <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi Jam Pelajaran (JP)</h4>
-                        <div class="form-group">
-                            <label>Durasi 1 JP (dalam Menit):</label>
-                            <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
-                            <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">Tersimpan ke Gist untuk menghitung Waktu Selesai Ujian secara otomatis.</small>
+                        <h4 style="margin: 0 0 8px 0; color: #008080;">Pengaturan Durasi JP & Timer Ujian</h4>
+                        <div class="row-flex" style="margin-bottom:6px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Durasi 1 JP (Menit):</label>
+                                <input type="number" id="settingMenitPerJp" min="5" max="240" value="40" placeholder="Default: 40">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Default Timer Siswa (Menit):</label>
+                                <input type="number" id="settingDefaultTimerMenit" min="1" max="300" value="60" placeholder="Default: 60">
+                            </div>
                         </div>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size:11px;">JP menghitung jarak Waktu Mulai - Selesai jadwal; Timer mengatur lama pengerjaan siswa.</small>
                     </div>
-                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP</button>
+                    <button onclick="simpanPengaturanJp()" style="background: #008080; padding: 7px 10px;">Simpan Pengaturan JP & Timer</button>
                 </div>
 
                 <!-- KOLOM 3: PASSWORD ADMIN -->
@@ -1941,6 +2006,7 @@ let daftarJadwalUjian = [];
 let sesiLoginSiswa = {};
 let pengaturanCbt = {
     menitPerJp: 40,
+    defaultTimerMenit: 60,
     adminPasswordPlain: "admin123"
 };
 let logSiswaLogin = []; 
@@ -5804,5 +5870,574 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 </script>
+
+<script>
+(function() {
+    const origSimpanPengaturanJp = window.simpanPengaturanJp;
+    window.simpanPengaturanJp = async function() {
+        const valJp = parseInt(document.getElementById('settingMenitPerJp').value, 10);
+        const valTimer = parseInt(document.getElementById('settingDefaultTimerMenit').value, 10);
+        if (isNaN(valJp) || valJp < 1) {
+            alert("Masukkan durasi menit per JP yang valid (minimal 1 menit)!");
+            return;
+        }
+        if (isNaN(valTimer) || valTimer < 1) {
+            alert("Masukkan durasi default Timer ujian siswa yang valid (minimal 1 menit)!");
+            return;
+        }
+        showLoading("Menyimpan pengaturan JP & Timer ke Gist...");
+        pengaturanCbt.menitPerJp = valJp;
+        pengaturanCbt.defaultTimerMenit = valTimer;
+        await saveCbtDatabaseToGist();
+        updateLabelJp();
+        hitungWaktuSelesaiOtomatis();
+        hideLoading();
+        alert(`Pengaturan berhasil disimpan!\n1 JP = ${valJp} Menit • Default Timer Ujian = ${valTimer} Menit.`);
+    };
+
+    const origUpdateLabelJp = window.updateLabelJp;
+    window.updateLabelJp = function() {
+        if (typeof origUpdateLabelJp === "function") origUpdateLabelJp();
+        const t = pengaturanCbt.defaultTimerMenit || 60;
+        const inpTimerSet = document.getElementById('settingDefaultTimerMenit');
+        if (inpTimerSet) inpTimerSet.value = t;
+        const inpTimerForm = document.getElementById('timerMenit');
+        if (inpTimerForm && !document.getElementById('editJadwalOrigIndices')?.value) {
+            inpTimerForm.value = t;
+        }
+    };
+
+    // Perbaikan filter baris header pada DB_Log_login_CBT
+    window.isBarisLogValid = function(row) {
+        if (!row || typeof row !== "object") return false;
+        const nama = String(row.nama ?? "").trim();
+        const kelas = String(row.kelas ?? "").trim();
+        const mapel = String(row.mapel ?? "").trim();
+        const status = String(row.status ?? "").trim();
+        const nilaiRaw = row.nilai;
+
+        if (!nama && !kelas && !mapel && !status && (nilaiRaw === null || nilaiRaw === undefined || String(nilaiRaw).trim() === "")) {
+            return false;
+        }
+
+        const namaLow = nama.toLowerCase();
+        const kelasLow = kelas.toLowerCase();
+        const mapelLow = mapel.toLowerCase();
+        const statusLow = status.toLowerCase();
+
+        if (
+            namaLow.includes("log login") ||
+            namaLow.includes("pengerjaan ujian") ||
+            namaLow === "nama" ||
+            namaLow === "kelas" ||
+            kelasLow === "mata pelajaran" ||
+            mapelLow === "status" ||
+            statusLow === "nilai" ||
+            (!nama && kelasLow === "x-1" && mapelLow === "simulasi")
+        ) {
+            return false;
+        }
+
+        if (/^(x|xi|xii)[\s\-_]/i.test(nama) && Array.isArray(daftarMapel) && daftarMapel.some(m => normStr(m) === kelasLow)) {
+            return false;
+        }
+
+        return Boolean(nama && mapel);
+    };
+
+    // Simpan jadwal dengan waktu selesai editable & timer per jadwal
+    window.simpanJadwalDanSoal = async function() {
+        let mapel = document.getElementById('jadwalMapel').value;
+        let checkedKelas = Array.from(document.querySelectorAll('input[name="kelasCheck"]:checked')).map(el => el.value);
+        let mulai = document.getElementById('waktuMulai').value;
+        let jp = parseInt(document.getElementById('jumlahJp').value, 10) || 1;
+        let selesai = document.getElementById('waktuSelesai').value;
+        let timer = parseInt(document.getElementById('timerMenit').value, 10) || (pengaturanCbt.defaultTimerMenit || 60);
+        let rawText = document.getElementById('soalBatchText').value.trim();
+
+        const origIndicesStr = document.getElementById('editJadwalOrigIndices')?.value || "";
+        const origMapel = document.getElementById('editJadwalOrigMapel')?.value || "";
+        const origKelasStr = document.getElementById('editJadwalOrigKelas')?.value || "";
+        const isEditMode = origIndicesStr !== "";
+
+        if (!mapel) { alert("Pilih Mata Pelajaran!"); return; }
+        if (checkedKelas.length === 0) { alert("Pilih minimal 1 kelas!"); return; }
+        if (!mulai || !selesai) { alert("Tentukan waktu mulai dan waktu selesai!"); return; }
+        if (mulai >= selesai) { alert("Waktu selesai harus lebih besar dari waktu mulai!"); return; }
+        if (timer < 1) { alert("Timer ujian siswa minimal 1 menit!"); return; }
+
+        showLoading(isEditMode ? "Memperbarui jadwal ujian..." : "Menyiapkan jadwal & menyimpan soal...");
+
+        if (isEditMode) {
+            try {
+                const origIndices = JSON.parse(origIndicesStr);
+                origIndices.sort((a, b) => b - a).forEach(idx => {
+                    if (idx >= 0 && idx < daftarJadwalUjian.length) {
+                        daftarJadwalUjian.splice(idx, 1);
+                    }
+                });
+            } catch (e) {}
+        }
+
+        checkedKelas.forEach(kelas => {
+            daftarJadwalUjian = daftarJadwalUjian.filter(j => !(j.mapel === mapel && j.kelas === kelas));
+            daftarJadwalUjian.push({ mapel, kelas, jp, mulai, selesai, timer });
+        });
+
+        await saveCbtDatabaseToGist();
+
+        if (rawText) {
+            showLoading("Menyimpan soal (1 mapel 1 baris, hemat Gist)...");
+            let parsedSoal = parseSoalDariTeks(rawText, mapel, checkedKelas);
+            if (parsedSoal.length === 0) {
+                hideLoading();
+                alert("Format soal tidak terbaca! Pastikan format sesuai (SOAL ... JAWABAN ... 0/1).");
+                return;
+            }
+            const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+            try {
+                let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+                const files = gistRes.data.files || {};
+                const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+                let contentSoal = parseSoalJsonFlexible(files[filename].content);
+                if (isEditMode && origMapel && origKelasStr) {
+                    try {
+                        contentSoal = hapusKelasDariSoalList(contentSoal, origMapel, JSON.parse(origKelasStr)).updated;
+                    } catch (e) {}
+                }
+                contentSoal = hapusKelasDariSoalList(contentSoal, mapel, checkedKelas).updated;
+                parsedSoal.forEach(newItem => {
+                    const existingIdentical = contentSoal.find(oldItem =>
+                        itemCocokMapel(oldItem, newItem.mapel) &&
+                        oldItem.soal === newItem.soal &&
+                        oldItem.kunci === newItem.kunci &&
+                        JSON.stringify(oldItem.options) === JSON.stringify(newItem.options)
+                    );
+                    if (existingIdentical && Array.isArray(existingIdentical.kelas)) {
+                        newItem.kelas.forEach(k => {
+                            if (!existingIdentical.kelas.some(ek => normStr(ek) === normStr(k))) existingIdentical.kelas.push(k);
+                        });
+                    } else {
+                        contentSoal.push(newItem);
+                    }
+                });
+                await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+                    files: { [filename]: { content: serializeSoalJsonOneMapelPerLine(contentSoal) } }
+                }, githubHeaders);
+                bersihkanCacheSoal();
+            } catch (e) {
+                hideLoading();
+                alert("Gagal upload soal ke Gist: " + e.message);
+                return;
+            }
+        } else if (isEditMode && origMapel && origKelasStr) {
+            try {
+                const origKelasList = JSON.parse(origKelasStr);
+                if (normStr(origMapel) !== normStr(mapel) || JSON.stringify([...origKelasList].sort()) !== JSON.stringify([...checkedKelas].sort())) {
+                    showLoading("Menyesuaikan mapel/kelas pada bank soal di Gist...");
+                    await sinkronkanKelasSoalSaatEditJadwal(origMapel, origKelasList, mapel, checkedKelas);
+                }
+            } catch (e) {}
+        }
+
+        hideLoading();
+        batalEditJadwal();
+        renderTabelJadwal();
+        alert(isEditMode ? "Jadwal ujian berhasil diperbarui!" : "Jadwal ujian dan soal berhasil disimpan!");
+    };
+
+    window.getGroupedJadwalList = function() {
+        const groups = [];
+        daftarJadwalUjian.forEach((j, originalIdx) => {
+            const timerVal = j.timer || (pengaturanCbt.defaultTimerMenit || 60);
+            const key = `${j.mapel}||${j.jp}||${j.mulai}||${j.selesai}||${timerVal}`;
+            let existing = groups.find(g => g.key === key);
+            if (existing) {
+                if (!existing.kelasList.includes(j.kelas)) existing.kelasList.push(j.kelas);
+                existing.indices.push(originalIdx);
+            } else {
+                groups.push({
+                    key,
+                    mapel: j.mapel,
+                    jp: j.jp,
+                    mulai: j.mulai,
+                    selesai: j.selesai,
+                    timer: timerVal,
+                    kelasList: [j.kelas],
+                    indices: [originalIdx]
+                });
+            }
+        });
+        groups.sort((a, b) => (new Date(b.mulai || 0).getTime() || 0) - (new Date(a.mulai || 0).getTime() || 0));
+        return groups;
+    };
+
+    window.renderTabelJadwal = function() {
+        let tbody = document.getElementById('tbodyJadwal');
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        const groupedList = getGroupedJadwalList();
+
+        if (groupedList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Belum ada jadwal ujian.</td></tr>`;
+            return;
+        }
+
+        groupedList.forEach((g) => {
+            const kelasStr = g.kelasList.join(', ');
+            const kelasJson = encodeURIComponent(JSON.stringify(g.kelasList));
+            const indicesJson = encodeURIComponent(JSON.stringify(g.indices));
+            const mapelEnc = encodeURIComponent(g.mapel);
+            const groupPayloadEnc = encodeURIComponent(JSON.stringify({
+                mapel: g.mapel,
+                kelasList: g.kelasList,
+                jp: g.jp || 1,
+                mulai: g.mulai || "",
+                selesai: g.selesai || "",
+                timer: g.timer || (pengaturanCbt.defaultTimerMenit || 60),
+                indices: g.indices
+            }));
+
+            tbody.innerHTML += `<tr>
+                <td class="col-mapel"><b>${g.mapel}</b></td>
+                <td class="col-kelas">${kelasStr}</td>
+                <td class="col-jp">${g.jp ? g.jp + ' JP' : '-'}</td>
+                <td class="col-waktu">${formatWaktuRingkasTabel(g.mulai)}</td>
+                <td class="col-waktu">${formatWaktuRingkasTabel(g.selesai)}</td>
+                <td class="col-timer">${g.timer}m</td>
+                <td class="col-aksi">
+                    <div class="jadwal-aksi-stack">
+                        <div class="jadwal-aksi-top-row">
+                            <button type="button" onclick="editJadwalGroup('${groupPayloadEnc}')" class="btn-warning btn-jadwal-act">Edit</button>
+                            <button type="button" onclick="lihatSoalJadwal('${mapelEnc}', '${kelasJson}')" class="btn-info btn-jadwal-act">Soal</button>
+                        </div>
+                        <div class="jadwal-aksi-top-row">
+                            <button type="button" onclick="bukaModalExportHasil('${mapelEnc}', '${kelasJson}')" class="btn-success btn-jadwal-act">Hasil</button>
+                            <button type="button" onclick="hapusJadwalGroup('${indicesJson}', '${mapelEnc}', '${kelasJson}')" class="btn-danger btn-jadwal-act">Hapus</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    };
+
+    window.editJadwalGroup = function(groupPayloadEnc) {
+        const g = JSON.parse(decodeURIComponent(groupPayloadEnc));
+        if (!g) return;
+        document.getElementById('editJadwalOrigIndices').value = JSON.stringify(g.indices || []);
+        document.getElementById('editJadwalOrigMapel').value = g.mapel || "";
+        document.getElementById('editJadwalOrigKelas').value = JSON.stringify(g.kelasList || []);
+
+        const selMapel = document.getElementById('jadwalMapel');
+        if (selMapel) {
+            if (!Array.from(selMapel.options).some(opt => opt.value === g.mapel)) {
+                selMapel.innerHTML += `<option value="${g.mapel}">${g.mapel}</option>`;
+            }
+            selMapel.value = g.mapel;
+        }
+        const kelasSet = new Set((g.kelasList || []).map(k => normStr(k)));
+        const rowSet = new Set();
+        document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => {
+            cb.checked = kelasSet.has(normStr(cb.value));
+            const rIdx = cb.getAttribute('data-row-idx');
+            if (rIdx !== null) rowSet.add(Number(rIdx));
+        });
+        rowSet.forEach(rIdx => sinkronkanTombolPilihBaris(rIdx));
+
+        document.getElementById('waktuMulai').value = g.mulai || "";
+        document.getElementById('jumlahJp').value = g.jp || 1;
+        document.getElementById('waktuSelesai').value = g.selesai || "";
+        document.getElementById('timerMenit').value = g.timer || (pengaturanCbt.defaultTimerMenit || 60);
+        document.getElementById('soalBatchText').value = "";
+        document.getElementById('fileSoalAny').value = "";
+
+        document.getElementById('judulFormJadwal').innerText = `Edit Jadwal: ${g.mapel}`;
+        document.getElementById('btnSimpanJadwal').innerText = "Update Jadwal";
+        document.getElementById('btnBatalEditJadwal').style.display = "block";
+        document.getElementById('cardFormJadwal')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    window.batalEditJadwal = function() {
+        document.getElementById('editJadwalOrigIndices').value = "";
+        document.getElementById('editJadwalOrigMapel').value = "";
+        document.getElementById('editJadwalOrigKelas').value = "";
+        document.getElementById('jadwalMapel').value = "";
+        document.querySelectorAll('input[name="kelasCheck"]').forEach(cb => cb.checked = false);
+        document.getElementById('waktuMulai').value = "";
+        document.getElementById('jumlahJp').value = "1";
+        document.getElementById('waktuSelesai').value = "";
+        document.getElementById('timerMenit').value = pengaturanCbt.defaultTimerMenit || 60;
+        document.getElementById('soalBatchText').value = "";
+        document.getElementById('fileSoalAny').value = "";
+        document.getElementById('judulFormJadwal').innerText = "Buat Jadwal";
+        document.getElementById('btnSimpanJadwal').innerText = "Simpan Jadwal & Upload Soal";
+        document.getElementById('btnBatalEditJadwal').style.display = "none";
+    };
+
+    window.mulaiTimerUjian = function(jadwalMatch) {
+        hentikanTimerUjian();
+        const timerEl = document.getElementById('examCountdownTimer');
+        const durasiTimerMenit = parseInt(jadwalMatch?.timer, 10) || parseInt(pengaturanCbt.defaultTimerMenit, 10) || 60;
+        let endMs = Date.now() + (durasiTimerMenit * 60 * 1000);
+
+        const jadwalSelesaiMs = parseJadwalDateTimeMs(jadwalMatch?.selesai);
+        if (!isNaN(jadwalSelesaiMs) && jadwalSelesaiMs < endMs) {
+            endMs = jadwalSelesaiMs;
+        }
+        examEndTimestampMs = endMs;
+
+        const tick = () => {
+            const sisaMs = examEndTimestampMs - Date.now();
+            const sisaSec = Math.max(0, Math.ceil(sisaMs / 1000));
+            if (timerEl) {
+                timerEl.innerText = `⏱ ${formatDurasiDetikKeHhMmSs(sisaSec)}`;
+                if (sisaSec <= 300) timerEl.classList.add('timer-warning');
+                else timerEl.classList.remove('timer-warning');
+            }
+            if (sisaMs <= 0) {
+                hentikanTimerUjian();
+                if (isExamInProgress && !isSubmittingExam) {
+                    isExamInProgress = false;
+                    lepasPengawasAntiCurang();
+                    selesaiUjian(false, "", true);
+                }
+            }
+        };
+        tick();
+        examCountdownIntervalId = setInterval(tick, 1000);
+    };
+
+    function parseWordCellXml(cellNode, driveUrlMap) {
+        let parts = [];
+        Array.from(cellNode.childNodes).forEach(child => {
+            const rendered = parseWordXmlNode(child, driveUrlMap);
+            if (rendered) parts.push(rendered);
+        });
+        return parts.join(" ").replace(/\s*\n\s*/g, " ").trim();
+    }
+
+    function parseWordXmlNode(node, driveUrlMap) {
+        if (!node) return "";
+        const name = node.nodeName;
+
+        if (name === "w:p") {
+            let line = "";
+            Array.from(node.childNodes).forEach(c => { line += parseWordXmlNode(c, driveUrlMap); });
+            return line.trim() ? `${line}<br>` : "";
+        }
+
+        if (name === "w:r") {
+            let text = "";
+            let isSup = false, isSub = false, isBold = false, isItalic = false;
+            const rPr = node.getElementsByTagName("w:rPr")[0];
+            if (rPr) {
+                const vAlign = rPr.getElementsByTagName("w:vertAlign")[0];
+                if (vAlign) {
+                    const v = vAlign.getAttribute("w:val");
+                    if (v === "superscript") isSup = true;
+                    if (v === "subscript") isSub = true;
+                }
+                if (rPr.getElementsByTagName("w:b").length > 0) isBold = true;
+                if (rPr.getElementsByTagName("w:i").length > 0) isItalic = true;
+            }
+            Array.from(node.childNodes).forEach(c => {
+                if (c.nodeName === "w:t") text += c.textContent;
+                else if (c.nodeName === "w:br") text += "<br>";
+                else if (c.nodeName === "w:drawing" || c.nodeName === "w:pict") text += parseWordShapeOrImage(c, driveUrlMap);
+            });
+            if (isSup) text = `<sup>${text}</sup>`;
+            if (isSub) text = `<sub>${text}</sub>`;
+            if (isBold && text.trim()) text = `<b>${text}</b>`;
+            if (isItalic && text.trim()) text = `<i>${text}</i>`;
+            return text;
+        }
+
+        if (name === "mc:AlternateContent") {
+            return parseWordShapeOrImage(node, driveUrlMap);
+        }
+
+        if (name === "m:oMathPara" || name === "m:oMath") {
+            return parseWordMathOmml(node);
+        }
+
+        if (name === "w:tbl") {
+            let tbl = `<table>`;
+            Array.from(node.children).forEach(tr => {
+                if (tr.nodeName === "w:tr") {
+                    tbl += `<tr>`;
+                    Array.from(tr.children).forEach(tc => {
+                        if (tc.nodeName === "w:tc") {
+                            tbl += `<td>${parseWordCellXml(tc, driveUrlMap)}</td>`;
+                        }
+                    });
+                    tbl += `</tr>`;
+                }
+            });
+            tbl += `</table>`;
+            return tbl;
+        }
+
+        return "";
+    }
+
+    function parseWordShapeOrImage(node, driveUrlMap) {
+        let out = "";
+        const blips = node.getElementsByTagName("a:blip");
+        for (let b of blips) {
+            const rId = b.getAttribute("r:embed");
+            if (rId && driveUrlMap[rId]) out += `<br><img src="${driveUrlMap[rId]}" class="img-soal">`;
+        }
+        const vImgs = node.getElementsByTagName("v:imagedata");
+        for (let v of vImgs) {
+            const rId = v.getAttribute("r:id");
+            if (rId && driveUrlMap[rId]) out += `<br><img src="${driveUrlMap[rId]}" class="img-soal">`;
+        }
+        const txbx = node.getElementsByTagName("w:txbxContent")[0];
+        if (txbx && !out) {
+            const inner = parseWordCellXml(txbx, driveUrlMap);
+            if (inner) out += `<div class="shape-textbox">${inner}</div>`;
+        }
+        return out;
+    }
+
+    function parseWordMathOmml(node) {
+        if (!node) return "";
+        const name = node.nodeName;
+        if (name === "m:t") return node.textContent || "";
+        if (name === "m:sSup") {
+            const e = node.getElementsByTagName("m:e")[0];
+            const sup = node.getElementsByTagName("m:sup")[0];
+            return `${parseWordMathOmml(e)}<sup>${parseWordMathOmml(sup)}</sup>`;
+        }
+        if (name === "m:sSub") {
+            const e = node.getElementsByTagName("m:e")[0];
+            const sub = node.getElementsByTagName("m:sub")[0];
+            return `${parseWordMathOmml(e)}<sub>${parseWordMathOmml(sub)}</sub>`;
+        }
+        if (name === "m:sSubSup") {
+            const e = node.getElementsByTagName("m:e")[0];
+            const sub = node.getElementsByTagName("m:sub")[0];
+            const sup = node.getElementsByTagName("m:sup")[0];
+            return `${parseWordMathOmml(e)}<sub>${parseWordMathOmml(sub)}</sub><sup>${parseWordMathOmml(sup)}</sup>`;
+        }
+        if (name === "m:f") {
+            const num = node.getElementsByTagName("m:num")[0];
+            const den = node.getElementsByTagName("m:den")[0];
+            return `<span class="math-frac"><span>${parseWordMathOmml(num)}</span><span>${parseWordMathOmml(den)}</span></span>`;
+        }
+        if (name === "m:rad") {
+            const deg = node.getElementsByTagName("m:deg")[0];
+            const e = node.getElementsByTagName("m:e")[0];
+            const degTxt = deg ? parseWordMathOmml(deg).trim() : "";
+            return `${degTxt ? `<sup>${degTxt}</sup>` : ""}&radic;<span style="border-top:1px solid currentColor; padding:0 2px;">${parseWordMathOmml(e)}</span>`;
+        }
+        let res = "";
+        Array.from(node.childNodes).forEach(c => { res += parseWordMathOmml(c); });
+        return res;
+    }
+
+    window.bacaFileSoalOtomatis = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        let ekstensi = file.name.split('.').pop().toLowerCase();
+
+        if (ekstensi === 'txt') {
+            const reader = new FileReader();
+            reader.onload = function(e) { document.getElementById('soalBatchText').value = e.target.result; };
+            reader.readAsText(file);
+        } else if (ekstensi === 'docx' && typeof JSZip !== "undefined") {
+            showLoading("Membaca rumus matematika, shape, tabel bersarang & kompresi gambar < 50 KB...");
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+
+                const relsXml = await zip.file("word/_rels/document.xml.rels")?.async("text");
+                const relsMap = {};
+                if (relsXml) {
+                    const relDoc = new DOMParser().parseFromString(relsXml, "application/xml");
+                    Array.from(relDoc.getElementsByTagName("Relationship")).forEach(rel => {
+                        const target = rel.getAttribute("Target") || "";
+                        if (target.startsWith("media/")) relsMap[rel.getAttribute("Id")] = "word/" + target;
+                    });
+                }
+
+                const driveUrlMap = {};
+                const relEntries = Object.entries(relsMap);
+                for (let i = 0; i < relEntries.length; i++) {
+                    const [rId, mediaPath] = relEntries[i];
+                    const mediaFile = zip.file(mediaPath);
+                    if (!mediaFile) continue;
+                    showLoading(`Mengompres & mengunggah gambar/shape ${i + 1} dari ${relEntries.length} (< 50 KB)...`);
+                    const base64Raw = "data:image/png;base64," + await mediaFile.async("base64");
+                    const hasilKompres = await kompresGambarSoalKeBawah50KB(base64Raw, MAX_GAMBAR_SOAL_BYTES);
+                    const extFile = hasilKompres.dataUrl.startsWith("data:image/webp") ? "webp" : "jpg";
+                    try {
+                        const uploadRes = await axios.post(GAS_URL, JSON.stringify({
+                            action: "uploadImage",
+                            folderName: "Soal_CBT_Drive",
+                            fileData: hasilKompres.dataUrl,
+                            fileName: `soal_img_${Date.now()}_${i + 1}.${extFile}`
+                        }));
+                        if (uploadRes.data && uploadRes.data.status === "success") {
+                            driveUrlMap[rId] = uploadRes.data.fileUrl;
+                        }
+                    } catch (e) {
+                        console.error("Gagal upload media Word ke Drive:", e);
+                    }
+                }
+
+                const docXml = await zip.file("word/document.xml").async("text");
+                const xmlDoc = new DOMParser().parseFromString(docXml, "application/xml");
+                const body = xmlDoc.getElementsByTagName("w:body")[0];
+                const mainTables = Array.from(body.children).filter(el => el.nodeName === "w:tbl");
+
+                const blocks = [];
+                let current = null;
+                const flushBlock = () => {
+                    if (!current) return;
+                    const validOpts = current.options.filter(o => o.teks.trim().length > 0);
+                    if (current.soal.trim() && validOpts.length > 0) {
+                        let out = `SOAL\n${current.soal.trim()}\nJAWABAN\n`;
+                        validOpts.forEach(o => { out += `${o.teks.trim()} ||| ${o.isCorrect ? "1" : "0"}\n`; });
+                        blocks.push(out.trim());
+                    }
+                    current = null;
+                };
+
+                if (mainTables.length > 0) {
+                    const rows = Array.from(mainTables[0].children).filter(el => el.nodeName === "w:tr");
+                    rows.forEach(tr => {
+                        const cells = Array.from(tr.children).filter(el => el.nodeName === "w:tc");
+                        if (cells.length < 2) return;
+                        const col1 = (cells[0].textContent || "").replace(/\s+/g, " ").trim().toUpperCase();
+                        const col2Html = parseWordCellXml(cells[1], driveUrlMap);
+                        const col3 = cells[2] ? (cells[2].textContent || "").replace(/\s+/g, " ").trim() : "";
+
+                        if (col1 === "SOAL" || col1.startsWith("SOAL ")) {
+                            flushBlock();
+                            current = { soal: col2Html, options: [] };
+                        } else if (col1 === "JAWABAN" || col1.startsWith("JAWABAN ")) {
+                            if (!current) current = { soal: "", options: [] };
+                            const isCorrect = col3 === "1" || col3.toLowerCase() === "benar";
+                            current.options.push({ teks: col2Html, isCorrect });
+                        } else if (current && current.options.length === 0 && col2Html.trim()) {
+                            current.soal += `<br>${col2Html}`;
+                        }
+                    });
+                    flushBlock();
+                }
+
+                document.getElementById('soalBatchText').value = blocks.join("\n\n");
+                hideLoading();
+                alert(`File Word berhasil diproses (${blocks.length} soal)! Matematika, pangkat, shape, dan tabel bersarang telah dikonversi.`);
+            } catch (err) {
+                hideLoading();
+                alert("Gagal memproses file Word: " + err.message);
+            }
+        }
+    };
+})();
+</script>
+
 </body>
 </html>
