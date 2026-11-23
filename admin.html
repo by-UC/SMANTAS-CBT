@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin - Kelola Soal</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 15px; line-height: 1.6; }
+    .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    input, textarea, select, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
+    button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #0056b3; }
+    .btn-hapus { background: #dc3545; width: auto; padding: 5px 10px; margin-top: 10px; }
+    .btn-hapus:hover { background: #a71d2a; }
+    .item-soal { border-bottom: 1px solid #eee; padding: 15px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Panel Admin Soal</h1>
+
+  <!-- Form Tambah Soal -->
+  <div class="card">
+    <h3>Tambah Soal Baru</h3>
+    <form id="form-soal">
+      <textarea id="pertanyaan" rows="3" placeholder="Tulis pertanyaan..." required></textarea>
+      <input type="text" id="opsi-a" placeholder="Pilihan A" required>
+      <input type="text" id="opsi-b" placeholder="Pilihan B" required>
+      <input type="text" id="opsi-c" placeholder="Pilihan C" required>
+      <input type="text" id="opsi-d" placeholder="Pilihan D" required>
+      
+      <label for="jawaban">Kunci Jawaban:</label>
+      <select id="jawaban" required>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
+      
+      <button type="submit">Simpan Soal</button>
+    </form>
+  </div>
+
+  <!-- Daftar Soal -->
+  <div class="card">
+    <h3>Daftar Soal (<span id="jumlah-soal">0</span>)</h3>
+    <div id="daftar-soal"></div>
+  </div>
+
+  <script src="soal.js"></script>
+</body>
+</html>
