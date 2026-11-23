@@ -1631,7 +1631,7 @@
 const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzlLxzIAySwV8oMAdI9mo78vZwLcLvMnDhtIoFiGbxn8s0U3Tq2d7ucnGrKK2eLLx-k/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxXMy0uqCdvg8NPl4G5MAk1kyk6svirpB5-vGa5-p1zJOp7tMSgI48DEwbMN_g2LvoI/exec";
 const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
@@ -2421,7 +2421,7 @@ async function muatUlangDaftarMapelSiswa() {
     hideLoading();
 }
 
-async function tampilkanHalamanPilihUjianSiswa(siswa) {
+async function tampilkanHalamanPilihUjianSiswa(siswa, skipHeavyGasFetch = false) {
     currentSiswaObj = siswa;
     namaSiswaLogin = siswa.nama;
     kelasSiswaLogin = siswa.kelas;
@@ -2433,7 +2433,7 @@ async function tampilkanHalamanPilihUjianSiswa(siswa) {
         deviceId: getOrCreateDeviceId()
     });
 
-    await fetchLogLoginFromGAS();
+    // Render langsung dari cache lokal & data yang sudah ada agar transisi login 0 ms
     renderOpsiMapelUntukSiswa(siswa);
     sinkronkanTampilanInputTokenSiswa();
 
@@ -2452,6 +2452,20 @@ async function tampilkanHalamanPilihUjianSiswa(siswa) {
     document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
     sinkronkanHeaderAdmin();
+
+    // Sinkronkan token & status log khusus siswa ini secara non-blocking dengan jitter agar tidak membebani GAS
+    if (!skipHeavyGasFetch) {
+        fetchTokenDariDrive(true).catch(() => {});
+    } else {
+        const tokAge = Date.now() - (tokenDriveState.syncedAtMs || 0);
+        if (!tokenDriveState.token || tokenDriveState.token === "----" || tokAge > 45000) {
+            setTimeout(() => {
+                fetchTokenDariDrive(true).then(() => {
+                    sinkronkanTampilanInputTokenSiswa();
+                }).catch(() => {});
+            }, 300 + Math.floor(Math.random() * 1500));
+        }
+    }
 }
 
 function getOrCreateDeviceId() {
@@ -4686,34 +4700,82 @@ function renderTabelSiswaLogin() {
     }
 }
 
+async function postGasDenganRetryRingan(payloadObj, maxRetries = 3, timeoutMs = 15000) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const jitter = attempt === 1 ? Math.floor(Math.random() * 450) : (attempt * 800 + Math.floor(Math.random() * 900));
+            if (jitter > 0) await new Promise(r => setTimeout(r, jitter));
+            const res = await axios.post(GAS_URL, JSON.stringify(payloadObj), { timeout: timeoutMs });
+            if (res && res.data) return res.data;
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    throw lastErr || new Error("Server GAS sedang sibuk");
+}
+
+function sinkronkanSesiDanLogLatarBelakang(siswa, myDeviceId, statusSetelahLogin, existingMapel = "-") {
+    // Jalankan non-blocking dengan jitter acak (0-2.5 detik) agar 1000+ siswa login bersamaan tidak menabrak LockService GAS sekaligus
+    const delayMs = 200 + Math.floor(Math.random() * 2300);
+    setTimeout(() => {
+        setSesiToGAS({
+            username: siswa.username,
+            deviceId: myDeviceId,
+            status: statusSetelahLogin,
+            nama: siswa.nama,
+            kelas: siswa.kelas,
+            mapel: existingMapel || "-",
+            updatedAt: getLocalIsoNow()
+        }).catch(() => {});
+    }, delayMs);
+}
+
 async function autentikasiSiswa() {
     let username = document.getElementById('nis').value.trim();
     let pass = document.getElementById('passSiswa').value.trim();
 
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
-    showLoading("Memverifikasi akun, sesi & konfigurasi token...");
-    await Promise.all([
-        fetchCbtDatabase(false),
-        fetchSesiFromGAS(true),
-        fetchTokenDariDrive(true)
-    ]);
+    showLoading("Memverifikasi akun siswa...");
+    // 1. Ambil database siswa & jadwal dari GitHub Raw CDN (gratis, tanpa batas koneksi, 0 hit ke GAS)
+    await fetchCbtDatabase(false);
 
-    let siswa = databaseSiswa.find(s => s.username === username);
+    let siswa = databaseSiswa.find(s => String(s.username).trim() === username);
     if(!siswa) { 
         hideLoading();
         alert("Username tidak ditemukan dalam database!"); 
         return; 
     }
 
-    if(siswa.password !== pass) {
+    if(String(siswa.password).trim() !== pass) {
         hideLoading();
         alert("Password salah!");
         return;
     }
 
     const myDeviceId = getOrCreateDeviceId();
-    const existingSession = sesiLoginSiswa[username];
+
+    // 2. Cek sesi khusus 1 user ini saja (ringan) dengan fallback aman jika GAS sedang padat
+    let existingSession = sesiLoginSiswa[username] || null;
+    try {
+        const resSesi = await postGasDenganRetryRingan({
+            action: "getSesiByUser",
+            username: username
+        }, 2, 8000);
+        if (resSesi && resSesi.status === "success" && resSesi.data) {
+            if (resSesi.data.username || resSesi.data.deviceId) {
+                existingSession = resSesi.data;
+                sesiLoginSiswa[username] = existingSession;
+            } else if (resSesi.data[username]) {
+                existingSession = resSesi.data[username];
+                sesiLoginSiswa[username] = existingSession;
+            }
+        }
+    } catch (e) {
+        // Jika endpoint getSesiByUser belum ada / jaringan padat, jangan blokir siswa masuk ke halaman pilih ujian
+        console.warn("Cek sesi per-user dilewati sementara:", e.message);
+    }
 
     if(existingSession && existingSession.deviceId && existingSession.deviceId !== myDeviceId) {
         hideLoading();
@@ -4725,18 +4787,16 @@ async function autentikasiSiswa() {
         ? existingSession.status
         : "Login Aktif";
 
-    await setSesiToGAS({
-        username: username,
-        deviceId: myDeviceId,
-        status: statusSetelahLogin,
-        nama: siswa.nama,
-        kelas: siswa.kelas,
-        mapel: existingSession ? existingSession.mapel : "-",
-        updatedAt: getLocalIsoNow()
-    });
-    hideLoading();
+    // 3. Simpan sesi ke GAS secara non-blocking + jitter agar 1000+ siswa login bersamaan langsung masuk tanpa antre LockService
+    sinkronkanSesiDanLogLatarBelakang(
+        siswa,
+        myDeviceId,
+        statusSetelahLogin,
+        existingSession ? existingSession.mapel : "-"
+    );
 
-    await tampilkanHalamanPilihUjianSiswa(siswa);
+    hideLoading();
+    await tampilkanHalamanPilihUjianSiswa(siswa, true);
 }
 
 async function logoutSiswa() {
@@ -6289,16 +6349,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     const savedSiswaSession = bacaSesiSiswaLokal();
     if (savedSiswaSession && savedSiswaSession.username) {
         showLoading("Memulihkan sesi login siswa...");
-        await Promise.all([
-            fetchCbtDatabase(false),
-            fetchSesiFromGAS(true),
-            fetchTokenDariDrive(true)
-        ]);
+        await fetchCbtDatabase(false);
         const foundSiswa = databaseSiswa.find(s => String(s.username).trim() === String(savedSiswaSession.username).trim());
-        const activeGasSesi = sesiLoginSiswa[savedSiswaSession.username];
-        if (foundSiswa && (!activeGasSesi || !activeGasSesi.deviceId || activeGasSesi.deviceId === getOrCreateDeviceId())) {
+        if (foundSiswa) {
             hideLoading();
-            await tampilkanHalamanPilihUjianSiswa(foundSiswa);
+            await tampilkanHalamanPilihUjianSiswa(foundSiswa, true);
             return;
         }
         hideLoading();
