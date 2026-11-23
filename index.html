@@ -285,22 +285,24 @@
             color: #111111;
         }
         .mapel-choice-item.locked {
-            background: #fff5f5;
-            border-color: #f5c2c7;
+            background: #fff3cd;
+            border-color: #ffc107;
             color: #dc3545;
+            font-weight: bold;
             cursor: not-allowed;
         }
         .mapel-choice-item.locked.selected {
-            background: #d6d8db;
+            background: #ffe69c;
             border-color: #dc3545;
             color: #dc3545;
+            font-weight: bold;
         }
         .mapel-lock-tag {
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: bold;
             padding: 2px 6px;
             border-radius: 3px;
-            background: #f8d7da;
+            background: #ffe082;
             color: #dc3545;
             white-space: nowrap;
         }
@@ -1641,8 +1643,35 @@ let tokenDriveState = {
     intervalMenit: 5,
     wajibToken: true,
     expiresAt: 0,
-    serverOffsetMs: 0
+    serverOffsetMs: 0,
+    syncedAtMs: 0
 };
+const TOKEN_CACHE_STORAGE_KEY = "smantas_cbt_token_cache_v1";
+
+function simpanCacheTokenLokal(stateObj) {
+    try {
+        localStorage.setItem(TOKEN_CACHE_STORAGE_KEY, JSON.stringify(stateObj));
+    } catch (e) {}
+}
+
+function bacaCacheTokenLokal() {
+    try {
+        const raw = localStorage.getItem(TOKEN_CACHE_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.token || parsed.token === "----") return null;
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+(function initCachedTokenOnLoad() {
+    const cachedTok = bacaCacheTokenLokal();
+    if (cachedTok) {
+        tokenDriveState = { ...tokenDriveState, ...cachedTok };
+    }
+})();
 let tokenCountdownTimerId = null;
 let isSyncingTokenFromDrive = false;
 
@@ -1665,8 +1694,10 @@ async function fetchTokenDariDrive(silent = true) {
                 intervalMenit: parseInt(d.intervalMenit, 10) || 5,
                 wajibToken: d.wajibToken !== false,
                 expiresAt: Number(d.expiresAt || 0),
-                serverOffsetMs: serverNow - Date.now()
+                serverOffsetMs: serverNow - Date.now(),
+                syncedAtMs: Date.now()
             };
+            simpanCacheTokenLokal(tokenDriveState);
             sinkronkanInputPengaturanToken();
             sinkronkanTampilanInputTokenSiswa();
         }
@@ -2182,6 +2213,41 @@ function getLogsBersih() {
     return Array.isArray(logSiswaLogin) ? logSiswaLogin.filter(isBarisLogValid) : [];
 }
 
+function parseTimestampFlexibleMs(val) {
+    if (!val) return 0;
+    if (typeof val === "number") return val;
+    const str = String(val).trim();
+    if (!str) return 0;
+    const direct = Date.parse(str);
+    if (!isNaN(direct)) return direct;
+    // Handle DD/MM/YYYY HH:mm:ss or YYYY-MM-DD HH:mm:ss
+    const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+        const d = parseInt(m[1], 10);
+        const mo = parseInt(m[2], 10) - 1;
+        const y = parseInt(m[3], 10);
+        const h = parseInt(m[4] || "0", 10);
+        const mi = parseInt(m[5] || "0", 10);
+        const s = parseInt(m[6] || "0", 10);
+        return new Date(y, mo, d, h, mi, s).getTime();
+    }
+    return 0;
+}
+
+function getLogTimestampMs(row, fallbackIdx = 0) {
+    if (!row || typeof row !== "object") return fallbackIdx;
+    const rawTs = row.timestamp ?? row.Timestamp ?? row.updatedAt ?? row.UpdatedAt ?? row.waktu ?? row.Waktu ?? "";
+    const parsed = parseTimestampFlexibleMs(rawTs);
+    return parsed > 0 ? parsed : fallbackIdx;
+}
+
+function getSesiUpdatedAtMs(sesiObj, fallbackIdx = 0) {
+    if (!sesiObj || typeof sesiObj !== "object") return fallbackIdx;
+    const rawTs = sesiObj.updatedAt ?? sesiObj.UpdatedAt ?? sesiObj.UpdateAt ?? sesiObj.updateAt ?? sesiObj.timestamp ?? sesiObj.Timestamp ?? "";
+    const parsed = parseTimestampFlexibleMs(rawTs);
+    return parsed > 0 ? parsed : fallbackIdx;
+}
+
 function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const targetMapel = normStr(mapelName);
     if (!targetMapel) return false;
@@ -2189,21 +2255,31 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
     const logs = getLogsBersih();
     const namaNorm = normStr(namaSiswa || "");
     const kelasNorm = normStr(kelasSiswa || "");
+    const unameNorm = normStr(username || "");
 
-    const logMapelIni = logs.filter(l =>
-        normStr(l.mapel) === targetMapel &&
-        (!namaNorm || normStr(l.nama) === namaNorm) &&
-        (!kelasNorm || normStr(l.kelas) === kelasNorm)
-    );
+    const logMapelIni = logs
+        .map((l, idx) => ({ row: l, ts: getLogTimestampMs(l, idx + 1) }))
+        .filter(({ row: l }) => {
+            if (normStr(l.mapel) !== targetMapel) return false;
+            const logUname = normStr(l.username || l.nis || "");
+            if (unameNorm && logUname && logUname === unameNorm) return true;
+            const namaMatch = !namaNorm || normStr(l.nama) === namaNorm;
+            const kelasMatch = !kelasNorm || normStr(l.kelas) === kelasNorm;
+            return namaMatch && kelasMatch;
+        })
+        .sort((a, b) => a.ts - b.ts);
 
     if (logMapelIni.length > 0) {
-        const lastLog = logMapelIni[logMapelIni.length - 1];
+        const lastLog = logMapelIni[logMapelIni.length - 1].row;
         const st = String(lastLog.status || "").trim();
-        if (st === "Direset" || st.toLowerCase().includes("reset")) {
+        const stLow = st.toLowerCase();
+        const adaNilai = lastLog.nilai !== null && lastLog.nilai !== undefined && String(lastLog.nilai).trim() !== "" && String(lastLog.nilai).trim() !== "-";
+
+        if (st === "Direset" || stLow.includes("direset") || stLow.startsWith("reset")) {
             bukaKunciMapelLokal(username, mapelName);
             return false;
         }
-        if (st.includes("Selesai") || st.toLowerCase().includes("curang")) {
+        if (adaNilai || stLow.includes("selesai") || stLow.includes("curang") || cekStatusTerkunci(st)) {
             return true;
         }
     }
@@ -2302,6 +2378,8 @@ function renderOpsiMapelUntukSiswa(siswa) {
     }
 
     box.innerHTML = "";
+    const tunggal = jadwalAktifKelas.length === 1;
+
     jadwalAktifKelas.forEach(j => {
         const terkunci = isMapelTerkunciUntukSiswa(siswa.username, siswa.nama, siswa.kelas, j.mapel);
         const itemDiv = document.createElement('div');
@@ -2309,12 +2387,23 @@ function renderOpsiMapelUntukSiswa(siswa) {
         itemDiv.setAttribute('data-mapel', j.mapel);
 
         const infoMeta = terkunci
-            ? `<span class="mapel-lock-tag">Terkunci</span>`
+            ? `<span class="mapel-lock-tag">[TERKUNCI]</span>`
             : `<span style="font-size:11px; font-weight:normal; color:#444;">${j.jp ? j.jp + ' JP • ' : ''}Selesai: ${j.selesai.replace('T', ' ')}</span>`;
 
         itemDiv.innerHTML = `<span>${j.mapel}</span>${infoMeta}`;
         itemDiv.onclick = () => pilihItemMapelSiswa(j.mapel, terkunci);
         box.appendChild(itemDiv);
+
+        if (tunggal) {
+            if (hiddenInput) hiddenInput.value = j.mapel;
+            itemDiv.classList.add('selected');
+            if (!terkunci) {
+                setTimeout(() => {
+                    const tokInp = document.getElementById('inputTokenSiswa');
+                    if (tokInp && tokInp.offsetParent !== null) tokInp.focus();
+                }, 60);
+            }
+        }
     });
 }
 
@@ -2832,7 +2921,7 @@ function normalisasiSesiDariGAS(rawData) {
     if (!rawData) return map;
 
     if (Array.isArray(rawData)) {
-        rawData.forEach(item => {
+        rawData.forEach((item, idx) => {
             if (!item) return;
             const uname = String(item.username || item.nis || "").trim();
             if (uname) {
@@ -2843,12 +2932,13 @@ function normalisasiSesiDariGAS(rawData) {
                     nama: item.nama || "",
                     kelas: item.kelas || "",
                     mapel: item.mapel || "-",
-                    updatedAt: item.updatedAt || ""
+                    updatedAt: item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || "",
+                    _rowOrder: idx
                 };
             }
         });
     } else if (typeof rawData === 'object') {
-        Object.keys(rawData).forEach(key => {
+        Object.keys(rawData).forEach((key, idx) => {
             const item = rawData[key];
             if (item && typeof item === 'object') {
                 const uname = String(item.username || key || "").trim();
@@ -2860,7 +2950,8 @@ function normalisasiSesiDariGAS(rawData) {
                         nama: item.nama || "",
                         kelas: item.kelas || "",
                         mapel: item.mapel || "-",
-                        updatedAt: item.updatedAt || ""
+                        updatedAt: item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || "",
+                        _rowOrder: idx
                     };
                 }
             }
@@ -3265,7 +3356,15 @@ function renderTabelSesiAktif() {
     const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
     let tampilCount = 0;
 
-    keys.forEach(username => {
+    const sortedKeys = [...keys].sort((a, b) => {
+        const sa = sesiLoginSiswa[a];
+        const sb = sesiLoginSiswa[b];
+        const tsA = getSesiUpdatedAtMs(sa, (sa?._rowOrder ?? 0) + 1);
+        const tsB = getSesiUpdatedAtMs(sb, (sb?._rowOrder ?? 0) + 1);
+        return tsB - tsA;
+    });
+
+    sortedKeys.forEach(username => {
         const s = sesiLoginSiswa[username];
         if(!s) return;
         if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
@@ -4556,8 +4655,14 @@ function renderTabelSiswaLogin() {
         return;
     }
 
+    const indexedLogs = bersih.map((row, origIdx) => ({
+        row,
+        origIdx,
+        ts: getLogTimestampMs(row, origIdx + 1)
+    })).sort((a, b) => b.ts - a.ts);
+
     let tampilCount = 0;
-    bersih.forEach((l, idx) => {
+    indexedLogs.forEach(({ row: l, origIdx }) => {
         if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
             return;
         }
@@ -4571,7 +4676,7 @@ function renderTabelSiswaLogin() {
             <td>${badgeStatus}</td>
             <td>${nilaiTampil}</td>
             <td>
-                <button type="button" onclick="hapusBarisLogSpreadsheet(${idx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
+                <button type="button" onclick="hapusBarisLogSpreadsheet(${origIdx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
             </td>
         </tr>`;
     });
@@ -4588,9 +4693,11 @@ async function autentikasiSiswa() {
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
     showLoading("Memverifikasi akun, sesi & konfigurasi token...");
-    await fetchCbtDatabase(false);
-    await fetchSesiFromGAS(true);
-    await fetchTokenDariDrive(true);
+    await Promise.all([
+        fetchCbtDatabase(false),
+        fetchSesiFromGAS(true),
+        fetchTokenDariDrive(true)
+    ]);
 
     let siswa = databaseSiswa.find(s => s.username === username);
     if(!siswa) { 
@@ -4738,8 +4845,56 @@ function hentikanTimerUjian() {
     }
 }
 
+async function verifikasiTokenCepat(tokenInput) {
+    if (tokenDriveState.wajibToken === false) return true;
+
+    const cleanInput = String(tokenInput || "").trim();
+    if (!cleanInput) return false;
+
+    const estServerNow = Date.now() + (tokenDriveState.serverOffsetMs || 0);
+    const cachedToken = String(tokenDriveState.token || "").trim();
+    const isLocalCacheStillValid =
+        cachedToken &&
+        cachedToken !== "----" &&
+        tokenDriveState.expiresAt > (estServerNow + 2000) &&
+        (Date.now() - (tokenDriveState.syncedAtMs || 0)) < 120000;
+
+    // 1. Jalur Instan (0 ms network): token lokal masih aktif & cocok persis
+    if (isLocalCacheStillValid && cachedToken === cleanInput) {
+        return true;
+    }
+
+    // 2. Jalur Fallback GAS (dengan timeout cepat & jitter ringan agar 1000+ siswa tidak antre lama)
+    const verRes = await axios.post(GAS_URL, JSON.stringify({
+        action: "verifyToken",
+        token: cleanInput
+    }), { timeout: 10000 });
+
+    if (verRes.data && verRes.data.status === "success" && verRes.data.valid === true) {
+        const d = verRes.data.data || {};
+        const serverNow = Number(d.serverNow || Date.now());
+        tokenDriveState = {
+            ...tokenDriveState,
+            token: cleanInput,
+            expiresAt: Number(d.expiresAt || (Date.now() + (tokenDriveState.intervalMenit || 5) * 60000)),
+            serverOffsetMs: serverNow - Date.now(),
+            syncedAtMs: Date.now()
+        };
+        simpanCacheTokenLokal(tokenDriveState);
+        return true;
+    }
+    return false;
+}
+
 async function mulaiUjianPilihan() {
     let mapel = document.getElementById('pilihMapelAktif').value;
+    if (!mapel) {
+        const items = document.querySelectorAll('#daftarMapelSiswaBox .mapel-choice-item');
+        if (items.length === 1) {
+            mapel = items[0].getAttribute('data-mapel') || "";
+            document.getElementById('pilihMapelAktif').value = mapel;
+        }
+    }
     if(!mapel) { alert("Klik/pilih mata pelajaran ujian yang tersedia terlebih dahulu!"); return; }
 
     if(currentSiswaObj && isMapelTerkunciUntukSiswa(currentSiswaObj.username, namaSiswaLogin, kelasSiswaLogin, mapel)) {
@@ -4753,27 +4908,6 @@ async function mulaiUjianPilihan() {
         alert("Masukkan 4 digit token ujian terlebih dahulu!");
         return;
     }
-
-    await masukFullscreenWajib();
-
-    showLoading("Memverifikasi token ujian dari Google Drive...");
-    try {
-        const verRes = await axios.post(GAS_URL, JSON.stringify({
-            action: "verifyToken",
-            token: tokenInput
-        }));
-        hideLoading();
-        if (!verRes.data || verRes.data.status !== "success" || verRes.data.valid !== true) {
-            alert("Token 4 digit salah atau sudah berganti! Minta token terbaru kepada pengawas.");
-            return;
-        }
-    } catch (e) {
-        hideLoading();
-        alert("Gagal memverifikasi token ujian: " + e.message);
-        return;
-    }
-
-    await masukFullscreenWajib();
 
     const nowMs = Date.now();
     const kelasTrim = kelasSiswaLogin.trim().toLowerCase();
@@ -4799,13 +4933,28 @@ async function mulaiUjianPilihan() {
         return;
     }
 
+    showLoading("Memverifikasi token & menyiapkan lembar soal...");
+    try {
+        const tokenValid = await verifikasiTokenCepat(tokenInput);
+        if (!tokenValid) {
+            hideLoading();
+            alert("Token 4 digit salah atau sudah berganti! Minta token terbaru kepada pengawas.");
+            return;
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal memverifikasi token ujian: " + e.message);
+        return;
+    }
+
     mapelSiswaLogin = mapel;
+    namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
 
     let riwayatStatusSaatIni = "Sedang Ujian";
     if(currentSiswaObj) {
         const prevSess = sesiLoginSiswa[currentSiswaObj.username];
         riwayatStatusSaatIni = gabungRiwayatStatus(prevSess ? prevSess.status : "", "Sedang Ujian");
-        await setSesiToGAS({
+        sesiLoginSiswa[currentSiswaObj.username] = {
             username: currentSiswaObj.username,
             deviceId: getOrCreateDeviceId(),
             status: riwayatStatusSaatIni,
@@ -4813,24 +4962,23 @@ async function mulaiUjianPilihan() {
             kelas: kelasSiswaLogin,
             mapel: mapel,
             updatedAt: getLocalIsoNow()
-        });
+        };
     }
 
-    try {
-        axios.post(GAS_URL, JSON.stringify({
-            action: "logLogin",
-            sheetName: "DB_Log_login_CBT",
-            nama: namaSiswaLogin,
-            kelas: kelasSiswaLogin,
-            mapel: mapel,
-            status: riwayatStatusSaatIni,
-            nilai: ""
-        }));
-    } catch(e) {
-        console.error("Gagal mengirim log login ke server:", e);
+    // Kirim pembaruan sesi & log login secara paralel (non-blocking) agar tidak menahan siswa masuk ke soal saat 1000+ user bersamaan
+    if (currentSiswaObj) {
+        setSesiToGAS(sesiLoginSiswa[currentSiswaObj.username]).catch(() => {});
     }
+    axios.post(GAS_URL, JSON.stringify({
+        action: "logLogin",
+        sheetName: "DB_Log_login_CBT",
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapel,
+        status: riwayatStatusSaatIni,
+        nilai: ""
+    })).catch(e => console.error("Gagal mengirim log login ke server:", e));
 
-    namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
     await loadSoalUjian(jadwalMatch);
 }
 
@@ -6141,9 +6289,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     const savedSiswaSession = bacaSesiSiswaLokal();
     if (savedSiswaSession && savedSiswaSession.username) {
         showLoading("Memulihkan sesi login siswa...");
-        await fetchCbtDatabase(false);
-        await fetchSesiFromGAS(true);
-        await fetchTokenDariDrive(true);
+        await Promise.all([
+            fetchCbtDatabase(false),
+            fetchSesiFromGAS(true),
+            fetchTokenDariDrive(true)
+        ]);
         const foundSiswa = databaseSiswa.find(s => String(s.username).trim() === String(savedSiswaSession.username).trim());
         const activeGasSesi = sesiLoginSiswa[savedSiswaSession.username];
         if (foundSiswa && (!activeGasSesi || !activeGasSesi.deviceId || activeGasSesi.deviceId === getOrCreateDeviceId())) {
