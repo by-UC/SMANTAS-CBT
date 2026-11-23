@@ -80,67 +80,10 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
             transition: max-width 0.25s ease;
         }
-        body.login-auth-active {
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-        }
-        body.login-auth-active #mainContainer.login-compact {
-            max-width: 960px;
-            width: 100%;
-            min-height: calc(100dvh - 20px);
-            margin: 0 auto;
-            padding: 24px 28px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        body.login-auth-active .login-compact .header-box {
-            padding-bottom: 12px;
-            margin-bottom: 18px;
-        }
-        body.login-auth-active .login-compact .header-brand h2 {
-            font-size: 24px;
-            margin-bottom: 4px;
-        }
-        body.login-auth-active .login-compact .header-brand h3 {
-            font-size: 14px;
-        }
-        body.login-auth-active .login-compact .single-role-bar {
-            margin-bottom: 18px;
-        }
-        body.login-auth-active .login-compact .btn-role-toggle {
-            padding: 13px 16px;
-            font-size: 15px;
-        }
-        body.login-auth-active .login-compact .form-group {
-            margin-bottom: 14px;
-        }
-        body.login-auth-active .login-compact label {
-            font-size: 14px;
-            margin-bottom: 6px;
-        }
-        body.login-auth-active .login-compact input[type="text"],
-        body.login-auth-active .login-compact input[type="password"] {
-            padding: 11px 14px;
-            font-size: 15px;
-        }
-        body.login-auth-active .login-compact .section-view > button {
-            padding: 13px 16px;
-            font-size: 15px;
-            margin-top: 6px;
-        }
-        @media (max-width: 600px) {
-            body.login-auth-active {
-                padding: 8px;
-            }
-            body.login-auth-active #mainContainer.login-compact {
-                min-height: calc(100dvh - 16px);
-                padding: 18px 16px;
-            }
+        .container.login-compact {
+            max-width: 440px;
+            margin-top: 24px;
+            padding: 16px;
         }
 
         h2, h3 { text-align: center; color: #0056b3; }
@@ -2508,7 +2451,6 @@ async function tampilkanHalamanPilihUjianSiswa(siswa, skipHeavyGasFetch = false)
     document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
     document.getElementById('tabMenu').style.display = 'none';
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
-    syncLoginPageCenterMode();
     sinkronkanHeaderAdmin();
 
     // Sinkronkan token & status log khusus siswa ini secara non-blocking dengan jitter agar tidak membebani GAS
@@ -2535,13 +2477,6 @@ function getOrCreateDeviceId() {
     return devId;
 }
 
-function syncLoginPageCenterMode() {
-    const isLoginAuthPage =
-        document.getElementById('viewLoginSiswa')?.classList.contains('active') ||
-        document.getElementById('viewLoginAdmin')?.classList.contains('active');
-    document.body.classList.toggle('login-auth-active', Boolean(isLoginAuthPage));
-}
-
 function setCompactMode(isCompact) {
     const container = document.getElementById('mainContainer');
     if (isCompact) {
@@ -2549,7 +2484,6 @@ function setCompactMode(isCompact) {
     } else {
         container.classList.remove('login-compact');
     }
-    syncLoginPageCenterMode();
     sinkronkanHeaderAdmin();
 }
 
@@ -2567,13 +2501,11 @@ function toggleRoleLogin() {
             setCompactMode(false);
             document.getElementById('viewPanelAdmin').classList.add('active');
             document.getElementById('tabMenu').style.display = 'none';
-            syncLoginPageCenterMode();
             sinkronkanHeaderAdmin();
             switchAdminTab('monitoring');
         } else {
             setCompactMode(true);
             document.getElementById('viewLoginAdmin').classList.add('active');
-            syncLoginPageCenterMode();
         }
     } else {
         currentLoginRole = 'siswa';
@@ -2589,7 +2521,6 @@ function toggleRoleLogin() {
             document.getElementById('viewLoginSiswa').classList.add('active');
         }
     }
-    syncLoginPageCenterMode();
     sinkronkanHeaderAdmin();
 }
 
@@ -5415,7 +5346,6 @@ async function loadSoalUjian(jadwalObj = null) {
         document.querySelectorAll('.section-view').forEach(sec => sec.classList.remove('active'));
         document.getElementById('tabMenu').style.display = 'none';
         document.getElementById('viewUjianSiswa').classList.add('active');
-        syncLoginPageCenterMode();
         document.getElementById('infoUjianText').innerText = `Siswa: ${namaSiswaLogin} (${kelasSiswaLogin}) | Mapel: ${mapelSiswaLogin}`;
         
         isExamInProgress = true;
@@ -5689,7 +5619,6 @@ function prosesLoginAdmin() {
         document.getElementById('viewLoginAdmin').classList.remove('active');
         document.getElementById('viewPanelAdmin').classList.add('active');
         document.getElementById('tabMenu').style.display = 'none';
-        syncLoginPageCenterMode();
         sinkronkanHeaderAdmin();
         switchAdminTab('monitoring');
     } else {
