@@ -941,7 +941,7 @@
     <p style="font-size: 12px; color: #ddd; margin-top: 4px;">Mohon tunggu, sistem sedang mengunggah data dan mengunci layar.</p>
 </div>
 
-<!-- OVERLAY PAKSA FULLSCREEN UNTUK MOBILE / BROWSER -->
+<!-- OVERLAY PAKSA FULLSCREEN MOBILE / DESKTOP JIKA KELUAR -->
 <div id="fullscreenGuardOverlay">
     <div class="fs-guard-box">
         <h3 style="margin:0 0 8px 0; color:#dc3545;">Mode Layar Penuh (Full Screen) Wajib!</h3>
@@ -2146,7 +2146,6 @@ function renderOpsiMapelUntukSiswa(siswa) {
     const nowMs = Date.now();
     const kelasTrim = String(siswa.kelas || "").trim().toLowerCase();
 
-    // Hanya mapel yang sesuai kelas DAN sedang berada di rentang waktu ujian (mulai <= sekarang <= selesai)
     const jadwalAktifKelas = daftarJadwalUjian.filter(j => {
         const kelasMatch = String(j.kelas || "").trim().toLowerCase() === kelasTrim;
         if (!kelasMatch) return false;
@@ -3781,7 +3780,7 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
     }
 }
 
-// ================= UPLOAD & PARSE SOAL (HEMAT GIST MULTI-KELAS + 1 MAPEL 1 BARIS) =================
+// ================= UPLOAD & PARSE SOAL (TABEL 3 KOLOM WORD + FORMAT TEKS) =================
 async function bacaFileSoalOtomatis(event) {
     const file = event.target.files[0];
     if(!file) return;
@@ -3849,11 +3848,11 @@ async function bacaFileSoalOtomatis(event) {
                 }
             }
 
-            let formattedText = konversiHtmlKeFormatCbtDenganLink(tempDiv);
+            let formattedText = ekstrakSoalDariHtmlMammoth(tempDiv);
             document.getElementById('soalBatchText').value = formattedText;
             hideLoading();
             const infoUkuran = ringkasanKompresi.length > 0 ? `\nUkuran gambar: ${ringkasanKompresi.join(", ")}` : "";
-            alert(`File Word berhasil diproses! Gambar dikompres (< 50 KB), tersimpan di Google Drive, dan link disematkan otomatis.${infoUkuran}`);
+            alert(`File Word berhasil diproses! Struktur kolom SOAL, JAWABAN & KUNCI (0/1) telah diselaraskan.${infoUkuran}`);
         } catch(err) {
             hideLoading();
             console.error(err);
@@ -3863,19 +3862,93 @@ async function bacaFileSoalOtomatis(event) {
     }
 }
 
-function konversiHtmlKeFormatCbtDenganLink(element) {
+function ambilTeksDanGambarDariCell(cell) {
+    if (!cell) return "";
+    const clone = cell.cloneNode(true);
+    const imgs = Array.from(clone.querySelectorAll("img"));
+    const imgTags = imgs
+        .map(img => img.getAttribute("src") || "")
+        .filter(Boolean)
+        .map(src => `<br><img src="${src}" class="img-soal">`);
+    imgs.forEach(img => img.remove());
+
+    const paragraphs = Array.from(clone.querySelectorAll("p, li, div"));
+    let teks = "";
+    if (paragraphs.length > 0) {
+        teks = paragraphs
+            .map(p => (p.innerText || "").replace(/\s+/g, " ").trim())
+            .filter(Boolean)
+            .join("\n");
+    } else {
+        teks = (clone.innerText || "").replace(/\s+/g, " ").trim();
+    }
+
+    return (teks + imgTags.join("")).trim();
+}
+
+function ekstrakSoalDariHtmlMammoth(containerEl) {
+    const rows = Array.from(containerEl.querySelectorAll("tr"));
+    const blocks = [];
+    let current = null;
+
+    const flushBlock = () => {
+        if (!current) return;
+        const soalClean = (current.soal || "").trim();
+        const validOptions = current.options.filter(o => (o.teks || "").trim().length > 0);
+        if (soalClean && validOptions.length > 0) {
+            let out = `SOAL\n${soalClean}\nJAWABAN\n`;
+            validOptions.forEach(opt => {
+                const bobot = opt.isCorrect ? "1" : "0";
+                out += `${opt.teks.trim()} ||| ${bobot}\n`;
+            });
+            blocks.push(out.trim());
+        }
+        current = null;
+    };
+
+    rows.forEach(tr => {
+        const cells = Array.from(tr.querySelectorAll("td, th"));
+        if (cells.length === 0) return;
+
+        const labelCol1 = (cells[0].innerText || "").replace(/\s+/g, " ").trim().toUpperCase();
+        const col2Content = cells.length >= 2 ? ambilTeksDanGambarDariCell(cells[1]) : "";
+        const col3Label = cells.length >= 3 ? (cells[2].innerText || "").replace(/\s+/g, " ").trim() : "";
+
+        if (labelCol1 === "SOAL" || labelCol1.startsWith("SOAL ")) {
+            flushBlock();
+            current = {
+                soal: col2Content,
+                options: []
+            };
+        } else if (labelCol1 === "JAWABAN" || labelCol1.startsWith("JAWABAN ")) {
+            if (!current) {
+                current = { soal: "", options: [] };
+            }
+            const isCorrect = col3Label === "1" || col3Label.toLowerCase() === "benar" || col3Label.toLowerCase() === "true";
+            current.options.push({
+                teks: col2Content,
+                isCorrect: isCorrect
+            });
+        } else if (current && current.options.length === 0 && col2Content) {
+            current.soal = current.soal ? `${current.soal}\n${col2Content}` : col2Content;
+        }
+    });
+
+    flushBlock();
+
+    if (blocks.length > 0) {
+        return blocks.join("\n\n");
+    }
+
     let textOut = "";
-    let nodes = element.querySelectorAll('p, li, h1, h2, h3, h4');
-    
+    let nodes = containerEl.querySelectorAll('p, li, h1, h2, h3, h4');
     nodes.forEach(node => {
         let text = node.innerText.trim();
         let imgEl = node.querySelector('img');
-        
         if(imgEl && imgEl.getAttribute('src')) {
             let linkDrive = imgEl.getAttribute('src');
             text += `<br><img src="${linkDrive}" class="img-soal">`;
         }
-        
         if(text.toLowerCase().startsWith("soal") || node.innerHTML.includes("SOAL")) {
             textOut += "\nSOAL\n" + text.replace(/SOAL[:\.]?/i, "").trim() + "\n";
         } else if(text.toLowerCase().startsWith("jawaban") || text === "0" || text === "1") {
@@ -3884,7 +3957,7 @@ function konversiHtmlKeFormatCbtDenganLink(element) {
             textOut += text + "\n";
         }
     });
-    return textOut;
+    return textOut.trim();
 }
 
 // ================= HELPER COCOK & HAPUS SOAL DI SOAL.JSON =================
@@ -4130,50 +4203,128 @@ async function simpanJadwalDanSoal() {
 }
 
 function parseSoalDariTeks(text, mapelName, kelasArray) {
-    let lines = text.split('\n');
-    let soalList = [];
-    let currentSoal = null;
-    let optionsMap = {};
-    let optionKeys = ['A', 'B', 'C', 'D', 'E'];
-    let optIdx = 0;
+    const lines = String(text || '').split(/\r?\n/);
+    const optionKeys = ['A', 'B', 'C', 'D', 'E'];
 
-    lines.forEach(line => {
-        let l = line.trim();
-        if(l.startsWith("SOAL")) {
-            if(currentSoal) {
-                currentSoal.options = optionsMap;
-                soalList.push(currentSoal);
-            }
-            currentSoal = {
+    const rawQuestions = [];
+    let current = null;
+    let mode = 'idle'; // 'idle' | 'soal' | 'jawaban'
+    let pendingOptionText = '';
+
+    const pushPendingOption = (bobotFlag = null) => {
+        if (!current) {
+            pendingOptionText = '';
+            return;
+        }
+        const cleanedOpt = (pendingOptionText || '').trim();
+        if (cleanedOpt.length > 0 && current.rawOptions.length < 5) {
+            current.rawOptions.push({
+                teks: cleanedOpt,
+                bobot: bobotFlag
+            });
+        }
+        pendingOptionText = '';
+    };
+
+    const finalizeQuestion = () => {
+        if (!current) return;
+        pushPendingOption(null);
+        if ((current.soal || '').trim().length > 0 && current.rawOptions.length > 0) {
+            const optionsMap = {};
+            let kunciHuruf = 'A';
+            let ditemukanKunci = false;
+
+            current.rawOptions.forEach((optObj, idx) => {
+                const label = optionKeys[idx];
+                if (!label) return;
+                optionsMap[label] = optObj.teks;
+                if (!ditemukanKunci && optObj.bobot === '1') {
+                    kunciHuruf = label;
+                    ditemukanKunci = true;
+                }
+            });
+
+            rawQuestions.push({
                 id: Math.floor(Date.now() + Math.random() * 100000),
                 mapel: mapelName,
                 kelas: [...new Set(kelasArray)],
-                soal: "",
-                options: {},
-                kunci: "K"
-            };
-            optionsMap = {};
-            optIdx = 0;
-        } else if(l.startsWith("JAWABAN")) {
-            // skip header JAWABAN
-        } else if(currentSoal && !currentSoal.soal) {
-            currentSoal.soal = l;
-        } else if(currentSoal) {
-            if(l === "0" || l === "1") {
-                if(l === "1" && optionKeys[optIdx - 1]) {
-                    currentSoal.kunci = encodeKunciGist(optionKeys[optIdx - 1]);
+                soal: current.soal.trim(),
+                options: optionsMap,
+                kunci: encodeKunciGist(kunciHuruf)
+            });
+        }
+        current = null;
+        mode = 'idle';
+    };
+
+    lines.forEach(rawLine => {
+        const l = rawLine.trim();
+        if (!l) return;
+
+        if (/^SOAL\b[:\.]?/i.test(l) && l.length <= 12) {
+            finalizeQuestion();
+            current = { soal: '', rawOptions: [] };
+            mode = 'soal';
+            const sisa = l.replace(/^SOAL\b[:\.]?/i, '').trim();
+            if (sisa) current.soal = sisa;
+            return;
+        }
+
+        if (/^JAWABAN\b[:\.]?/i.test(l) && l.length <= 15) {
+            if (!current) current = { soal: '', rawOptions: [] };
+            pushPendingOption(null);
+            mode = 'jawaban';
+            const sisa = l.replace(/^JAWABAN\b[:\.]?/i, '').trim();
+            if (sisa) {
+                const mInline = sisa.match(/^(.*?)\s*\|\|\|\s*([01])$/);
+                if (mInline) {
+                    pushPendingOption(mInline[2]);
+                    pendingOptionText = mInline[1];
+                    pushPendingOption(mInline[2]);
+                } else {
+                    pendingOptionText = sisa;
                 }
-            } else if(l.length > 0 && optIdx < 5) {
-                optionsMap[optionKeys[optIdx]] = l;
-                optIdx++;
             }
+            return;
+        }
+
+        if (!current) return;
+
+        if (mode === 'soal') {
+            current.soal = current.soal ? `${current.soal}\n${l}` : l;
+        } else if (mode === 'jawaban') {
+            const mInline = l.match(/^(.*?)\s*\|\|\|\s*([01])$/);
+            if (mInline) {
+                const teksBagian = mInline[1].trim();
+                const bobotBagian = mInline[2];
+                if (teksBagian) {
+                    pushPendingOption(null);
+                    pendingOptionText = teksBagian;
+                    pushPendingOption(bobotBagian);
+                } else if (pendingOptionText) {
+                    pushPendingOption(bobotBagian);
+                }
+                return;
+            }
+
+            if (l === '0' || l === '1') {
+                if (pendingOptionText) {
+                    pushPendingOption(l);
+                } else if (current.rawOptions.length > 0 && current.rawOptions[current.rawOptions.length - 1].bobot === null) {
+                    current.rawOptions[current.rawOptions.length - 1].bobot = l;
+                }
+                return;
+            }
+
+            if (pendingOptionText) {
+                pushPendingOption(null);
+            }
+            pendingOptionText = l.replace(/^[A-E][\.\)]\s*/i, '').trim();
         }
     });
-    if(currentSoal) {
-        currentSoal.options = optionsMap;
-        soalList.push(currentSoal);
-    }
-    return soalList;
+
+    finalizeQuestion();
+    return rawQuestions;
 }
 
 function getGroupedJadwalList() {
@@ -4848,7 +4999,6 @@ async function mulaiUjianPilihan() {
         return;
     }
 
-    // Paksa fullscreen langsung pada gestur klik pertama pengguna agar didukung semua browser mobile & desktop
     await masukFullscreenWajib();
 
     showLoading("Memverifikasi token ujian dari Google Drive...");
@@ -5516,7 +5666,7 @@ window.onload = async function() {
 
     setCompactMode(true);
     sinkronkanHeaderAdmin();
-}
+};
 </script>
 </body>
 </html>
