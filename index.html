@@ -1964,70 +1964,60 @@ function eksekusiCetakKartu() {
     window.print();
 }
 
-function normalisasiKeBarisPerMapel(rawItems) {
-    const arr = Array.isArray(rawItems) ? rawItems : [];
-    const mapelMap = new Map();
+function bersihkanHtmlDariBase64Sisa(htmlStr) {
+    if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
+    return htmlStr
+        .replace(/https:\/\/drive\.google\.com\/(?:uc\?(?:export=view&)?id=|file\/d\/)([a-zA-Z0-9_-]{15,})[^"'\s>]*/gi, (_, id) => `https://lh3.googleusercontent.com/d/${id}`);
+}
 
-    const getOrCreateGroup = (mapelName) => {
-        const key = String(mapelName || "Umum").trim() || "Umum";
-        if (!mapelMap.has(key)) {
-            mapelMap.set(key, {
-                mapel: key,
-                kelas: [],
-                soal: []
+function normalisasiKeBarisPerSoal(rawItems) {
+    const arr = Array.isArray(rawItems) ? rawItems : [];
+    const flatSoal = [];
+    const seenIds = new Set();
+
+    const pushSoalBersih = (item, fallbackMapel = "Umum", fallbackKelas = []) => {
+        if (!item || typeof item !== "object" || item.soal === undefined) return;
+        const cleanOptions = {};
+        if (item.options && typeof item.options === "object") {
+            Object.keys(item.options).forEach(k => {
+                cleanOptions[k] = bersihkanHtmlDariBase64Sisa(item.options[k]);
             });
         }
-        return mapelMap.get(key);
+        const soalObj = {
+            id: item.id || Math.floor(Date.now() + Math.random() * 100000),
+            mapel: String(item.mapel || fallbackMapel || "Umum").trim(),
+            kelas: Array.isArray(item.kelas) && item.kelas.length > 0
+                ? [...new Set(item.kelas.filter(Boolean))]
+                : [...new Set((fallbackKelas || []).filter(Boolean))],
+            soal: bersihkanHtmlDariBase64Sisa(item.soal),
+            options: cleanOptions,
+            kunci: item.kunci || "K"
+        };
+        const uniqueKey = `${soalObj.id}_${normStr(soalObj.mapel)}`;
+        if (!seenIds.has(uniqueKey)) {
+            seenIds.add(uniqueKey);
+            flatSoal.push(soalObj);
+        }
     };
 
     arr.forEach(entry => {
         if (!entry || typeof entry !== "object") return;
-
         if (Array.isArray(entry.soal)) {
-            const grp = getOrCreateGroup(entry.mapel);
-            if (Array.isArray(entry.kelas)) {
-                entry.kelas.forEach(k => {
-                    if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
-                });
-            }
-            entry.soal.forEach(s => {
-                if (!s || typeof s !== "object") return;
-                const soalObj = {
-                    ...s,
-                    mapel: s.mapel || grp.mapel,
-                    kelas: Array.isArray(s.kelas) && s.kelas.length > 0 ? s.kelas : [...grp.kelas]
-                };
-                if (!grp.soal.some(existing => existing.id && soalObj.id && existing.id === soalObj.id)) {
-                    grp.soal.push(soalObj);
-                }
-            });
-            return;
-        }
-
-        const grp = getOrCreateGroup(entry.mapel);
-        if (Array.isArray(entry.kelas)) {
-            entry.kelas.forEach(k => {
-                if (k && !grp.kelas.includes(k)) grp.kelas.push(k);
-            });
-        }
-        if (entry.soal !== undefined) {
-            if (!grp.soal.some(existing => existing.id && entry.id && existing.id === entry.id)) {
-                grp.soal.push({
-                    ...entry,
-                    mapel: grp.mapel,
-                    kelas: Array.isArray(entry.kelas) ? [...entry.kelas] : [...grp.kelas]
-                });
-            }
+            const grpMapel = String(entry.mapel || "Umum").trim() || "Umum";
+            const grpKelas = Array.isArray(entry.kelas) ? entry.kelas : [];
+            entry.soal.forEach(s => pushSoalBersih(s, grpMapel, grpKelas));
+        } else {
+            pushSoalBersih(entry, entry.mapel, entry.kelas);
         }
     });
 
-    return Array.from(mapelMap.values());
+    return flatSoal;
 }
 
-function serializeSoalJsonOneMapelPerLine(soalArrayOrMapelRows) {
-    const mapelRows = normalisasiKeBarisPerMapel(soalArrayOrMapelRows);
-    if (mapelRows.length === 0) return "[]";
-    const lines = mapelRows.map(row => `  ${JSON.stringify(row)}`);
+function serializeSoalJsonOneSoalPerLine(soalArrayOrMixedRows) {
+    const soalRows = normalisasiKeBarisPerSoal(soalArrayOrMixedRows);
+    if (soalRows.length === 0) return "[]";
+    const lines = soalRows.map(row => `  ${JSON.stringify(row)}`);
     return `[\n${lines.join(",\n")}\n]`;
 }
 
@@ -2061,18 +2051,7 @@ function parseSoalJsonFlexible(rawContent) {
         }
     }
 
-    const mapelRows = normalisasiKeBarisPerMapel(rawItems);
-    const flatSoal = [];
-    mapelRows.forEach(row => {
-        row.soal.forEach(item => {
-            flatSoal.push({
-                ...item,
-                mapel: item.mapel || row.mapel,
-                kelas: Array.isArray(item.kelas) && item.kelas.length > 0 ? item.kelas : [...row.kelas]
-            });
-        });
-    });
-    return flatSoal;
+    return normalisasiKeBarisPerSoal(rawItems);
 }
 
 const MAP_OPT_TO_CIPHER = { 'A': 'K', 'B': 'L', 'C': 'M', 'D': 'N', 'E': 'O' };
@@ -4142,8 +4121,9 @@ function renderTabelDaftarSiswa() {
     }
 }
 
-const MAX_GAMBAR_SOAL_BYTES = 50 * 1024;
-const MAX_GAMBAR_SOAL_DIM = 1280;
+const MAX_GAMBAR_SOAL_BYTES = 45 * 1024; // Target per gambar <= 45 KB
+const MAX_TOTAL_GAMBAR_PERSOAL_BYTES = 850 * 1024; // Batas ketat total seluruh gambar dalam 1 soal < 900 KB
+const MAX_GAMBAR_SOAL_DIM = 1024;
 
 function estimasiUkuranBase64Bytes(dataUrl) {
     if (!dataUrl || typeof dataUrl !== "string") return 0;
@@ -4179,7 +4159,7 @@ function renderCanvasToDataUrl(img, width, height, mimeType, quality, fillWhiteB
     return canvas.toDataURL(mimeType, quality);
 }
 
-async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR_SOAL_BYTES) {
+async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR_SOAL_BYTES, maxDimLimit = MAX_GAMBAR_SOAL_DIM) {
     try {
         const ukuranAwal = estimasiUkuranBase64Bytes(base64DataUrl);
         if (ukuranAwal > 0 && ukuranAwal <= maxBytes) {
@@ -4191,17 +4171,17 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
         let height = img.naturalHeight || img.height || 600;
 
         const maxDimAwal = Math.max(width, height);
-        if (maxDimAwal > MAX_GAMBAR_SOAL_DIM) {
-            const scale = MAX_GAMBAR_SOAL_DIM / maxDimAwal;
-            width = Math.round(width * scale);
-            height = Math.round(height * scale);
+        if (maxDimAwal > maxDimLimit) {
+            const scale = maxDimLimit / maxDimAwal;
+            width = Math.max(120, Math.round(width * scale));
+            height = Math.max(90, Math.round(height * scale));
         }
 
         let bestDataUrl = null;
         let bestSize = Infinity;
 
-        const qualities = [0.85, 0.78, 0.72, 0.65, 0.58, 0.50];
-        for (let step = 0; step < 5; step++) {
+        const qualities = [0.80, 0.72, 0.64, 0.56, 0.48, 0.40];
+        for (let step = 0; step < 6; step++) {
             for (const q of qualities) {
                 const candidateWebp = renderCanvasToDataUrl(img, width, height, "image/webp", q, true);
                 const sizeWebp = estimasiUkuranBase64Bytes(candidateWebp);
@@ -4214,7 +4194,7 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
                 }
             }
 
-            for (const q of [0.82, 0.74, 0.66, 0.58, 0.50]) {
+            for (const q of [0.76, 0.68, 0.60, 0.50, 0.42]) {
                 const candidateJpeg = renderCanvasToDataUrl(img, width, height, "image/jpeg", q, true);
                 const sizeJpeg = estimasiUkuranBase64Bytes(candidateJpeg);
                 if (sizeJpeg < bestSize) {
@@ -4226,13 +4206,15 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
                 }
             }
 
-            width = Math.max(320, Math.round(width * 0.82));
-            height = Math.max(240, Math.round(height * 0.82));
+            width = Math.max(180, Math.round(width * 0.78));
+            height = Math.max(135, Math.round(height * 0.78));
         }
 
-        let qFallback = 0.45;
-        while (bestSize > maxBytes && (qFallback >= 0.25 || width > 320)) {
-            const candidate = renderCanvasToDataUrl(img, width, height, "image/jpeg", Math.max(0.25, qFallback), true);
+        let qFallback = 0.38;
+        let guardLoop = 0;
+        while (bestSize > maxBytes && guardLoop < 20 && (qFallback >= 0.18 || width > 140)) {
+            guardLoop++;
+            const candidate = renderCanvasToDataUrl(img, width, height, "image/jpeg", Math.max(0.18, qFallback), true);
             const sz = estimasiUkuranBase64Bytes(candidate);
             if (sz < bestSize) {
                 bestSize = sz;
@@ -4240,11 +4222,11 @@ async function kompresGambarSoalKeBawah50KB(base64DataUrl, maxBytes = MAX_GAMBAR
             }
             if (sz <= maxBytes) break;
 
-            if (qFallback > 0.25) {
+            if (qFallback > 0.18) {
                 qFallback = Number((qFallback - 0.05).toFixed(2));
             } else {
-                width = Math.max(260, Math.round(width * 0.85));
-                height = Math.max(180, Math.round(height * 0.85));
+                width = Math.max(140, Math.round(width * 0.82));
+                height = Math.max(105, Math.round(height * 0.82));
             }
         }
 
@@ -4338,7 +4320,7 @@ async function eksekusiHapusSoalDiGist(mapel, kelasList) {
     const contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
 
     const resultHapus = hapusKelasDariSoalList(contentSoal, mapel, kelasList);
-    const serialized = serializeSoalJsonOneMapelPerLine(resultHapus.updated);
+    const serialized = serializeSoalJsonOneSoalPerLine(resultHapus.updated);
 
     await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
         files: { [filename]: { content: serialized } }
@@ -4382,7 +4364,7 @@ async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMape
     });
 
     if (berubah) {
-        const serialized = serializeSoalJsonOneMapelPerLine(contentSoal);
+        const serialized = serializeSoalJsonOneSoalPerLine(contentSoal);
         await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
             files: { [filename]: { content: serialized } }
         }, githubHeaders);
@@ -5451,8 +5433,8 @@ function renderSatuSoalAktif() {
     });
 
     container.innerHTML = `<div class="soal-box">
-        <p>${currentSoalIndex + 1}. ${item.soal}</p>
-        ${optionsHtml}
+        <p>${currentSoalIndex + 1}. ${bersihkanHtmlDariBase64Sisa(item.soal)}</p>
+        ${bersihkanHtmlDariBase64Sisa(optionsHtml)}
     </div>`;
 
     document.getElementById('labelNomorSoal').innerText = `Soal ${currentSoalIndex + 1} dari ${total}`;
@@ -6109,72 +6091,181 @@ function bacaFileSoalOtomatis(event) {
     }
 }
 
-async function uploadGambarBase64KeDrive(base64DataUrl, mapel, kelas, indexSoal, indexImg) {
+function perpendekUrlDrive(rawUrl, fileIdFallback = "") {
+    let fileId = String(fileIdFallback || "").trim();
+    const urlStr = String(rawUrl || "").trim();
+    if (!fileId && urlStr) {
+        const m1 = urlStr.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+        const m2 = urlStr.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+        const m3 = urlStr.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]{15,})/);
+        fileId = (m1 && m1[1]) || (m2 && m2[1]) || (m3 && m3[1]) || "";
+    }
+    if (fileId) {
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+    return urlStr;
+}
+
+const uploadedImageUrlCache = new Map();
+
+async function uploadGambarTerkompresiKeDrive(finalDataUrl, indexSoal, indexImg) {
     try {
-        const compressed = await kompresGambarSoalKeBawah50KB(base64DataUrl, MAX_GAMBAR_SOAL_BYTES);
-        const finalDataUrl = compressed.dataUrl || base64DataUrl;
+        const hashKey = CryptoJS.MD5(finalDataUrl).toString();
+        if (uploadedImageUrlCache.has(hashKey)) {
+            return uploadedImageUrlCache.get(hashKey);
+        }
 
         const match = finalDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-        if (!match) return base64DataUrl;
+        if (!match) return finalDataUrl;
 
         const mimeType = match[1];
         const base64Clean = match[2];
-        const ext = mimeType.split("/")[1] || "jpg";
-        const fileName = `soal_${String(mapel || "mapel").replace(/[^a-zA-Z0-9_-]/g, "_")}_${String(kelas || "kelas").replace(/[^a-zA-Z0-9_-]/g, "_")}_q${indexSoal}_img${indexImg}_${Date.now()}.${ext}`;
+        const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg");
+        const fileName = `q${indexSoal}_i${indexImg}_${Date.now().toString(36)}.${ext}`;
 
-        const res = await axios.post(GAS_URL, JSON.stringify({
-            action: "uploadImage",
-            fileName: fileName,
-            mimeType: mimeType,
-            base64Data: base64Clean
-        }));
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                if (attempt > 1) {
+                    await new Promise(r => setTimeout(r, 900 + Math.floor(Math.random() * 600)));
+                }
+                const res = await axios.post(GAS_URL, JSON.stringify({
+                    action: "uploadImage",
+                    fileName: fileName,
+                    mimeType: mimeType,
+                    base64Data: base64Clean
+                }), { timeout: 18000 });
 
-        if (res.data && res.data.status === "success" && res.data.url) {
-            return res.data.url;
+                if (res.data && res.data.status === "success" && (res.data.url || res.data.fileId)) {
+                    const shortUrl = perpendekUrlDrive(res.data.url, res.data.fileId);
+                    uploadedImageUrlCache.set(hashKey, shortUrl);
+                    return shortUrl;
+                }
+            } catch (reqErr) {
+                if (attempt === 2) console.warn("Upload Drive gagal, gunakan gambar terkompresi lokal:", reqErr.message);
+            }
         }
     } catch (err) {
-        console.error("Gagal upload gambar ke Google Drive:", err);
+        console.warn("Fallback ke gambar base64 terkompresi:", err);
     }
-    return base64DataUrl;
+    return finalDataUrl;
 }
 
-async function prosesGambarDalamSoalItem(soalItem, mapel, kelasFirst, indexSoal) {
-    let imgCounter = 0;
+async function kompresKetatSemuaGambarDalamSatuSoal(soalItem, indexSoal) {
+    const regex = /<img([^>]*?)src=["'](data:image\/[^"']+)["']([^>]*?)>/gi;
+    const refs = [];
 
-    async function replaceDataUrlsInHtml(htmlStr) {
-        if (!htmlStr || typeof htmlStr !== "string") return htmlStr;
-        const regex = /<img([^>]*?)src=["'](data:image\/[^"']+)["']([^>]*?)>/gi;
-        const matches = [];
+    const scanField = (htmlStr, setterFn) => {
+        if (!htmlStr || typeof htmlStr !== "string") return;
+        regex.lastIndex = 0;
         let m;
+        const matches = [];
         while ((m = regex.exec(htmlStr)) !== null) {
             matches.push({
                 fullMatch: m[0],
                 beforeSrc: m[1] || "",
                 dataUrl: m[2],
-                afterSrc: m[3] || ""
+                afterSrc: m[3] || "",
+                compressedDataUrl: m[2],
+                sizeBytes: estimasiUkuranBase64Bytes(m[2])
             });
         }
-        if (matches.length === 0) return htmlStr;
-
-        let result = htmlStr;
-        for (const item of matches) {
-            imgCounter++;
-            const driveUrl = await uploadGambarBase64KeDrive(item.dataUrl, mapel, kelasFirst, indexSoal, imgCounter);
-            const cleanedBefore = item.beforeSrc.replace(/\s*class=["'][^"']*["']/gi, "");
-            const cleanedAfter = item.afterSrc.replace(/\s*class=["'][^"']*["']/gi, "");
-            const newTag = `<img class="img-soal"${cleanedBefore} src="${driveUrl}"${cleanedAfter} referrerpolicy="no-referrer">`;
-            result = result.replace(item.fullMatch, newTag);
+        if (matches.length > 0) {
+            refs.push({ htmlStr, setterFn, matches });
         }
-        return result;
-    }
+    };
 
-    soalItem.soal = await replaceDataUrlsInHtml(soalItem.soal);
+    scanField(soalItem.soal, (val) => { soalItem.soal = val; });
     if (soalItem.options && typeof soalItem.options === "object") {
-        for (const optKey of Object.keys(soalItem.options)) {
-            soalItem.options[optKey] = await replaceDataUrlsInHtml(soalItem.options[optKey]);
+        Object.keys(soalItem.options).forEach(optKey => {
+            scanField(soalItem.options[optKey], (val) => { soalItem.options[optKey] = val; });
+        });
+    }
+
+    const allMatches = refs.flatMap(r => r.matches);
+    if (allMatches.length === 0) return { soalItem, gambarRefs: [] };
+
+    const perImgBudget = Math.max(
+        14 * 1024,
+        Math.min(MAX_GAMBAR_SOAL_BYTES, Math.floor(MAX_TOTAL_GAMBAR_PERSOAL_BYTES / allMatches.length))
+    );
+    const dimLimit = allMatches.length >= 6 ? 680 : (allMatches.length >= 3 ? 820 : MAX_GAMBAR_SOAL_DIM);
+
+    let totalBytes = 0;
+    for (const item of allMatches) {
+        const resComp = await kompresGambarSoalKeBawah50KB(item.dataUrl, perImgBudget, dimLimit);
+        item.compressedDataUrl = resComp.dataUrl;
+        item.sizeBytes = resComp.sizeBytes;
+        totalBytes += resComp.sizeBytes;
+    }
+
+    let pass = 1;
+    while (totalBytes >= MAX_TOTAL_GAMBAR_PERSOAL_BYTES && pass <= 3) {
+        pass++;
+        const tighterBudget = Math.max(10 * 1024, Math.floor((MAX_TOTAL_GAMBAR_PERSOAL_BYTES * 0.72) / allMatches.length));
+        const tighterDim = Math.max(360, Math.round(dimLimit * 0.72));
+        totalBytes = 0;
+        for (const item of allMatches) {
+            const reComp = await kompresGambarSoalKeBawah50KB(item.compressedDataUrl, tighterBudget, tighterDim);
+            item.compressedDataUrl = reComp.dataUrl;
+            item.sizeBytes = reComp.sizeBytes;
+            totalBytes += reComp.sizeBytes;
         }
     }
-    return soalItem;
+
+    return { soalItem, gambarRefs: refs, indexSoal };
+}
+
+async function prosesGambarDalamSemuaSoal(soalArray, mapel, kelasFirst) {
+    const paketPerSoal = [];
+    for (let i = 0; i < soalArray.length; i++) {
+        showLoading(`Mengompres gambar soal (${i + 1}/${soalArray.length}) agar < 900 KB/soal...`);
+        const hasilKompres = await kompresKetatSemuaGambarDalamSatuSoal(soalArray[i], i + 1);
+        if (hasilKompres.gambarRefs && hasilKompres.gambarRefs.length > 0) {
+            paketPerSoal.push(hasilKompres);
+        }
+    }
+
+    if (paketPerSoal.length === 0) return soalArray;
+
+    const totalGambar = paketPerSoal.reduce(
+        (acc, p) => acc + p.gambarRefs.reduce((s, r) => s + r.matches.length, 0),
+        0
+    );
+    let selesaiGambar = 0;
+
+    const CONCURRENCY = 2;
+    let cursor = 0;
+
+    async function worker() {
+        while (cursor < paketPerSoal.length) {
+            const pIdx = cursor++;
+            const paket = paketPerSoal[pIdx];
+            let imgCounter = 0;
+
+            for (const ref of paket.gambarRefs) {
+                let updatedHtml = ref.htmlStr;
+                for (const item of ref.matches) {
+                    imgCounter++;
+                    const finalUrlOrDataUrl = await uploadGambarTerkompresiKeDrive(
+                        item.compressedDataUrl,
+                        paket.indexSoal,
+                        imgCounter
+                    );
+                    selesaiGambar++;
+                    showLoading(`Mengunggah gambar ke Drive (${selesaiGambar}/${totalGambar})...`);
+                    const cleanedBefore = item.beforeSrc.replace(/\s*class=["'][^"']*["']/gi, "");
+                    const cleanedAfter = item.afterSrc.replace(/\s*class=["'][^"']*["']/gi, "");
+                    const newTag = `<img class="img-soal"${cleanedBefore} src="${finalUrlOrDataUrl}"${cleanedAfter} referrerpolicy="no-referrer">`;
+                    updatedHtml = updatedHtml.replace(item.fullMatch, newTag);
+                }
+                ref.setterFn(updatedHtml);
+            }
+        }
+    }
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, paketPerSoal.length) }, () => worker());
+    await Promise.all(workers);
+    return soalArray;
 }
 
 function mulaiEditJadwal(indicesJson, mapelEnc, kelasJson) {
@@ -6268,10 +6359,8 @@ async function simpanJadwalDanSoal() {
     showLoading(isEditing ? "Memperbarui jadwal ujian..." : "Mengompres & mengunggah gambar soal ke Google Drive...");
 
     if (soalBaru.length > 0) {
-        for (let i = 0; i < soalBaru.length; i++) {
-            showLoading(`Memproses & mengunggah gambar soal ke Drive (${i + 1}/${soalBaru.length})...`);
-            soalBaru[i] = await prosesGambarDalamSoalItem(soalBaru[i], mapel, kelasTerpilih[0], i + 1);
-        }
+        showLoading("Mengompres & mengunggah gambar soal ke Drive...");
+        soalBaru = await prosesGambarDalamSemuaSoal(soalBaru, mapel, kelasTerpilih[0]);
     }
 
     showLoading("Menyimpan jadwal ke Gist...");
@@ -6313,7 +6402,7 @@ async function simpanJadwalDanSoal() {
 
                 const cleaned = hapusKelasDariSoalList(contentSoal, editOrigMapel || mapel, origKelasList.length > 0 ? origKelasList : kelasTerpilih);
                 const combinedSoal = [...cleaned.updated, ...soalBaru];
-                const serialized = serializeSoalJsonOneMapelPerLine(combinedSoal);
+                const serialized = serializeSoalJsonOneSoalPerLine(combinedSoal);
 
                 await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
                     files: { [filename]: { content: serialized } }
@@ -6369,7 +6458,7 @@ async function simpanJadwalDanSoal() {
 
         const cleaned = hapusKelasDariSoalList(contentSoal, mapel, kelasTerpilih);
         const combinedSoal = [...cleaned.updated, ...soalBaru];
-        const serialized = serializeSoalJsonOneMapelPerLine(combinedSoal);
+        const serialized = serializeSoalJsonOneSoalPerLine(combinedSoal);
 
         await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
             files: { [filename]: { content: serialized } }
@@ -6419,6 +6508,22 @@ function renderTabelJadwal() {
         const grp = groupMap.get(key);
         if (!grp.kelasList.includes(j.kelas)) grp.kelasList.push(j.kelas);
         grp.indices.push(idx);
+    });
+
+    groups.sort((a, b) => {
+        const startA = parseJadwalDateTimeMs(a.mulai);
+        const startB = parseJadwalDateTimeMs(b.mulai);
+        if (!isNaN(startB) && !isNaN(startA) && startB !== startA) {
+            return startB - startA;
+        }
+        const endA = parseJadwalDateTimeMs(a.selesai);
+        const endB = parseJadwalDateTimeMs(b.selesai);
+        if (!isNaN(endB) && !isNaN(endA) && endB !== endA) {
+            return endB - endA;
+        }
+        const maxIdxA = Math.max(...(a.indices || [0]));
+        const maxIdxB = Math.max(...(b.indices || [0]));
+        return maxIdxB - maxIdxA;
     });
 
     groups.forEach(grp => {
