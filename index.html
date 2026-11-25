@@ -330,6 +330,37 @@
             white-space: nowrap;
         }
 
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+            padding: 4px 6px;
+            background: #f1f5f5;
+            border: 1px solid #dce4e4;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .pagination-btns {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pagination-btns button {
+            width: auto;
+            padding: 2px 8px;
+            font-size: 10.5px;
+            background: #008080;
+            color: #fff;
+            border-radius: 3px;
+        }
+        .pagination-btns button:disabled {
+            background: #b0bec5;
+            cursor: not-allowed;
+        }
+
         /* TABEL PADAT & RAPAT DI SELURUH BAGIAN DASHBOARD ADMIN */
         .compact-admin-table th,
         .compact-admin-table td {
@@ -1319,7 +1350,7 @@
                             <option value="sedang_ujian">Sedang Ujian</option>
                             <option value="selesai">Selesai</option>
                         </select>
-                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 155px; padding: 2.5px 6px; font-size: 10.5px;">
+                        <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="debouncedCariSesi()" style="width: 155px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #008080;">Cari</button>
                         <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 2.5px 6px; font-size: 10px; background: #6c757d;">Reset</button>
                         <button type="button" onclick="fetchSesiFromGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #17a2b8;">Refresh Sesi</button>
@@ -1343,6 +1374,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginationSesiBar" class="pagination-bar" style="display:none;"></div>
             </div>
         </div>
 
@@ -1355,7 +1387,7 @@
                         <select id="filterMapelLog" onchange="renderTabelSiswaLogin()" style="width: auto; min-width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
                             <option value="__AKTIF__">Mapel Aktif (Jadwal Sekarang)</option>
                         </select>
-                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
+                        <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="debouncedCariLog()" style="width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #17a2b8;">Refresh Log</button>
                         <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #dc3545;">🗑️ Hapus Semua Log</button>
                     </div>
@@ -1377,6 +1409,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginationLogBar" class="pagination-bar" style="display:none;"></div>
             </div>
         </div>
 
@@ -1543,7 +1576,7 @@
                         <select id="filterKelasKartu" onchange="renderTabelDaftarSiswa()" style="width: auto; padding: 2.5px 6px; font-size: 10.5px;">
                             <option value="">Semua Kelas</option>
                         </select>
-                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="renderTabelDaftarSiswa()" style="width: 155px; padding: 2.5px 6px; font-size: 10.5px;">
+                        <input type="text" id="inputCariNamaSiswa" placeholder="Cari berdasarkan Nama..." oninput="debouncedCariSiswa()" style="width: 155px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="renderTabelDaftarSiswa()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #008080;">Cari</button>
                         <button type="button" onclick="resetCariNamaSiswa()" style="width: auto; padding: 2.5px 6px; font-size: 10px; background: #6c757d;">Reset</button>
                         <button type="button" onclick="bukaModalCetakKartu()" style="width: auto; padding: 2.5px 8px; font-size: 10px; background: #28a745;">🖨️ Cetak Kartu (3 cm)</button>
@@ -1566,6 +1599,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginationSiswaBar" class="pagination-bar" style="display:none;"></div>
             </div>
         </div>
 
@@ -2115,16 +2149,89 @@ let databaseSiswa = [];
 let studentFastMap = new Map(); // Indeks Hash Map O(1) untuk 1000+ siswa
 let isPreFetchingDb = false;
 
+let siswaSearchIndex = [];
+let pageSiswaAktif = 1;
+const PAGE_SIZE_SISWA = 50;
+let pageSesiAktif = 1;
+const PAGE_SIZE_SESI = 50;
+let pageLogAktif = 1;
+const PAGE_SIZE_LOG = 50;
+
+let timerCariSiswa = null;
+let timerCariSesi = null;
+let timerCariLog = null;
+
+function debouncedCariSiswa() {
+    clearTimeout(timerCariSiswa);
+    timerCariSiswa = setTimeout(() => {
+        pageSiswaAktif = 1;
+        renderTabelDaftarSiswa();
+    }, 100);
+}
+
+function debouncedCariSesi() {
+    clearTimeout(timerCariSesi);
+    timerCariSesi = setTimeout(() => {
+        pageSesiAktif = 1;
+        renderTabelSesiAktif();
+    }, 100);
+}
+
+function debouncedCariLog() {
+    clearTimeout(timerCariLog);
+    timerCariLog = setTimeout(() => {
+        pageLogAktif = 1;
+        renderTabelSiswaLogin();
+    }, 100);
+}
+
 function rebuildStudentFastMap() {
     studentFastMap.clear();
+    siswaSearchIndex = [];
     if (!Array.isArray(databaseSiswa)) return;
     for (let i = 0; i < databaseSiswa.length; i++) {
         const s = databaseSiswa[i];
-        if (s && s.username !== undefined && s.username !== null) {
-            const key = String(s.username).trim().toLowerCase();
-            if (key) studentFastMap.set(key, s);
+        if (!s) continue;
+        const uname = s.username !== undefined && s.username !== null ? String(s.username).trim() : "";
+        const nama = s.nama !== undefined && s.nama !== null ? String(s.nama) : "";
+        const kelas = s.kelas !== undefined && s.kelas !== null ? String(s.kelas).trim() : "";
+        if (uname) {
+            studentFastMap.set(uname.toLowerCase(), s);
         }
+        siswaSearchIndex.push({
+            idx: i,
+            s: s,
+            namaLow: nama.toLowerCase(),
+            kelasLow: kelas.toLowerCase(),
+            unameLow: uname.toLowerCase()
+        });
     }
+}
+
+function renderPaginationControls(barId, totalItems, currentPage, pageSize, onPageChangeFnName) {
+    const bar = document.getElementById(barId);
+    if (!bar) return;
+    if (totalItems <= pageSize) {
+        bar.style.display = "none";
+        bar.innerHTML = "";
+        return;
+    }
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const safePage = Math.min(Math.max(1, currentPage), totalPages);
+    const startIdx = (safePage - 1) * pageSize + 1;
+    const endIdx = Math.min(totalItems, safePage * pageSize);
+
+    bar.style.display = "flex";
+    bar.innerHTML = `
+        <span>Menampilkan <b>${startIdx}–${endIdx}</b> dari <b>${totalItems}</b> data</span>
+        <div class="pagination-btns">
+            <button type="button" ${safePage <= 1 ? "disabled" : ""} onclick="${onPageChangeFnName}(1)">« Awal</button>
+            <button type="button" ${safePage <= 1 ? "disabled" : ""} onclick="${onPageChangeFnName}(${safePage - 1})">‹ Prev</button>
+            <span style="padding:0 4px;">Hal <b>${safePage}</b> / ${totalPages}</span>
+            <button type="button" ${safePage >= totalPages ? "disabled" : ""} onclick="${onPageChangeFnName}(${safePage + 1})">Next ›</button>
+            <button type="button" ${safePage >= totalPages ? "disabled" : ""} onclick="${onPageChangeFnName}(${totalPages})">Akhir »</button>
+        </div>
+    `;
 }
 let daftarJadwalUjian = []; 
 let sesiLoginSiswa = {};
@@ -3130,14 +3237,56 @@ function normalisasiSesiDariGAS(rawData) {
     return map;
 }
 
-async function fetchSesiFromGAS(silent = false) {
+const SESI_ADMIN_CACHE_KEY = "smantas_cbt_admin_sesi_cache_v1";
+const LOG_ADMIN_CACHE_KEY = "smantas_cbt_admin_log_cache_v1";
+
+function simpanCacheAdminSesi(obj) {
+    try { localStorage.setItem(SESI_ADMIN_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data: obj })); } catch (e) {}
+}
+function bacaCacheAdminSesi() {
     try {
-        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getSesi" }));
+        const raw = localStorage.getItem(SESI_ADMIN_CACHE_KEY);
+        if (!raw) return null;
+        const p = JSON.parse(raw);
+        if (p && p.data && (Date.now() - p.savedAt < 5 * 60 * 1000)) return p.data;
+    } catch (e) {}
+    return null;
+}
+
+function simpanCacheAdminLog(arr) {
+    try { localStorage.setItem(LOG_ADMIN_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data: arr })); } catch (e) {}
+}
+function bacaCacheAdminLog() {
+    try {
+        const raw = localStorage.getItem(LOG_ADMIN_CACHE_KEY);
+        if (!raw) return null;
+        const p = JSON.parse(raw);
+        if (p && Array.isArray(p.data) && (Date.now() - p.savedAt < 5 * 60 * 1000)) return p.data;
+    } catch (e) {}
+    return null;
+}
+
+let isFetchingSesiGas = false;
+async function fetchSesiFromGAS(silent = false) {
+    if (Object.keys(sesiLoginSiswa).length === 0) {
+        const cached = bacaCacheAdminSesi();
+        if (cached && Object.keys(cached).length > 0) {
+            sesiLoginSiswa = cached;
+            renderTabelSesiAktif();
+        }
+    }
+    if (isFetchingSesiGas) return sesiLoginSiswa;
+    isFetchingSesiGas = true;
+    try {
+        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getSesi" }), { timeout: 15000 });
         if (res.data && res.data.status === "success") {
             sesiLoginSiswa = normalisasiSesiDariGAS(res.data.data);
+            simpanCacheAdminSesi(sesiLoginSiswa);
         }
     } catch (e) {
         if (!silent) console.error("Gagal mengambil data sesi dari GAS:", e);
+    } finally {
+        isFetchingSesiGas = false;
     }
     renderTabelSesiAktif();
     return sesiLoginSiswa;
@@ -3390,21 +3539,36 @@ function isBarisLogValid(row) {
     return true;
 }
 
+let isFetchingLogGas = false;
 async function fetchLogLoginFromGAS() {
+    if (logSiswaLogin.length === 0) {
+        const cached = bacaCacheAdminLog();
+        if (cached && cached.length > 0) {
+            logSiswaLogin = cached.filter(isBarisLogValid);
+            renderTabelSiswaLogin();
+        }
+    }
+    if (isFetchingLogGas) return;
+    isFetchingLogGas = true;
     try {
         let res = await axios.post(GAS_URL, JSON.stringify({
             action: "getLogLogin",
             sheetName: "DB_Log_login_CBT"
-        }));
+        }), { timeout: 15000 });
         if(res.data && res.data.status === "success") {
             const rawArr = Array.isArray(res.data.data) ? res.data.data : [];
             logSiswaLogin = rawArr.filter(isBarisLogValid);
+            simpanCacheAdminLog(logSiswaLogin);
         }
     } catch(e) {
         console.error("Gagal mengambil log login dari GAS (DB_Log_login_CBT):", e);
+    } finally {
+        isFetchingLogGas = false;
     }
     renderTabelSiswaLogin();
-    renderTabelSesiAktif();
+    if (document.getElementById('adminTabMonitoring')?.classList.contains('active')) {
+        renderTabelSesiAktif();
+    }
 }
 
 function isWaitLockError(errMsg) {
@@ -3620,56 +3784,132 @@ function buatTombolResetAksiHtml(username, sesiObj) {
     return `<div class="reset-aksi-group">${btns.join("")}</div>`;
 }
 
+function gantiHalamanSesi(newPage) {
+    pageSesiAktif = newPage;
+    renderTabelSesiAktif();
+}
+
+function buildActiveJadwalCacheMap() {
+    const nowMs = Date.now();
+    const activeByKelas = new Map();
+    const activeAllSet = new Set();
+    (daftarJadwalUjian || []).forEach(j => {
+        if (!j || !j.mapel) return;
+        const startMs = parseJadwalDateTimeMs(j.mulai);
+        const endMs = parseJadwalDateTimeMs(j.selesai);
+        if (isNaN(startMs) || isNaN(endMs) || nowMs < startMs || nowMs > endMs) return;
+        const mNorm = normStr(j.mapel);
+        const kNorm = normStr(j.kelas);
+        activeAllSet.add(mNorm);
+        if (kNorm) {
+            if (!activeByKelas.has(kNorm)) activeByKelas.set(kNorm, new Map());
+            activeByKelas.get(kNorm).set(mNorm, String(j.mapel).trim());
+        }
+    });
+    return { activeByKelas, activeAllSet };
+}
+
+function kumpulkanMapelAktifSiswaFast(username, sesiObj, jadwalCache) {
+    const mapelSet = new Map();
+    const kNorm = normStr(sesiObj && sesiObj.kelas ? sesiObj.kelas : "");
+    const kelasMap = kNorm ? jadwalCache.activeByKelas.get(kNorm) : null;
+
+    const addIfActive = (m) => {
+        const clean = String(m || "").trim();
+        if (!clean || clean === "-") return;
+        const key = normStr(clean);
+        if (mapelSet.has(key)) return;
+        if (kelasMap ? kelasMap.has(key) : jadwalCache.activeAllSet.has(key)) {
+            mapelSet.set(key, clean);
+        }
+    };
+
+    if (sesiObj && sesiObj.mapel) addIfActive(sesiObj.mapel);
+
+    const lockedArr = bacaLockedMapelLokal(username);
+    for (let i = 0; i < lockedArr.length; i++) {
+        const mNorm = lockedArr[i];
+        const label = (kelasMap && kelasMap.get(mNorm)) || mNorm;
+        addIfActive(label);
+    }
+
+    if (mapelSet.size === 0 && kelasMap) {
+        kelasMap.forEach((label, key) => mapelSet.set(key, label));
+    }
+    return Array.from(mapelSet.values());
+}
+
 function renderTabelSesiAktif() {
     const tbody = document.getElementById('tbodySesiAktif');
     if(!tbody) return;
-    tbody.innerHTML = "";
 
     const keys = Object.keys(sesiLoginSiswa);
     if(keys.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
+        renderPaginationControls('paginationSesiBar', 0, 1, PAGE_SIZE_SESI, 'gantiHalamanSesi');
         return;
     }
 
     const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
     const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
-    let tampilCount = 0;
 
-    const sortedKeys = [...keys].sort((a, b) => {
-        const sa = sesiLoginSiswa[a];
-        const sb = sesiLoginSiswa[b];
-        const tsA = getSesiUpdatedAtMs(sa, (sa?._rowOrder ?? 0) + 1);
-        const tsB = getSesiUpdatedAtMs(sb, (sb?._rowOrder ?? 0) + 1);
-        return tsB - tsA;
-    });
-
-    sortedKeys.forEach(username => {
+    const filteredItems = [];
+    for (let i = 0; i < keys.length; i++) {
+        const username = keys[i];
         const s = sesiLoginSiswa[username];
-        if(!s) return;
-        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
-            return;
-        }
-        if (statusFilter && !cekCocokFilterStatusSesi(s.status || 'Login Aktif', statusFilter)) {
-            return;
-        }
-        tampilCount++;
-        let statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
-        const aksiHtml = buatTombolResetAksiHtml(username, s);
+        if (!s) continue;
+        if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) continue;
+        if (statusFilter && !cekCocokFilterStatusSesi(s.status || 'Login Aktif', statusFilter)) continue;
+        filteredItems.push({
+            username,
+            s,
+            ts: getSesiUpdatedAtMs(s, (s._rowOrder ?? 0) + 1)
+        });
+    }
 
-        tbody.innerHTML += `<tr>
+    if (filteredItems.length === 0) {
+        const infoFilter = [keyword ? `nama "${keyword}"` : "", statusFilter ? `status terpilih` : ""].filter(Boolean).join(" dan ");
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan ${infoFilter || "kriteria tersebut"} tidak ditemukan pada sesi aktif.</td></tr>`;
+        renderPaginationControls('paginationSesiBar', 0, 1, PAGE_SIZE_SESI, 'gantiHalamanSesi');
+        return;
+    }
+
+    filteredItems.sort((a, b) => b.ts - a.ts);
+
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE_SESI));
+    if (pageSesiAktif > totalPages) pageSesiAktif = totalPages;
+    if (pageSesiAktif < 1) pageSesiAktif = 1;
+    const start = (pageSesiAktif - 1) * PAGE_SIZE_SESI;
+    const pageSlice = filteredItems.slice(start, start + PAGE_SIZE_SESI);
+
+    const jadwalCache = buildActiveJadwalCacheMap();
+    const rowsHtml = new Array(pageSlice.length);
+
+    for (let i = 0; i < pageSlice.length; i++) {
+        const { username, s } = pageSlice[i];
+        const statusBadge = renderStatusBadgesHtml(s.status || 'Login Aktif');
+        const mapelAktifList = kumpulkanMapelAktifSiswaFast(username, s, jadwalCache);
+        const unameEnc = encodeURIComponent(username);
+        const btns = [];
+        for (let m = 0; m < mapelAktifList.length; m++) {
+            const mp = mapelAktifList[m];
+            btns.push(`<button type="button" onclick="resetMapelSiswaAdmin('${unameEnc}', '${encodeURIComponent(mp)}')" class="btn-reset-mapel">Reset-${mp}</button>`);
+        }
+        btns.push(`<button type="button" onclick="resetPerangkatSiswaAdmin('${unameEnc}')" class="btn-reset-perangkat">Reset-Perangkat</button>`);
+        btns.push(`<button type="button" onclick="hapusSesiSiswaAdmin('${unameEnc}')" class="btn-hapus-sesi">Hapus Sesi</button>`);
+
+        rowsHtml[i] = `<tr>
             <td><b>${username}</b></td>
             <td>${s.nama || '-'}</td>
             <td>${s.kelas || '-'}</td>
             <td>${statusBadge}</td>
             <td style="font-family:monospace; font-size:10px;">${s.deviceId || '-'}</td>
-            <td>${aksiHtml}</td>
+            <td><div class="reset-aksi-group">${btns.join("")}</div></td>
         </tr>`;
-    });
-
-    if (tampilCount === 0) {
-        const infoFilter = [keyword ? `nama "${keyword}"` : "", statusFilter ? `status terpilih` : ""].filter(Boolean).join(" dan ");
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan ${infoFilter || "kriteria tersebut"} tidak ditemukan pada sesi aktif.</td></tr>`;
     }
+
+    tbody.innerHTML = rowsHtml.join("");
+    renderPaginationControls('paginationSesiBar', filteredItems.length, pageSesiAktif, PAGE_SIZE_SESI, 'gantiHalamanSesi');
 }
 
 async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
@@ -4292,27 +4532,52 @@ function resetCariNamaSiswa() {
     renderTabelDaftarSiswa();
 }
 
+function gantiHalamanSiswa(newPage) {
+    pageSiswaAktif = newPage;
+    renderTabelDaftarSiswa();
+}
+
 function renderTabelDaftarSiswa() {
     let tbody = document.getElementById('tbodyDaftarSiswa');
     if(!tbody) return;
-    tbody.innerHTML = "";
+
     if(databaseSiswa.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data siswa.</td></tr>`;
+        renderPaginationControls('paginationSiswaBar', 0, 1, PAGE_SIZE_SISWA, 'gantiHalamanSiswa');
         return;
+    }
+
+    if (siswaSearchIndex.length !== databaseSiswa.length) {
+        rebuildStudentFastMap();
     }
 
     const keyword = (document.getElementById('inputCariNamaSiswa')?.value || "").trim().toLowerCase();
     const kelasFilter = (document.getElementById('filterKelasKartu')?.value || "").trim().toLowerCase();
-    let tampilCount = 0;
 
-    databaseSiswa.forEach((s, idx) => {
-        const cocokNama = !keyword || String(s.nama || "").toLowerCase().includes(keyword);
-        const cocokKelas = !kelasFilter || String(s.kelas || "").trim().toLowerCase() === kelasFilter;
-        if (!cocokNama || !cocokKelas) {
-            return;
-        }
-        tampilCount++;
-        tbody.innerHTML += `<tr>
+    const matched = [];
+    for (let i = 0; i < siswaSearchIndex.length; i++) {
+        const entry = siswaSearchIndex[i];
+        if (kelasFilter && entry.kelasLow !== kelasFilter) continue;
+        if (keyword && entry.namaLow.indexOf(keyword) === -1 && entry.unameLow.indexOf(keyword) === -1) continue;
+        matched.push(entry);
+    }
+
+    if (matched.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data siswa tidak ditemukan untuk filter saat ini.</td></tr>`;
+        renderPaginationControls('paginationSiswaBar', 0, 1, PAGE_SIZE_SISWA, 'gantiHalamanSiswa');
+        return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE_SISWA));
+    if (pageSiswaAktif > totalPages) pageSiswaAktif = totalPages;
+    if (pageSiswaAktif < 1) pageSiswaAktif = 1;
+    const start = (pageSiswaAktif - 1) * PAGE_SIZE_SISWA;
+    const pageSlice = matched.slice(start, start + PAGE_SIZE_SISWA);
+
+    const rowsHtml = new Array(pageSlice.length);
+    for (let i = 0; i < pageSlice.length; i++) {
+        const { s, idx } = pageSlice[i];
+        rowsHtml[i] = `<tr>
             <td>${s.nama}</td>
             <td>${s.kelas}</td>
             <td>${s.username}</td>
@@ -4323,11 +4588,10 @@ function renderTabelDaftarSiswa() {
                 <button onclick="hapusSiswa(${idx})" class="btn-sm btn-danger">Hapus</button>
             </td>
         </tr>`;
-    });
-
-    if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data siswa tidak ditemukan untuk filter saat ini.</td></tr>`;
     }
+
+    tbody.innerHTML = rowsHtml.join("");
+    renderPaginationControls('paginationSiswaBar', matched.length, pageSiswaAktif, PAGE_SIZE_SISWA, 'gantiHalamanSiswa');
 }
 
 const MAX_GAMBAR_SOAL_BYTES = 45 * 1024; // Target per gambar <= 45 KB
@@ -5086,10 +5350,14 @@ function perbaruiOpsiDropdownMapelLog(bersihLogs) {
     }
 }
 
+function gantiHalamanLog(newPage) {
+    pageLogAktif = newPage;
+    renderTabelSiswaLogin();
+}
+
 function renderTabelSiswaLogin() {
     let tbody = document.getElementById('tbodySiswaLogin');
     if(!tbody) return;
-    tbody.innerHTML = "";
 
     const bersih = getLogsBersih();
     perbaruiOpsiDropdownMapelLog(bersih);
@@ -5099,11 +5367,13 @@ function renderTabelSiswaLogin() {
 
     if(bersih.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
+        renderPaginationControls('paginationLogBar', 0, 1, PAGE_SIZE_LOG, 'gantiHalamanLog');
         return;
     }
 
     const dedupMap = new Map();
-    bersih.forEach((row, origIdx) => {
+    for (let origIdx = 0; origIdx < bersih.length; origIdx++) {
+        const row = bersih[origIdx];
         const ts = getLogTimestampMs(row, origIdx + 1);
         const keySiswa = normStr(row.username || row.nis || row.nama || "");
         const keyKelas = normStr(row.kelas || "");
@@ -5113,35 +5383,55 @@ function renderTabelSiswaLogin() {
         if (!existing || ts >= existing.ts) {
             dedupMap.set(compositeKey, { row, origIdx, ts });
         }
-    });
+    }
 
-    const indexedLogs = Array.from(dedupMap.values()).sort((a, b) => b.ts - a.ts);
+    const jadwalCache = filterMapelVal === "__AKTIF__" ? buildActiveJadwalCacheMap() : null;
+    const targetPrevNorm = filterMapelVal.startsWith("PREV::") ? decodeURIComponent(filterMapelVal.slice(6)) : "";
 
-    let tampilCount = 0;
-    indexedLogs.forEach(({ row: l, origIdx }) => {
-        const mapelRow = String(l.mapel || "").trim();
-        const mapelNorm = normStr(mapelRow);
+    const filteredLogs = [];
+    dedupMap.forEach((entry) => {
+        const l = entry.row;
+        const mapelNorm = normStr(l.mapel || "");
 
         if (filterMapelVal === "__AKTIF__") {
-            const aktifUntukKelas = isJadwalMapelAktifSekarang(mapelRow, l.kelas || "");
-            const aktifUmum = isJadwalMapelAktifSekarang(mapelRow, "");
-            if (!aktifUntukKelas && !aktifUmum) {
-                return;
-            }
-        } else if (filterMapelVal.startsWith("PREV::")) {
-            const targetPrevNorm = decodeURIComponent(filterMapelVal.slice(6));
-            if (mapelNorm !== targetPrevNorm) {
-                return;
-            }
+            const kNorm = normStr(l.kelas || "");
+            const kelasMap = kNorm ? jadwalCache.activeByKelas.get(kNorm) : null;
+            const aktif = (kelasMap && kelasMap.has(mapelNorm)) || jadwalCache.activeAllSet.has(mapelNorm);
+            if (!aktif) return;
+        } else if (targetPrevNorm) {
+            if (mapelNorm !== targetPrevNorm) return;
         }
 
         if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
             return;
         }
-        tampilCount++;
-        let badgeStatus = renderStatusBadgesHtml(l.status);
+        filteredLogs.push(entry);
+    });
+
+    if (filteredLogs.length === 0) {
+        if (filterMapelVal === "__AKTIF__" && !keyword) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada log untuk mata pelajaran yang sedang aktif saat ini. Pilih mapel di dropdown untuk melihat Log Mapel Sebelumnya.</td></tr>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log tidak ditemukan untuk filter${keyword ? ` nama "${keyword}"` : ""} saat ini.</td></tr>`;
+        }
+        renderPaginationControls('paginationLogBar', 0, 1, PAGE_SIZE_LOG, 'gantiHalamanLog');
+        return;
+    }
+
+    filteredLogs.sort((a, b) => b.ts - a.ts);
+
+    const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE_LOG));
+    if (pageLogAktif > totalPages) pageLogAktif = totalPages;
+    if (pageLogAktif < 1) pageLogAktif = 1;
+    const start = (pageLogAktif - 1) * PAGE_SIZE_LOG;
+    const pageSlice = filteredLogs.slice(start, start + PAGE_SIZE_LOG);
+
+    const rowsHtml = new Array(pageSlice.length);
+    for (let i = 0; i < pageSlice.length; i++) {
+        const { row: l, origIdx } = pageSlice[i];
+        const badgeStatus = renderStatusBadgesHtml(l.status);
         const nilaiTampil = (l.nilai !== null && l.nilai !== undefined && String(l.nilai).trim() !== "") ? l.nilai : "-";
-        tbody.innerHTML += `<tr>
+        rowsHtml[i] = `<tr>
             <td>${l.nama || '-'}</td>
             <td>${l.kelas || '-'}</td>
             <td>${l.mapel || '-'}</td>
@@ -5151,15 +5441,10 @@ function renderTabelSiswaLogin() {
                 <button type="button" onclick="hapusBarisLogSpreadsheet(${origIdx})" class="btn-sm btn-danger" style="margin:0;">Hapus Log</button>
             </td>
         </tr>`;
-    });
-
-    if (tampilCount === 0) {
-        if (filterMapelVal === "__AKTIF__" && !keyword) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada log untuk mata pelajaran yang sedang aktif saat ini. Pilih mapel di dropdown untuk melihat Log Mapel Sebelumnya.</td></tr>`;
-        } else {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log tidak ditemukan untuk filter${keyword ? ` nama "${keyword}"` : ""} saat ini.</td></tr>`;
-        }
     }
+
+    tbody.innerHTML = rowsHtml.join("");
+    renderPaginationControls('paginationLogBar', filteredLogs.length, pageLogAktif, PAGE_SIZE_LOG, 'gantiHalamanLog');
 }
 
 async function postGasDenganRetryRingan(payloadObj, maxRetries = 3, timeoutMs = 15000) {
@@ -5863,11 +6148,44 @@ function pilihJawaban(indexSoal, opsi) {
     document.getElementById('labelStatusTerjawab').innerText = `Terjawab: ${jumlahTerjawab} / ${listSoal.length}`;
 }
 
+function sinkronkanSubmitKeServerLatarBelakang(bundlePayload) {
+    // Simpan dulu ke antrean lokal sebagai pengaman 100% anti-hilang jika tab ditutup
+    tambahAntreanKirimGagal(bundlePayload);
+    const jitterMs = 150 + Math.floor(Math.random() * 2200);
+    setTimeout(async () => {
+        try {
+            const res = await axios.post(GAS_URL, JSON.stringify({
+                ...bundlePayload,
+                submissionId: `SUB_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+                overwriteExisting: true,
+                singleResultPerMapel: true
+            }), { timeout: 25000 });
+            if (res.data && res.data.status === "success") {
+                const raw = localStorage.getItem(PENDING_SUBMIT_STORAGE_KEY);
+                if (raw) {
+                    const arr = JSON.parse(raw).filter(it => it?.payload?.uniqueKey !== bundlePayload.uniqueKey);
+                    if (arr.length === 0) localStorage.removeItem(PENDING_SUBMIT_STORAGE_KEY);
+                    else localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(arr));
+                }
+            }
+        } catch (err) {
+            // Tetap tersimpan di PENDING_SUBMIT_STORAGE_KEY dan akan otomatis dikirim ulang
+        }
+    }, jitterMs);
+}
+
 async function selesaiUjian(isCurang = false, alasanPelanggaran = "") {
     if(isSubmittingExam) return;
 
     if(!isCurang && !alasanPelanggaran) {
-        if(!confirm("Apakah Anda yakin ingin mengumpulkan jawaban? Ujian yang sudah dikirim tidak bisa diulang!")) {
+        const totalSoal = listSoal.length;
+        const terjawabCount = Object.keys(jawabanSiswa).length;
+        const belumDijawab = Math.max(0, totalSoal - terjawabCount);
+        const pesanKonfirmasi = belumDijawab > 0
+            ? `Masih ada ${belumDijawab} soal yang BELUM dijawab (${terjawabCount}/${totalSoal} terjawab).\n\nYakin ingin menyelesaikan dan mengirim ujian sekarang?`
+            : `Semua soal sudah dijawab (${terjawabCount}/${totalSoal}).\n\nKumpulkan jawaban sekarang? Ujian yang sudah dikirim tidak bisa diulang!`;
+
+        if(!confirm(pesanKonfirmasi)) {
             const btnSelesai = document.getElementById('btnSelesaiUjian');
             if (btnSelesai) btnSelesai.disabled = false;
             return;
@@ -5879,14 +6197,15 @@ async function selesaiUjian(isCurang = false, alasanPelanggaran = "") {
     hentikanTimerUjian();
     const guard = document.getElementById('fullscreenGuardOverlay');
     if (guard) guard.style.display = 'none';
-    showLoading("Menghitung nilai & mengunci hasil ujian...");
 
+    // 1. Hitung nilai secara instan di memori (< 1 ms)
     let jumlahBenar = 0;
-    listSoal.forEach((item, index) => {
-        const kunciBenar = decodeKunciGist(item.kunci);
-        if(jawabanSiswa[index] === kunciBenar) jumlahBenar++;
-    });
-    let skorAkhir = listSoal.length > 0 ? Math.round((jumlahBenar / listSoal.length) * 100) : 0;
+    const totalSoal = listSoal.length;
+    for (let i = 0; i < totalSoal; i++) {
+        const kunciBenar = decodeKunciGist(listSoal[i].kunci);
+        if (jawabanSiswa[i] === kunciBenar) jumlahBenar++;
+    }
+    const skorAkhir = totalSoal > 0 ? Math.round((jumlahBenar / totalSoal) * 100) : 0;
 
     let statusFinal = "Selesai";
     if(isCurang) {
@@ -5941,43 +6260,34 @@ async function selesaiUjian(isCurang = false, alasanPelanggaran = "") {
             username: nisSiswaFinal,
             nilai: skorAkhir,
             status: riwayatStatusFinal,
-            jawaban: jawabanSiswa,
+            jawaban: { ...jawabanSiswa },
             overwriteExisting: true,
             uniqueKey: uniqueResultKey
         }
     };
 
-    const kirimRes = await kirimBundleDenganRetry(bundlePayload, 4);
-    if (kirimRes.ok) {
-        hapusCadanganJawabanLokal();
-    } else {
-        tambahAntreanKirimGagal(bundlePayload);
-        hapusCadanganJawabanLokal();
-    }
+    // 2. Amankan cadangan & kirim bundle ke server di latar belakang (non-blocking agar 1000+ siswa tidak menunggu antrean LockService GAS)
+    hapusCadanganJawabanLokal();
+    sinkronkanSubmitKeServerLatarBelakang(bundlePayload);
 
     try {
         if (isCurrentlyFullscreen() && document.exitFullscreen) {
-            await document.exitFullscreen().catch(() => {});
+            document.exitFullscreen().catch(() => {});
         }
     } catch (e) {}
 
-    hideLoading();
     isSubmittingExam = false;
 
-    const infoAntrean = kirimRes.ok
-        ? ""
-        : "\n\nCatatan: Jaringan server sedang sangat sibuk, jawaban Anda sudah diamankan di perangkat dan akan tersinkron otomatis.";
-
     if(isCurang) {
-        alert(`UJIAN DIHENTIKAN OTOMATIS!\nPelanggaran terdeteksi: ${alasanPelanggaran}\nMapel "${mapelSiswaLogin}" langsung terkunci! Nilai Anda: ${skorAkhir}${infoAntrean}`);
+        alert(`UJIAN DIHENTIKAN OTOMATIS!\nPelanggaran terdeteksi: ${alasanPelanggaran}\nMapel "${mapelSiswaLogin}" langsung terkunci! Nilai Anda: ${skorAkhir}`);
     } else if (alasanPelanggaran === "Waktu Ujian Habis") {
-        alert(`WAKTU UJIAN HABIS!\nJawaban Anda otomatis dikumpulkan dan mapel "${mapelSiswaLogin}" dikunci.\nNilai Anda: ${skorAkhir}${infoAntrean}`);
+        alert(`WAKTU UJIAN HABIS!\nJawaban Anda otomatis dikumpulkan dan mapel "${mapelSiswaLogin}" dikunci.\nNilai Anda: ${skorAkhir}`);
     } else {
-        alert(`Ujian Selesai! Nilai Anda: ${skorAkhir}\nMapel "${mapelSiswaLogin}" sekarang terkunci.${infoAntrean}`);
+        alert(`Ujian Selesai! Nilai Anda: ${skorAkhir}\nBenar: ${jumlahBenar} dari ${totalSoal} soal.\nMapel "${mapelSiswaLogin}" sekarang terkunci.`);
     }
 
     if(currentSiswaObj) {
-        await tampilkanHalamanPilihUjianSiswa(currentSiswaObj);
+        await tampilkanHalamanPilihUjianSiswa(currentSiswaObj, true);
     } else {
         location.reload();
     }
@@ -6082,9 +6392,13 @@ async function switchAdminTab(tabName) {
     } else if(tabName === 'siswa') {
         document.getElementById('adminTabSiswa').classList.add('active');
         document.querySelectorAll('.admin-tab-btn')[4].classList.add('active');
-        await fetchCbtDatabase(false);
-        initDropdowns();
-        renderTabelDaftarSiswa();
+        pageSiswaAktif = 1;
+        if (!isDataLoadedOnce) {
+            await fetchCbtDatabase(false);
+        } else {
+            initDropdowns();
+            renderTabelDaftarSiswa();
+        }
     } else if(tabName === 'settings') {
         document.getElementById('adminTabSettings').classList.add('active');
         document.querySelectorAll('.admin-tab-btn')[5].classList.add('active');
