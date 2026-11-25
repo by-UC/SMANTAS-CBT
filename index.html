@@ -1238,7 +1238,7 @@
                 <span id="labelNomorSoal">Soal 1 dari 1</span>
                 <span class="soal-progress-sub" id="labelStatusTerjawab">Terjawab: 0 / 1</span>
             </div>
-            <button type="button" id="btnSelesaiUjian" class="btn-selesai-top" onclick="selesaiUjian(false)">Selesaikan & Kirim Ujian</button>
+            <button type="button" id="btnSelesaiUjian" class="btn-selesai-top" onclick="this.disabled=true; selesaiUjian(false)">Selesaikan & Kirim Ujian</button>
         </div>
 
         <div id="soalContainer"></div>
@@ -1311,6 +1311,14 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; flex-wrap: wrap; gap: 4px;">
                     <h4 style="margin: 0; color: #008080;">Kontrol Sesi Perangkat & Reset Mapel / Perangkat Siswa (GAS)</h4>
                     <div style="display: flex; gap: 3px; align-items: center; flex-wrap: wrap;">
+                        <select id="filterStatusSesi" onchange="renderTabelSesiAktif()" style="width: auto; min-width: 130px; padding: 2.5px 6px; font-size: 10.5px;">
+                            <option value="">Semua Status</option>
+                            <option value="curang">Curang</option>
+                            <option value="reset">Reset</option>
+                            <option value="login_aktif">Login Aktif</option>
+                            <option value="sedang_ujian">Sedang Ujian</option>
+                            <option value="selesai">Selesai</option>
+                        </select>
                         <input type="text" id="inputCariNamaSesi" placeholder="Cari berdasarkan Nama..." oninput="renderTabelSesiAktif()" style="width: 155px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #008080;">Cari</button>
                         <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 2.5px 6px; font-size: 10px; background: #6c757d;">Reset</button>
@@ -1344,6 +1352,9 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (DB_Log_login_CBT)</h4>
                     <div style="display: flex; gap: 3px; align-items: center; flex-wrap: wrap;">
+                        <select id="filterMapelLog" onchange="renderTabelSiswaLogin()" style="width: auto; min-width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
+                            <option value="__AKTIF__">Mapel Aktif (Jadwal Sekarang)</option>
+                        </select>
                         <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="renderTabelSiswaLogin()" style="width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #17a2b8;">Refresh Log</button>
                         <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #dc3545;">🗑️ Hapus Semua Log</button>
@@ -1659,6 +1670,38 @@ const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
+let mapelGistRegistry = {}; // { "Fisika": { gistId: "...", rawUrl: "...", fileName: "db_soal_fisika.json" } }
+
+function buatSlugFileMapel(namaMapel) {
+    const slug = String(namaMapel || "umum")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    return `db_soal_${slug || "umum"}.json`;
+}
+
+async function buatGistBaruUntukMapel(namaMapel) {
+    const fileName = buatSlugFileMapel(namaMapel);
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const payload = {
+        description: `SMANTAS CBT - Bank Soal ${namaMapel} (${fileName})`,
+        public: false,
+        files: {
+            [fileName]: {
+                content: "[]"
+            }
+        }
+    };
+    const res = await axios.post("https://api.github.com/gists", payload, githubHeaders);
+    const gistId = res.data.id;
+    const rawUrl = res.data.files?.[fileName]?.raw_url || `https://gist.githubusercontent.com/by-UC/${gistId}/raw/${fileName}`;
+    return {
+        gistId: gistId,
+        rawUrl: rawUrl,
+        fileName: fileName
+    };
+}
 
 // ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.xlsx) =================
 let tokenDriveState = {
@@ -2071,6 +2114,20 @@ let currentLoginRole = 'siswa';
 let daftarKelas = ["X-1", "X-2", "XI-IPA-1", "XII-IPA-1"];
 let daftarMapel = ["Bahasa Sunda", "Matematika", "Biologi"];
 let databaseSiswa = [];
+let studentFastMap = new Map(); // Indeks Hash Map O(1) untuk 1000+ siswa
+let isPreFetchingDb = false;
+
+function rebuildStudentFastMap() {
+    studentFastMap.clear();
+    if (!Array.isArray(databaseSiswa)) return;
+    for (let i = 0; i < databaseSiswa.length; i++) {
+        const s = databaseSiswa[i];
+        if (s && s.username !== undefined && s.username !== null) {
+            const key = String(s.username).trim().toLowerCase();
+            if (key) studentFastMap.set(key, s);
+        }
+    }
+}
 let daftarJadwalUjian = []; 
 let sesiLoginSiswa = {};
 let pengaturanCbt = {
@@ -2771,7 +2828,13 @@ function terapkanDataCbtMaster(data) {
     if (!data || typeof data !== 'object') return;
     if (Array.isArray(data.db_kelas)) daftarKelas = data.db_kelas;
     if (Array.isArray(data.db_mapel)) daftarMapel = data.db_mapel;
-    if (Array.isArray(data.db_siswa)) databaseSiswa = data.db_siswa;
+    if (Array.isArray(data.db_siswa)) {
+        databaseSiswa = data.db_siswa;
+        rebuildStudentFastMap();
+    }
+    if (data.db_mapel_gists && typeof data.db_mapel_gists === 'object') {
+        mapelGistRegistry = data.db_mapel_gists;
+    }
     if (Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
     if (data.db_pengaturan && typeof data.db_pengaturan === 'object') {
         pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
@@ -2879,9 +2942,11 @@ async function saveCbtDatabaseToGist() {
     const safePengaturan = { ...pengaturanCbt };
     delete safePengaturan.adminPasswordPlain;
 
+    rebuildStudentFastMap();
     let payloadData = {
         db_kelas: daftarKelas,
         db_mapel: daftarMapel,
+        db_mapel_gists: mapelGistRegistry,
         db_siswa: databaseSiswa,
         db_jadwal: daftarJadwalUjian,
         db_pengaturan: safePengaturan
@@ -3168,40 +3233,78 @@ function bersihkanCacheSoal() {
     } catch (e) {}
 }
 
+function getTargetGistInfoForMapel(mapelName) {
+    if (mapelName) {
+        const exact = mapelGistRegistry[mapelName];
+        if (exact && exact.gistId) return exact;
+        const matchedKey = Object.keys(mapelGistRegistry).find(k => normStr(k) === normStr(mapelName));
+        if (matchedKey && mapelGistRegistry[matchedKey]?.gistId) return mapelGistRegistry[matchedKey];
+    }
+    return { gistId: GIST_ID, rawUrl: GIST_RAW_URL, fileName: "soal.json" };
+}
+
 async function fetchAllSoalFromGist(options = {}) {
     const preferRaw = options.preferRaw !== false;
     const forceRefresh = options.forceRefresh === true;
-    const cacheScope = options.cacheScope || (preferRaw ? "raw_exam" : "admin_api");
+    const targetMapel = options.mapel || "";
+    const targetGist = getTargetGistInfoForMapel(targetMapel);
+    const cacheScope = options.cacheScope || `${preferRaw ? "raw" : "api"}_${targetGist.gistId}`;
 
     if (!forceRefresh) {
         const cached = bacaCacheSoal(cacheScope);
         if (cached) return cached;
     }
 
+    // Jika meminta semua soal di Admin (tanpa mapel spesifik) dan ada banyak Gist mapel, gabungkan
+    if (!targetMapel && Object.keys(mapelGistRegistry).length > 0) {
+        const combinedAll = [];
+        const seenGistIds = new Set();
+        const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+        const targets = [
+            { gistId: GIST_ID, fileName: "soal.json" },
+            ...Object.values(mapelGistRegistry)
+        ];
+        for (const t of targets) {
+            if (!t || !t.gistId || seenGistIds.has(t.gistId)) continue;
+            seenGistIds.add(t.gistId);
+            try {
+                const gRes = await axios.get(`https://api.github.com/gists/${t.gistId}?t=${Date.now()}`, githubHeaders);
+                const files = gRes.data.files || {};
+                const fname = files[t.fileName] ? t.fileName : Object.keys(files)[0];
+                const parsed = parseSoalJsonFlexible(files[fname]?.content || "[]");
+                combinedAll.push(...parsed);
+            } catch (e) {}
+        }
+        simpanCacheSoal(cacheScope, combinedAll);
+        return combinedAll;
+    }
+
+    const baseRawUrl = targetGist.rawUrl.replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
     if (preferRaw) {
         try {
-            const res = await axios.get(`${GIST_RAW_URL}?t=${Math.floor(Date.now() / 30000)}`);
+            const res = await axios.get(`${baseRawUrl}?t=${Math.floor(Date.now() / 30000)}`);
             const list = parseSoalJsonFlexible(res.data);
             simpanCacheSoal(cacheScope, list);
             return list;
         } catch (rawErr) {
-            console.warn("Gagal baca GIST_RAW_URL, fallback ke Gist API:", rawErr);
+            console.warn("Gagal baca Raw URL, fallback ke Gist API:", rawErr);
         }
     }
 
     try {
-        const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+        const gistRes = await axios.get(`https://api.github.com/gists/${targetGist.gistId}?t=${Date.now()}`, {
             headers: { "Authorization": `token ${GIST_TOKEN}` }
         });
-        const filename = Object.keys(gistRes.data.files)[0];
-        const rawContent = gistRes.data.files[filename].content;
+        const files = gistRes.data.files || {};
+        const filename = files[targetGist.fileName] ? targetGist.fileName : Object.keys(files)[0];
+        const rawContent = files[filename].content;
         const list = parseSoalJsonFlexible(rawContent);
         simpanCacheSoal(cacheScope, list);
         return list;
     } catch (apiErr) {
         if (!preferRaw) {
             try {
-                const res = await axios.get(`${GIST_RAW_URL}?t=${Date.now()}`);
+                const res = await axios.get(`${baseRawUrl}?t=${Date.now()}`);
                 const list = parseSoalJsonFlexible(res.data);
                 simpanCacheSoal(cacheScope, list);
                 return list;
@@ -3382,7 +3485,33 @@ async function hapusSemuaLogSpreadsheet() {
 function resetCariNamaSesi() {
     const inp = document.getElementById('inputCariNamaSesi');
     if (inp) inp.value = "";
+    const sel = document.getElementById('filterStatusSesi');
+    if (sel) sel.value = "";
     renderTabelSesiAktif();
+}
+
+function cekCocokFilterStatusSesi(statusStr, filterKey) {
+    if (!filterKey) return true;
+    const raw = String(statusStr || "").trim().toLowerCase();
+    const tokens = raw.split(",").map(t => t.trim()).filter(Boolean);
+    const terakhir = tokens.length > 0 ? tokens[tokens.length - 1] : raw;
+
+    if (filterKey === "curang") {
+        return tokens.some(t => t.includes("curang")) || raw.includes("curang");
+    }
+    if (filterKey === "reset") {
+        return terakhir.includes("reset") || terakhir.includes("direset") || tokens.some(t => t.includes("reset") || t.includes("direset"));
+    }
+    if (filterKey === "login_aktif") {
+        return terakhir === "login aktif" || (!raw || raw === "-");
+    }
+    if (filterKey === "sedang_ujian") {
+        return terakhir === "sedang ujian" || terakhir.startsWith("sedang ujian");
+    }
+    if (filterKey === "selesai") {
+        return terakhir === "selesai" || terakhir.startsWith("selesai");
+    }
+    return true;
 }
 
 function kumpulkanMapelAktifSiswa(username, sesiObj) {
@@ -3461,6 +3590,7 @@ function renderTabelSesiAktif() {
     }
 
     const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
+    const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
     let tampilCount = 0;
 
     const sortedKeys = [...keys].sort((a, b) => {
@@ -3475,6 +3605,9 @@ function renderTabelSesiAktif() {
         const s = sesiLoginSiswa[username];
         if(!s) return;
         if (keyword && !String(s.nama || "").toLowerCase().includes(keyword)) {
+            return;
+        }
+        if (statusFilter && !cekCocokFilterStatusSesi(s.status || 'Login Aktif', statusFilter)) {
             return;
         }
         tampilCount++;
@@ -3492,7 +3625,8 @@ function renderTabelSesiAktif() {
     });
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan nama "${keyword}" tidak ditemukan pada sesi aktif.</td></tr>`;
+        const infoFilter = [keyword ? `nama "${keyword}"` : "", statusFilter ? `status terpilih` : ""].filter(Boolean).join(" dan ");
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Siswa dengan ${infoFilter || "kriteria tersebut"} tidak ditemukan pada sesi aktif.</td></tr>`;
     }
 }
 
@@ -3514,14 +3648,21 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
         mapel: mapel
     };
 
+    const kelasTargetReset = sesiLama.kelas || (databaseSiswa.find(s => String(s.username).trim() === String(username).trim())?.kelas || "");
+    const namaTargetReset = sesiLama.nama || (databaseSiswa.find(s => String(s.username).trim() === String(username).trim())?.nama || "");
+    const namaUjianTargetReset = kelasTargetReset ? `${mapel.replace(/\s+/g, '_')}_${kelasTargetReset.replace(/\s+/g, '_')}` : "";
+
     try {
         await axios.post(GAS_URL, JSON.stringify({
             action: "resetMapelSiswa",
             sheetName: "DB_Log_login_CBT",
             username: username,
-            nama: sesiLama.nama || "",
-            kelas: sesiLama.kelas || "",
+            nis: username,
+            nama: namaTargetReset,
+            kelas: kelasTargetReset,
             mapel: mapel,
+            namaUjian: namaUjianTargetReset,
+            deletePreviousResult: true,
             status: "Direset",
             nilai: ""
         }));
@@ -3810,7 +3951,7 @@ function sinkronkanTombolPilihBaris(rowIndex) {
     }
 }
 
-function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnName) {
+function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnName, isMapelGrid = false) {
     if (!containerEl) return;
     containerEl.innerHTML = "";
 
@@ -3845,8 +3986,10 @@ function renderMatrixCategoryGrid(containerEl, items, maxRowsPerCol, onDeleteFnN
     items.forEach((labelText, idx) => {
         const div = document.createElement("div");
         div.className = "master-matrix-item";
+        const gistMeta = isMapelGrid && mapelGistRegistry[labelText] ? mapelGistRegistry[labelText] : null;
+        const gistBadge = gistMeta ? `<span title="Gist ID: ${gistMeta.gistId}" style="font-size:9px; color:#008080; background:#e6f4f4; padding:1px 4px; border-radius:3px; margin-left:4px;">${gistMeta.fileName}</span>` : "";
         div.innerHTML = `
-            <span class="item-label" title="${labelText}">${labelText}</span>
+            <span class="item-label" title="${labelText}">${labelText}${gistBadge}</span>
             <button type="button" onclick="${onDeleteFnName}(${idx})" style="padding:1px 5px; font-size:9.5px; background:#dc3545; color:white; width:auto; border:none; border-radius:3px; cursor:pointer; flex-shrink:0;">Hapus</button>
         `;
         containerEl.appendChild(div);
@@ -3858,7 +4001,7 @@ function renderListMaster() {
     let divMapel = document.getElementById('listMapel');
 
     renderMatrixCategoryGrid(divKelas, daftarKelas, 7, "hapusKelas");
-    renderMatrixCategoryGrid(divMapel, daftarMapel, 10, "hapusMapel");
+    renderMatrixCategoryGrid(divMapel, daftarMapel, 10, "hapusMapel", true);
 }
 
 async function tambahKelas() {
@@ -3886,19 +4029,43 @@ async function hapusKelas(index) {
 async function tambahMapel() {
     let m = document.getElementById('inputMapelBaru').value.trim();
     if(!m) return;
-    if(daftarMapel.includes(m)) { alert("Mapel sudah ada!"); return; }
-    showLoading("Menyimpan mata pelajaran...");
-    daftarMapel.push(m);
-    document.getElementById('inputMapelBaru').value = "";
-    await saveCbtDatabaseToGist();
-    initDropdowns();
-    hideLoading();
-    alert("Mapel berhasil ditambahkan ke Gist!");
+    if(daftarMapel.some(existing => normStr(existing) === normStr(m))) { alert("Mapel sudah ada!"); return; }
+    const fileNamePreview = buatSlugFileMapel(m);
+    showLoading(`Membuat Gist baru "${fileNamePreview}" & menyimpan mapel...`);
+    try {
+        const gistInfo = await buatGistBaruUntukMapel(m);
+        mapelGistRegistry[m] = gistInfo;
+        daftarMapel.push(m);
+        document.getElementById('inputMapelBaru').value = "";
+        await saveCbtDatabaseToGist();
+        initDropdowns();
+        hideLoading();
+        alert(`Mapel "${m}" berhasil ditambahkan!
+Gist baru otomatis dibuat: ${gistInfo.fileName} (ID: ${gistInfo.gistId})`);
+    } catch (err) {
+        hideLoading();
+        alert("Gagal membuat Gist baru untuk mapel: " + (err.response?.data?.message || err.message));
+    }
 }
 
 async function hapusMapel(index) {
-    if(!confirm("Yakin ingin menghapus mata pelajaran ini?")) return;
-    showLoading("Menghapus mata pelajaran...");
+    const mapelTarget = daftarMapel[index];
+    if(!mapelTarget) return;
+    const infoGist = mapelGistRegistry[mapelTarget];
+    const msgExtra = infoGist ? `
+Gist khusus "${infoGist.fileName}" juga akan dihapus.` : "";
+    if(!confirm(`Yakin ingin menghapus mata pelajaran "${mapelTarget}"?${msgExtra}`)) return;
+    showLoading("Menghapus mata pelajaran & Gist terkait...");
+    if (infoGist && infoGist.gistId) {
+        try {
+            await axios.delete(`https://api.github.com/gists/${infoGist.gistId}`, {
+                headers: { "Authorization": `token ${GIST_TOKEN}` }
+            });
+        } catch (e) {
+            console.warn("Gagal menghapus Gist mapel dari GitHub:", e.message);
+        }
+        delete mapelGistRegistry[mapelTarget];
+    }
     daftarMapel.splice(index, 1);
     await saveCbtDatabaseToGist();
     initDropdowns();
@@ -4313,23 +4480,21 @@ function hapusKelasDariSoalList(contentSoal, mapel, kelasList) {
 }
 
 async function eksekusiHapusSoalDiGist(mapel, kelasList) {
+    const targetGist = getTargetGistInfoForMapel(mapel);
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const gistRes = await axios.get(`https://api.github.com/gists/${targetGist.gistId}?t=${Date.now()}`, githubHeaders);
     const files = gistRes.data.files || {};
-    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    const filename = files[targetGist.fileName] ? targetGist.fileName : Object.keys(files)[0];
     const contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
 
     const resultHapus = hapusKelasDariSoalList(contentSoal, mapel, kelasList);
     const serialized = serializeSoalJsonOneSoalPerLine(resultHapus.updated);
 
-    await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+    await axios.patch(`https://api.github.com/gists/${targetGist.gistId}`, {
         files: { [filename]: { content: serialized } }
     }, githubHeaders);
 
     bersihkanCacheSoal();
-    const parsedFresh = parseSoalJsonFlexible(serialized);
-    simpanCacheSoal("admin_api", parsedFresh);
-    simpanCacheSoal("raw_exam", parsedFresh);
     return resultHapus.dihapusCount;
 }
 
@@ -4576,14 +4741,16 @@ function susunBarisRekapKelas(mapel, kelasTarget) {
         const namaNorm = String(l.nama || "").trim().toLowerCase();
         if (!namaSudahMasuk.has(namaNorm)) {
             namaSudahMasuk.add(namaNorm);
+            const entries = logMatch.filter(x => String(x.nama || "").trim().toLowerCase() === namaNorm);
+            const latest = entries[entries.length - 1] || l;
             rows.push({
                 "No": rows.length + 1,
-                "NIS / Username": "-",
-                "Nama Siswa": l.nama || "-",
-                "Kelas": l.kelas || kelasTarget,
+                "NIS / Username": latest.username || latest.nis || "-",
+                "Nama Siswa": latest.nama || "-",
+                "Kelas": latest.kelas || kelasTarget,
                 "Mata Pelajaran": mapel,
-                "Status": l.status || "-",
-                "Nilai": (l.nilai !== null && l.nilai !== undefined && l.nilai !== "") ? Number(l.nilai) : "-"
+                "Status": latest.status || "-",
+                "Nilai": (latest.nilai !== null && latest.nilai !== undefined && latest.nilai !== "") ? Number(latest.nilai) : "-"
             });
         }
     });
@@ -4646,7 +4813,7 @@ async function lihatSoalJadwal(mapelEnc, kelasJson) {
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
     showLoading("Mengambil daftar soal dari Gist...");
-    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
+    const allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, mapel: mapel });
     hideLoading();
 
     const seenIds = new Set();
@@ -4758,27 +4925,106 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     alert(`Jadwal dan soal "${mapel}" (${kelasList.join(', ')}) berhasil dihapus!`);
 }
 
+function perbaruiOpsiDropdownMapelLog(bersihLogs) {
+    const sel = document.getElementById('filterMapelLog');
+    if (!sel) return;
+    const prevVal = sel.value || "__AKTIF__";
+
+    const mapelMap = new Map();
+    const mapelAktifSet = new Set();
+
+    (daftarJadwalUjian || []).forEach(j => {
+        const mp = String(j.mapel || "").trim();
+        if (!mp) return;
+        const norm = normStr(mp);
+        if (!mapelMap.has(norm)) mapelMap.set(norm, mp);
+        if (isJadwalMapelAktifSekarang(mp, j.kelas || "")) {
+            mapelAktifSet.add(norm);
+        }
+    });
+
+    (bersihLogs || []).forEach(l => {
+        const mp = String(l.mapel || "").trim();
+        if (!mp || mp === "-") return;
+        const norm = normStr(mp);
+        if (!mapelMap.has(norm)) mapelMap.set(norm, mp);
+    });
+
+    const listSebelumnya = [];
+    mapelMap.forEach((label, norm) => {
+        if (!mapelAktifSet.has(norm)) {
+            listSebelumnya.push({ norm, label });
+        }
+    });
+    listSebelumnya.sort((a, b) => a.label.localeCompare(b.label, 'id'));
+
+    let html = `<option value="__AKTIF__">Mapel Aktif (Jadwal Sekarang)</option>`;
+    if (listSebelumnya.length > 0) {
+        html += `<optgroup label="Log Mapel Sebelumnya">`;
+        listSebelumnya.forEach(item => {
+            html += `<option value="PREV::${encodeURIComponent(item.norm)}">${item.label}</option>`;
+        });
+        html += `</optgroup>`;
+    }
+    html += `<option value="__SEMUA__">Semua Mapel (Aktif & Sebelumnya)</option>`;
+
+    sel.innerHTML = html;
+    if (Array.from(sel.options).some(o => o.value === prevVal)) {
+        sel.value = prevVal;
+    } else {
+        sel.value = "__AKTIF__";
+    }
+}
+
 function renderTabelSiswaLogin() {
     let tbody = document.getElementById('tbodySiswaLogin');
     if(!tbody) return;
     tbody.innerHTML = "";
 
     const bersih = getLogsBersih();
+    perbaruiOpsiDropdownMapelLog(bersih);
+
     const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
+    const filterMapelVal = document.getElementById('filterMapelLog')?.value || "__AKTIF__";
 
     if(bersih.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang login/mengerjakan ujian.</td></tr>`;
         return;
     }
 
-    const indexedLogs = bersih.map((row, origIdx) => ({
-        row,
-        origIdx,
-        ts: getLogTimestampMs(row, origIdx + 1)
-    })).sort((a, b) => b.ts - a.ts);
+    const dedupMap = new Map();
+    bersih.forEach((row, origIdx) => {
+        const ts = getLogTimestampMs(row, origIdx + 1);
+        const keySiswa = normStr(row.username || row.nis || row.nama || "");
+        const keyKelas = normStr(row.kelas || "");
+        const keyMapel = normStr(row.mapel || "");
+        const compositeKey = `${keySiswa}||${keyKelas}||${keyMapel}`;
+        const existing = dedupMap.get(compositeKey);
+        if (!existing || ts >= existing.ts) {
+            dedupMap.set(compositeKey, { row, origIdx, ts });
+        }
+    });
+
+    const indexedLogs = Array.from(dedupMap.values()).sort((a, b) => b.ts - a.ts);
 
     let tampilCount = 0;
     indexedLogs.forEach(({ row: l, origIdx }) => {
+        const mapelRow = String(l.mapel || "").trim();
+        const mapelNorm = normStr(mapelRow);
+
+        if (filterMapelVal === "__AKTIF__") {
+            const aktifUntukKelas = isJadwalMapelAktifSekarang(mapelRow, l.kelas || "");
+            const aktifUmum = isJadwalMapelAktifSekarang(mapelRow, "");
+            if (!aktifUntukKelas && !aktifUmum) {
+                return;
+            }
+        } else if (filterMapelVal.startsWith("PREV::")) {
+            const targetPrevNorm = decodeURIComponent(filterMapelVal.slice(6));
+            if (mapelNorm !== targetPrevNorm) {
+                return;
+            }
+        }
+
         if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) {
             return;
         }
@@ -4798,7 +5044,11 @@ function renderTabelSiswaLogin() {
     });
 
     if (tampilCount === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log dengan nama "${keyword}" tidak ditemukan.</td></tr>`;
+        if (filterMapelVal === "__AKTIF__" && !keyword) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Tidak ada log untuk mata pelajaran yang sedang aktif saat ini. Pilih mapel di dropdown untuk melihat Log Mapel Sebelumnya.</td></tr>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Data log tidak ditemukan untuk filter${keyword ? ` nama "${keyword}"` : ""} saat ini.</td></tr>`;
+        }
     }
 }
 
@@ -4839,48 +5089,33 @@ async function autentikasiSiswa() {
 
     if(!username || !pass) { alert("Username dan Password harus diisi!"); return; }
 
-    showLoading("Memverifikasi akun siswa...");
-    // 1. Ambil database siswa & jadwal dari GitHub Raw CDN (gratis, tanpa batas koneksi, 0 hit ke GAS)
-    await fetchCbtDatabase(false);
-
-    let siswa = databaseSiswa.find(s => String(s.username).trim() === username);
-    if(!siswa) { 
+    // Jika data sudah di-prefetch saat halaman dibuka, validasi berjalan 0 ms tanpa overlay loading!
+    if (!isDataLoadedOnce || studentFastMap.size === 0) {
+        showLoading("Memuat database peserta (sekali unduh)...");
+        await fetchCbtDatabase(false);
         hideLoading();
+    }
+
+    if (studentFastMap.size === 0 && databaseSiswa.length > 0) {
+        rebuildStudentFastMap();
+    }
+
+    // Lookup O(1) instan untuk 1000+ siswa
+    let siswa = studentFastMap.get(username.toLowerCase()) || databaseSiswa.find(s => String(s.username).trim() === username);
+    if(!siswa) { 
         alert("Username tidak ditemukan dalam database!"); 
         return; 
     }
 
     if(String(siswa.password).trim() !== pass) {
-        hideLoading();
         alert("Password salah!");
         return;
     }
 
     const myDeviceId = getOrCreateDeviceId();
-
-    // 2. Cek sesi khusus 1 user ini saja (ringan) dengan fallback aman jika GAS sedang padat
-    let existingSession = sesiLoginSiswa[username] || null;
-    try {
-        const resSesi = await postGasDenganRetryRingan({
-            action: "getSesiByUser",
-            username: username
-        }, 2, 8000);
-        if (resSesi && resSesi.status === "success" && resSesi.data) {
-            if (resSesi.data.username || resSesi.data.deviceId) {
-                existingSession = resSesi.data;
-                sesiLoginSiswa[username] = existingSession;
-            } else if (resSesi.data[username]) {
-                existingSession = resSesi.data[username];
-                sesiLoginSiswa[username] = existingSession;
-            }
-        }
-    } catch (e) {
-        // Jika endpoint getSesiByUser belum ada / jaringan padat, jangan blokir siswa masuk ke halaman pilih ujian
-        console.warn("Cek sesi per-user dilewati sementara:", e.message);
-    }
+    const existingSession = sesiLoginSiswa[username] || null;
 
     if(existingSession && existingSession.deviceId && existingSession.deviceId !== myDeviceId) {
-        hideLoading();
         alert("AKSES DITOLAK!\nAkun Anda sedang aktif login di perangkat lain.\nUntuk pindah perangkat, silakan logout dari perangkat sebelumnya atau minta Admin melakukan Reset-Perangkat.");
         return;
     }
@@ -4889,7 +5124,7 @@ async function autentikasiSiswa() {
         ? existingSession.status
         : "Login Aktif";
 
-    // 3. Simpan sesi ke GAS secara non-blocking + jitter agar 1000+ siswa login bersamaan langsung masuk tanpa antre LockService
+    // Sinkronisasi sesi ke GAS berjalan di latar belakang (non-blocking) dengan jitter acak agar tidak memblokir 1000+ siswa
     sinkronkanSesiDanLogLatarBelakang(
         siswa,
         myDeviceId,
@@ -4897,7 +5132,6 @@ async function autentikasiSiswa() {
         existingSession ? existingSession.mapel : "-"
     );
 
-    hideLoading();
     await tampilkanHalamanPilihUjianSiswa(siswa, true);
 }
 
@@ -5131,14 +5365,18 @@ async function mulaiUjianPilihan() {
     if (currentSiswaObj) {
         setSesiToGAS(sesiLoginSiswa[currentSiswaObj.username]).catch(() => {});
     }
+    const nisMulai = document.getElementById('nis').value.trim() || (currentSiswaObj ? currentSiswaObj.username : "-");
     axios.post(GAS_URL, JSON.stringify({
         action: "logLogin",
         sheetName: "DB_Log_login_CBT",
+        username: nisMulai,
+        nis: nisMulai,
         nama: namaSiswaLogin,
         kelas: kelasSiswaLogin,
         mapel: mapel,
         status: riwayatStatusSaatIni,
-        nilai: ""
+        nilai: "",
+        overwriteExisting: true
     })).catch(e => console.error("Gagal mengirim log login ke server:", e));
 
     await loadSoalUjian(jadwalMatch);
@@ -5195,12 +5433,21 @@ function tambahAntreanKirimGagal(payloadObj) {
         const raw = localStorage.getItem(PENDING_SUBMIT_STORAGE_KEY);
         const queue = raw ? JSON.parse(raw) : [];
         const arr = Array.isArray(queue) ? queue : [];
-        arr.push({
+        const uKey = payloadObj?.uniqueKey || `${payloadObj?.hasil?.nis || ""}_${payloadObj?.hasil?.namaUjian || ""}`;
+        const filtered = arr.filter(item => {
+            const itemKey = item?.payload?.uniqueKey || `${item?.payload?.hasil?.nis || ""}_${item?.payload?.hasil?.namaUjian || ""}`;
+            return itemKey !== uKey;
+        });
+        filtered.push({
             id: Date.now() + "_" + Math.random().toString(36).slice(2, 7),
             queuedAt: new Date().toISOString(),
-            payload: payloadObj
+            payload: {
+                ...payloadObj,
+                overwriteExisting: true,
+                singleResultPerMapel: true
+            }
         });
-        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(arr));
+        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(filtered));
     } catch (e) {}
 }
 
@@ -5233,19 +5480,30 @@ async function prosesAntreanKirimTertunda() {
 
 async function kirimBundleDenganRetry(bundlePayload, maxRetries = 4) {
     let lastErr = null;
+    const submissionId = `SUB_${Date.now()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const payloadWithId = {
+        ...bundlePayload,
+        submissionId: submissionId,
+        overwriteExisting: true,
+        singleResultPerMapel: true
+    };
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const jitterDelay = attempt === 1 ? Math.floor(Math.random() * 600) : (attempt * 1200 + Math.floor(Math.random() * 1000));
+            const jitterDelay = attempt === 1 ? Math.floor(Math.random() * 500) : (attempt * 1500 + Math.floor(Math.random() * 1000));
             if (jitterDelay > 0) {
                 await new Promise(r => setTimeout(r, jitterDelay));
             }
 
             if (attempt > 1) {
-                showLoading(`Koneksi padat, mencoba mengirim ulang jawaban (Percobaan ${attempt}/${maxRetries})...`);
+                showLoading(`Koneksi padat, menyinkronkan jawaban (Percobaan ${attempt}/${maxRetries})...`);
             }
 
-            const res = await axios.post(GAS_URL, JSON.stringify(bundlePayload), {
-                timeout: 22000
+            const res = await axios.post(GAS_URL, JSON.stringify({
+                ...payloadWithId,
+                attempt: attempt
+            }), {
+                timeout: 30000
             });
             if (res.data && res.data.status === "success") {
                 return { ok: true, data: res.data };
@@ -5309,7 +5567,7 @@ async function loadSoalUjian(jadwalObj = null) {
             ? bacaCadanganJawabanLokal(currentSiswaObj.username, mapelSiswaLogin, kelasSiswaLogin)
             : null;
 
-        let allSoal = await fetchAllSoalFromGist({ preferRaw: true, forceRefresh: false, cacheScope: 'raw_exam' });
+        let allSoal = await fetchAllSoalFromGist({ preferRaw: true, forceRefresh: false, mapel: mapelSiswaLogin });
 
         let filtered = allSoal.filter(s => {
             if (!itemCocokMapel(s, mapelSiswaLogin)) return false;
@@ -5320,7 +5578,7 @@ async function loadSoalUjian(jadwalObj = null) {
         });
 
         if (filtered.length === 0) {
-            allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, cacheScope: 'admin_api' });
+            allSoal = await fetchAllSoalFromGist({ preferRaw: false, forceRefresh: true, mapel: mapelSiswaLogin });
             filtered = allSoal.filter(s => {
                 if (!itemCocokMapel(s, mapelSiswaLogin)) return false;
                 if (Array.isArray(s.kelas) && s.kelas.length > 0) {
@@ -5355,6 +5613,8 @@ async function loadSoalUjian(jadwalObj = null) {
         
         isExamInProgress = true;
         isSubmittingExam = false;
+        const btnSelesaiInit = document.getElementById('btnSelesaiUjian');
+        if (btnSelesaiInit) btnSelesaiInit.disabled = false;
         renderSatuSoalAktif();
         mulaiTimerUjian(jadwalObj);
         hideLoading();
@@ -5475,7 +5735,11 @@ async function selesaiUjian(isCurang = false, alasanPelanggaran = "") {
     if(isSubmittingExam) return;
 
     if(!isCurang && !alasanPelanggaran) {
-        if(!confirm("Apakah Anda yakin ingin mengumpulkan jawaban? Ujian yang sudah dikirim tidak bisa diulang!")) return;
+        if(!confirm("Apakah Anda yakin ingin mengumpulkan jawaban? Ujian yang sudah dikirim tidak bisa diulang!")) {
+            const btnSelesai = document.getElementById('btnSelesaiUjian');
+            if (btnSelesai) btnSelesai.disabled = false;
+            return;
+        }
     }
 
     isSubmittingExam = true;
@@ -5516,24 +5780,38 @@ async function selesaiUjian(isCurang = false, alasanPelanggaran = "") {
         };
     }
 
+    const nisSiswaFinal = document.getElementById('nis').value.trim() || (currentSiswaObj ? currentSiswaObj.username : "-");
+    const uniqueResultKey = `${String(nisSiswaFinal).trim().toLowerCase()}__${String(mapelSiswaLogin).trim().toLowerCase()}`;
+
     const bundlePayload = {
         action: "submitExamBundle",
         sheetName: "DB_Log_login_CBT",
+        overwriteExisting: true,
+        singleResultPerMapel: true,
+        uniqueKey: uniqueResultKey,
         sesi: currentSiswaObj ? sesiLoginSiswa[currentSiswaObj.username] : null,
         log: {
+            username: nisSiswaFinal,
+            nis: nisSiswaFinal,
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapelSiswaLogin,
             status: riwayatStatusFinal,
-            nilai: skorAkhir
+            nilai: skorAkhir,
+            overwriteExisting: true
         },
         hasil: {
             namaUjian: namaUjianAktif,
+            mapel: mapelSiswaLogin,
+            kelas: kelasSiswaLogin,
             nama: namaSiswaLogin,
-            nis: document.getElementById('nis').value.trim() || (currentSiswaObj ? currentSiswaObj.username : "-"),
+            nis: nisSiswaFinal,
+            username: nisSiswaFinal,
             nilai: skorAkhir,
             status: riwayatStatusFinal,
-            jawaban: jawabanSiswa
+            jawaban: jawabanSiswa,
+            overwriteExisting: true,
+            uniqueKey: uniqueResultKey
         }
     };
 
@@ -5657,6 +5935,7 @@ async function switchAdminTab(tabName) {
     } else if(tabName === 'log') {
         document.getElementById('adminTabLog').classList.add('active');
         document.querySelectorAll('.admin-tab-btn')[1].classList.add('active');
+        await fetchCbtDatabase(false);
         fetchLogLoginFromGAS();
     } else if(tabName === 'ujian') {
         document.getElementById('adminTabUjian').classList.add('active');
@@ -6456,29 +6735,27 @@ async function simpanJadwalDanSoal() {
     await saveCbtDatabaseToGist();
     renderTabelJadwal();
 
-    showLoading(`Mengunggah ${soalBaru.length} butir soal ke soal.json di Gist...`);
+    const targetGist = getTargetGistInfoForMapel(mapel);
+    showLoading(`Mengunggah ${soalBaru.length} butir soal ke ${targetGist.fileName} di Gist...`);
     try {
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-        let gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+        let gistRes = await axios.get(`https://api.github.com/gists/${targetGist.gistId}?t=${Date.now()}`, githubHeaders);
         const files = gistRes.data.files || {};
-        let filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+        let filename = files[targetGist.fileName] ? targetGist.fileName : Object.keys(files)[0];
         let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
 
         const cleaned = hapusKelasDariSoalList(contentSoal, mapel, kelasTerpilih);
         const combinedSoal = [...cleaned.updated, ...soalBaru];
         const serialized = serializeSoalJsonOneSoalPerLine(combinedSoal);
 
-        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+        await axios.patch(`https://api.github.com/gists/${targetGist.gistId}`, {
             files: { [filename]: { content: serialized } }
         }, githubHeaders);
 
         bersihkanCacheSoal();
-        const parsedFresh = parseSoalJsonFlexible(serialized);
-        simpanCacheSoal("admin_api", parsedFresh);
-        simpanCacheSoal("raw_exam", parsedFresh);
 
         hideLoading();
-        alert(`Berhasil menyimpan jadwal & mengunggah ${soalBaru.length} soal ke soal.json untuk kelas: ${kelasTerpilih.join(', ')}!`);
+        alert(`Berhasil menyimpan jadwal & mengunggah ${soalBaru.length} soal ke ${filename} untuk kelas: ${kelasTerpilih.join(', ')}!`);
         document.getElementById('soalBatchText').value = "";
     } catch(err) {
         hideLoading();
@@ -6594,6 +6871,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         hideLoading();
     }
 
+    // Pre-fetch db_cbt.json di latar belakang sejak halaman dibuka agar saat tombol Masuk diklik validasi O(1) berjalan 0 ms
+    fetchCbtDatabase(false).catch(() => {});
     fetchTokenDariDrive(true);
     prosesAntreanKirimTertunda();
     setCompactMode(true);
