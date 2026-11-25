@@ -5250,19 +5250,41 @@ async function logoutSiswa() {
     bersihkanCacheSoal();
     hapusSesiSiswaLokal();
     if(currentSiswaObj) {
-        showLoading("Melepaskan sesi perangkat di GAS...");
+        const uname = String(currentSiswaObj.username || "").trim();
+        showLoading("Menghapus DeviceId pada sheet Sesi...");
         await fetchSesiFromGAS(true);
-        const sess = sesiLoginSiswa[currentSiswaObj.username];
-        if(sess && sess.deviceId === getOrCreateDeviceId() && !cekStatusTerkunci(sess.status)) {
-            if (sess.status && sess.status !== "Login Aktif") {
-                await setSesiToGAS({
-                    ...sess,
-                    deviceId: "",
-                    updatedAt: getLocalIsoNow()
-                });
-            } else {
-                await deleteSesiFromGAS(currentSiswaObj.username);
-            }
+        const sess = sesiLoginSiswa[uname];
+
+        try {
+            await axios.post(GAS_URL, JSON.stringify({
+                action: "clearDeviceId",
+                sheetName: "Sesi",
+                spreadsheetId: "1lXpmJZTWZZvYG5gbj0_dW6fu2yV77pp_wz6vOyWMelk",
+                username: uname,
+                nis: uname,
+                deviceId: ""
+            }), { timeout: 15000 });
+        } catch (e) {
+            console.warn("Endpoint clearDeviceId fallback ke setSesi:", e);
+        }
+
+        if (sess) {
+            await setSesiToGAS({
+                ...sess,
+                username: uname,
+                deviceId: "",
+                updatedAt: getLocalIsoNow()
+            });
+        } else {
+            await setSesiToGAS({
+                username: uname,
+                deviceId: "",
+                status: "Login Aktif",
+                nama: currentSiswaObj.nama || "",
+                kelas: currentSiswaObj.kelas || "",
+                mapel: "-",
+                updatedAt: getLocalIsoNow()
+            });
         }
         hideLoading();
     }
