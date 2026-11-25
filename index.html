@@ -61,7 +61,7 @@
             padding-left: 2px;
             padding-right: 2px;
         }
-        .table-jadwal-aktif .col-aksi { width: 13%; }
+        .table-jadwal-aktif .col-aksi { width: 15.5%; }
     </style>
     <style>
         * { box-sizing: border-box; }
@@ -567,11 +567,11 @@
             overflow-wrap: anywhere;
         }
         .table-jadwal-aktif .col-kelas {
-            width: 31%;
+            width: 28.5%;
             overflow-wrap: anywhere;
         }
         .table-jadwal-aktif .col-jp {
-            width: 7%;
+            width: 6.5%;
             text-align: center;
             padding-left: 2px;
             padding-right: 2px;
@@ -584,7 +584,7 @@
             padding-right: 2px;
         }
         .table-jadwal-aktif .col-aksi {
-            width: 13%;
+            width: 15.5%;
             padding: 2px;
         }
         .jadwal-aksi-stack {
@@ -1662,11 +1662,9 @@
 
 <script>
 // ================= KONFIGURASI SISTEM =================
-const GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/4b29a383e8a164f932396735ab60621b/raw/soal.json"; 
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzlLxzIAySwV8oMAdI9mo78vZwLcLvMnDhtIoFiGbxn8s0U3Tq2d7ucnGrKK2eLLx-k/exec";
-const GIST_ID = "4b29a383e8a164f932396735ab60621b";
 const t1 = "ghp_5Ofh9x64itKcWGL1PDIk0";
 const t2 = "V2eEWYvRV0AFFLJ";
 const GIST_TOKEN = t1 + t2;
@@ -3191,9 +3189,10 @@ async function deleteSesiFromGAS(username) {
 }
 
 const SOAL_CACHE_TTL_MS = 15 * 60 * 1000;
+const SOAL_CACHE_PREFIX = `smantas_cbt_soal_cache_${CBT_GIST_ID}_`;
 
 function getSoalCacheKey(scope = "all") {
-    return `smantas_cbt_soal_cache_${GIST_ID}_${scope}`;
+    return `${SOAL_CACHE_PREFIX}${scope}`;
 }
 
 function bacaCacheSoal(scope = "all") {
@@ -3226,7 +3225,7 @@ function simpanCacheSoal(scope = "all", data = []) {
 function bersihkanCacheSoal() {
     try {
         Object.keys(sessionStorage).forEach(k => {
-            if (k.startsWith(`smantas_cbt_soal_cache_${GIST_ID}_`)) {
+            if (k.startsWith(SOAL_CACHE_PREFIX)) {
                 sessionStorage.removeItem(k);
             }
         });
@@ -3234,36 +3233,61 @@ function bersihkanCacheSoal() {
 }
 
 function getTargetGistInfoForMapel(mapelName) {
-    if (mapelName) {
-        const exact = mapelGistRegistry[mapelName];
-        if (exact && exact.gistId) return exact;
-        const matchedKey = Object.keys(mapelGistRegistry).find(k => normStr(k) === normStr(mapelName));
-        if (matchedKey && mapelGistRegistry[matchedKey]?.gistId) return mapelGistRegistry[matchedKey];
+    if (!mapelName) return null;
+    const exact = mapelGistRegistry[mapelName];
+    if (exact && exact.gistId) return exact;
+    const matchedKey = Object.keys(mapelGistRegistry).find(k => normStr(k) === normStr(mapelName));
+    if (matchedKey && mapelGistRegistry[matchedKey]?.gistId) return mapelGistRegistry[matchedKey];
+    return null;
+}
+
+async function ensureGistInfoForMapel(mapelName) {
+    let info = getTargetGistInfoForMapel(mapelName);
+    if (info && info.gistId) return info;
+
+    // Cari Gist yang sudah ada berdasarkan nama file db_soal_<mapel>.json atau buat Gist baru otomatis
+    const expectedFile = buatSlugFileMapel(mapelName);
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    try {
+        const listRes = await axios.get(`https://api.github.com/gists?per_page=100&t=${Date.now()}`, githubHeaders);
+        const gists = Array.isArray(listRes.data) ? listRes.data : [];
+        const found = gists.find(g => g.files && g.files[expectedFile]);
+        if (found) {
+            info = {
+                gistId: found.id,
+                rawUrl: found.files[expectedFile].raw_url || `https://gist.githubusercontent.com/by-UC/${found.id}/raw/${expectedFile}`,
+                fileName: expectedFile
+            };
+            mapelGistRegistry[mapelName] = info;
+            await saveCbtDatabaseToGist();
+            return info;
+        }
+    } catch (e) {
+        console.warn("Gagal mencari Gist mapel di GitHub:", e.message);
     }
-    return { gistId: GIST_ID, rawUrl: GIST_RAW_URL, fileName: "soal.json" };
+
+    info = await buatGistBaruUntukMapel(mapelName);
+    mapelGistRegistry[mapelName] = info;
+    await saveCbtDatabaseToGist();
+    return info;
 }
 
 async function fetchAllSoalFromGist(options = {}) {
     const preferRaw = options.preferRaw !== false;
     const forceRefresh = options.forceRefresh === true;
     const targetMapel = options.mapel || "";
-    const targetGist = getTargetGistInfoForMapel(targetMapel);
-    const cacheScope = options.cacheScope || `${preferRaw ? "raw" : "api"}_${targetGist.gistId}`;
 
-    if (!forceRefresh) {
-        const cached = bacaCacheSoal(cacheScope);
-        if (cached) return cached;
-    }
-
-    // Jika meminta semua soal di Admin (tanpa mapel spesifik) dan ada banyak Gist mapel, gabungkan
-    if (!targetMapel && Object.keys(mapelGistRegistry).length > 0) {
+    // Jika meminta semua soal di Admin (tanpa mapel spesifik), gabungkan seluruh db_soal_<mapel>.json terdaftar
+    if (!targetMapel) {
+        const cacheScopeAll = options.cacheScope || "admin_all_mapel_gists";
+        if (!forceRefresh) {
+            const cached = bacaCacheSoal(cacheScopeAll);
+            if (cached) return cached;
+        }
         const combinedAll = [];
         const seenGistIds = new Set();
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-        const targets = [
-            { gistId: GIST_ID, fileName: "soal.json" },
-            ...Object.values(mapelGistRegistry)
-        ];
+        const targets = Object.values(mapelGistRegistry || {});
         for (const t of targets) {
             if (!t || !t.gistId || seenGistIds.has(t.gistId)) continue;
             seenGistIds.add(t.gistId);
@@ -3275,11 +3299,29 @@ async function fetchAllSoalFromGist(options = {}) {
                 combinedAll.push(...parsed);
             } catch (e) {}
         }
-        simpanCacheSoal(cacheScope, combinedAll);
+        simpanCacheSoal(cacheScopeAll, combinedAll);
         return combinedAll;
     }
 
-    const baseRawUrl = targetGist.rawUrl.replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
+    let targetGist = getTargetGistInfoForMapel(targetMapel);
+    if (!targetGist || !targetGist.gistId) {
+        await fetchCbtDatabase(true, false);
+        targetGist = getTargetGistInfoForMapel(targetMapel);
+    }
+    if (!targetGist || !targetGist.gistId) {
+        return [];
+    }
+
+    const cacheScope = options.cacheScope || `${preferRaw ? "raw" : "api"}_${targetGist.gistId}`;
+    if (!forceRefresh) {
+        const cached = bacaCacheSoal(cacheScope);
+        if (cached) return cached;
+    }
+
+    const expectedFile = targetGist.fileName || buatSlugFileMapel(targetMapel);
+    const baseRawUrl = (targetGist.rawUrl || `https://gist.githubusercontent.com/by-UC/${targetGist.gistId}/raw/${expectedFile}`)
+        .replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
+
     if (preferRaw) {
         try {
             const res = await axios.get(`${baseRawUrl}?t=${Math.floor(Date.now() / 30000)}`);
@@ -3287,7 +3329,7 @@ async function fetchAllSoalFromGist(options = {}) {
             simpanCacheSoal(cacheScope, list);
             return list;
         } catch (rawErr) {
-            console.warn("Gagal baca Raw URL, fallback ke Gist API:", rawErr);
+            console.warn(`Gagal baca Raw URL ${expectedFile}, fallback ke Gist API:`, rawErr);
         }
     }
 
@@ -3296,8 +3338,8 @@ async function fetchAllSoalFromGist(options = {}) {
             headers: { "Authorization": `token ${GIST_TOKEN}` }
         });
         const files = gistRes.data.files || {};
-        const filename = files[targetGist.fileName] ? targetGist.fileName : Object.keys(files)[0];
-        const rawContent = files[filename].content;
+        const filename = files[expectedFile] ? expectedFile : Object.keys(files)[0];
+        const rawContent = files[filename]?.content || "[]";
         const list = parseSoalJsonFlexible(rawContent);
         simpanCacheSoal(cacheScope, list);
         return list;
@@ -3309,7 +3351,7 @@ async function fetchAllSoalFromGist(options = {}) {
                 simpanCacheSoal(cacheScope, list);
                 return list;
             } catch (e2) {
-                console.error("Gagal mengambil soal dari Gist:", e2);
+                console.error(`Gagal mengambil soal dari ${expectedFile}:`, e2);
             }
         }
         return [];
@@ -4481,28 +4523,39 @@ function hapusKelasDariSoalList(contentSoal, mapel, kelasList) {
 
 async function eksekusiHapusSoalDiGist(mapel, kelasList) {
     const targetGist = getTargetGistInfoForMapel(mapel);
+    if (!targetGist || !targetGist.gistId) {
+        bersihkanCacheSoal();
+        return 0;
+    }
+
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
     const gistRes = await axios.get(`https://api.github.com/gists/${targetGist.gistId}?t=${Date.now()}`, githubHeaders);
     const files = gistRes.data.files || {};
-    const filename = files[targetGist.fileName] ? targetGist.fileName : Object.keys(files)[0];
+    const expectedFile = targetGist.fileName || buatSlugFileMapel(mapel);
+    const filename = files[expectedFile] ? expectedFile : Object.keys(files)[0];
+    if (!filename) return 0;
+
     const contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
-
     const resultHapus = hapusKelasDariSoalList(contentSoal, mapel, kelasList);
-    const serialized = serializeSoalJsonOneSoalPerLine(resultHapus.updated);
 
-    await axios.patch(`https://api.github.com/gists/${targetGist.gistId}`, {
-        files: { [filename]: { content: serialized } }
-    }, githubHeaders);
+    if (resultHapus.dihapusCount > 0 || resultHapus.updated.length !== contentSoal.length) {
+        const serialized = serializeSoalJsonOneSoalPerLine(resultHapus.updated);
+        await axios.patch(`https://api.github.com/gists/${targetGist.gistId}`, {
+            files: { [filename]: { content: serialized } }
+        }, githubHeaders);
+    }
 
     bersihkanCacheSoal();
     return resultHapus.dihapusCount;
 }
 
-async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMapel, newKelasList) {
+async function updateKelasDiSatuGist(gistInfo, oldMapel, oldKelasList, newMapel, newKelasList, soalTambahan = []) {
+    if (!gistInfo || !gistInfo.gistId) return;
     const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-    const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
+    const gistRes = await axios.get(`https://api.github.com/gists/${gistInfo.gistId}?t=${Date.now()}`, githubHeaders);
     const files = gistRes.data.files || {};
-    const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
+    const expectedFile = gistInfo.fileName || buatSlugFileMapel(newMapel || oldMapel);
+    const filename = files[expectedFile] ? expectedFile : Object.keys(files)[0];
     let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
 
     const oldKelasSet = new Set((oldKelasList || []).map(k => normStr(k)).filter(Boolean));
@@ -4528,13 +4581,66 @@ async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMape
         };
     });
 
+    if (Array.isArray(soalTambahan) && soalTambahan.length > 0) {
+        const cleaned = hapusKelasDariSoalList(contentSoal, oldMapel, oldKelasList);
+        contentSoal = [...cleaned.updated, ...soalTambahan];
+        berubah = true;
+    }
+
     if (berubah) {
         const serialized = serializeSoalJsonOneSoalPerLine(contentSoal);
-        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+        await axios.patch(`https://api.github.com/gists/${gistInfo.gistId}`, {
             files: { [filename]: { content: serialized } }
         }, githubHeaders);
         bersihkanCacheSoal();
     }
+}
+
+async function sinkronkanKelasSoalSaatEditJadwal(oldMapel, oldKelasList, newMapel, newKelasList, soalTambahan = []) {
+    const oldGist = await ensureGistInfoForMapel(oldMapel);
+    const newGist = await ensureGistInfoForMapel(newMapel);
+
+    if (oldGist && newGist && oldGist.gistId !== newGist.gistId) {
+        // Jika saat edit jadwal mata pelajaran diganti ke mapel lain, pindahkan soal dari db_soal_<mapelLama>.json ke db_soal_<mapelBaru>.json
+        const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+        const oldRes = await axios.get(`https://api.github.com/gists/${oldGist.gistId}?t=${Date.now()}`, githubHeaders);
+        const oldFiles = oldRes.data.files || {};
+        const oldFname = oldFiles[oldGist.fileName] ? oldGist.fileName : Object.keys(oldFiles)[0];
+        const oldContent = parseSoalJsonFlexible(oldFiles[oldFname]?.content || "[]");
+
+        const oldKelasSet = new Set((oldKelasList || []).map(k => normStr(k)).filter(Boolean));
+        const soalDipindah = [];
+        const sisaOldContent = [];
+
+        oldContent.forEach(item => {
+            if (!itemCocokMapel(item, oldMapel)) {
+                sisaOldContent.push(item);
+                return;
+            }
+            const itemKelasArr = Array.isArray(item.kelas) ? item.kelas : [];
+            const cocokKelas = itemKelasArr.length === 0 || itemKelasArr.some(k => oldKelasSet.has(normStr(k)));
+            if (cocokKelas) {
+                soalDipindah.push({ ...item, mapel: newMapel, kelas: [...new Set(newKelasList)] });
+                const sisaKelas = itemKelasArr.filter(k => !oldKelasSet.has(normStr(k)));
+                if (sisaKelas.length > 0) {
+                    sisaOldContent.push({ ...item, kelas: sisaKelas });
+                }
+            } else {
+                sisaOldContent.push(item);
+            }
+        });
+
+        await axios.patch(`https://api.github.com/gists/${oldGist.gistId}`, {
+            files: { [oldFname]: { content: serializeSoalJsonOneSoalPerLine(sisaOldContent) } }
+        }, githubHeaders);
+
+        const paketUntukMapelBaru = soalTambahan.length > 0 ? soalTambahan : soalDipindah;
+        await updateKelasDiSatuGist(newGist, newMapel, newKelasList, newMapel, newKelasList, paketUntukMapelBaru);
+        bersihkanCacheSoal();
+        return;
+    }
+
+    await updateKelasDiSatuGist(newGist, oldMapel, oldKelasList, newMapel, newKelasList, soalTambahan);
 }
 
 function parseSoalDariTeks(text, mapelName, kelasArray) {
@@ -4887,16 +4993,18 @@ function tutupModalSoal() {
 }
 
 async function hapusSoalUntukKelas(mapel, kelasList) {
-    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari soal.json di Gist?`)) return;
-    showLoading("Menghapus soal dari soal.json di Gist...");
+    const targetGist = getTargetGistInfoForMapel(mapel);
+    const fileLabel = targetGist?.fileName || buatSlugFileMapel(mapel);
+    if(!confirm(`Hapus soal "${mapel}" untuk kelas ${kelasList.join(', ')} dari ${fileLabel} di Gist?`)) return;
+    showLoading(`Menghapus soal dari ${fileLabel} di Gist...`);
     try {
         await eksekusiHapusSoalDiGist(mapel, kelasList);
         hideLoading();
         tutupModalSoal();
-        alert(`Soal untuk ${mapel} (${kelasList.join(', ')}) berhasil dihapus dari soal.json!`);
+        alert(`Soal untuk ${mapel} (${kelasList.join(', ')}) berhasil dihapus dari ${fileLabel}!`);
     } catch(err) {
         hideLoading();
-        alert("Gagal menghapus soal dari soal.json: " + err.message);
+        alert(`Gagal menghapus soal dari ${fileLabel}: ` + err.message);
     }
 }
 
@@ -4905,8 +5013,10 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     const mapel = decodeURIComponent(mapelEnc);
     const kelasList = JSON.parse(decodeURIComponent(kelasJson));
 
-    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus menghapus soalnya di soal.json?`)) return;
-    showLoading("Menghapus jadwal & membersihkan soal di soal.json...");
+    const targetGist = getTargetGistInfoForMapel(mapel);
+    const fileLabel = targetGist?.fileName || buatSlugFileMapel(mapel);
+    if(!confirm(`Hapus jadwal ujian "${mapel}" untuk kelas ${kelasList.join(', ')} sekaligus menghapus soalnya di ${fileLabel}?`)) return;
+    showLoading(`Menghapus jadwal & membersihkan soal di ${fileLabel}...`);
 
     indices.sort((a, b) => b - a).forEach(idx => {
         daftarJadwalUjian.splice(idx, 1);
@@ -4917,7 +5027,7 @@ async function hapusJadwalGroup(indicesJson, mapelEnc, kelasJson) {
     try {
         await eksekusiHapusSoalDiGist(mapel, kelasList);
     } catch (err) {
-        console.error("Gagal membersihkan soal di soal.json saat hapus jadwal:", err);
+        console.error(`Gagal membersihkan soal di ${fileLabel} saat hapus jadwal:`, err);
     }
 
     renderTabelJadwal();
@@ -6678,32 +6788,16 @@ async function simpanJadwalDanSoal() {
         daftarJadwalUjian = jadwalUpdated;
         await saveCbtDatabaseToGist();
 
-        if (soalBaru.length > 0) {
-            showLoading(`Mengunggah ${soalBaru.length} butir soal baru ke soal.json...`);
-            try {
-                const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
-                const gistRes = await axios.get(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, githubHeaders);
-                const files = gistRes.data.files || {};
-                const filename = files["soal.json"] ? "soal.json" : Object.keys(files)[0];
-                let contentSoal = parseSoalJsonFlexible(files[filename]?.content || "[]");
-
-                const cleaned = hapusKelasDariSoalList(contentSoal, editOrigMapel || mapel, origKelasList.length > 0 ? origKelasList : kelasTerpilih);
-                const combinedSoal = [...cleaned.updated, ...soalBaru];
-                const serialized = serializeSoalJsonOneSoalPerLine(combinedSoal);
-
-                await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
-                    files: { [filename]: { content: serialized } }
-                }, githubHeaders);
-                bersihkanCacheSoal();
-            } catch (err) {
-                console.error("Gagal mengupdate soal.json saat edit jadwal:", err);
-            }
-        } else {
-            try {
-                await sinkronkanKelasSoalSaatEditJadwal(editOrigMapel || mapel, origKelasList, mapel, kelasTerpilih);
-            } catch (err) {
-                console.error("Gagal menyinkronkan kelas soal saat edit jadwal:", err);
-            }
+        try {
+            await sinkronkanKelasSoalSaatEditJadwal(
+                editOrigMapel || mapel,
+                origKelasList.length > 0 ? origKelasList : kelasTerpilih,
+                mapel,
+                kelasTerpilih,
+                soalBaru
+            );
+        } catch (err) {
+            console.error("Gagal menyinkronkan soal di Gist saat edit jadwal:", err);
         }
 
         renderTabelJadwal();
@@ -6735,7 +6829,7 @@ async function simpanJadwalDanSoal() {
     await saveCbtDatabaseToGist();
     renderTabelJadwal();
 
-    const targetGist = getTargetGistInfoForMapel(mapel);
+    const targetGist = await ensureGistInfoForMapel(mapel);
     showLoading(`Mengunggah ${soalBaru.length} butir soal ke ${targetGist.fileName} di Gist...`);
     try {
         const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
