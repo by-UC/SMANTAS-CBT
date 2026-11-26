@@ -366,6 +366,32 @@
             background: #1d63ed;
             color: #fff;
         }
+
+        .rt-speaker-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 22px;
+            padding: 0;
+            margin: 0;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #0f172a;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .rt-speaker-btn:hover {
+            background: #e2e8f0;
+        }
+        .rt-speaker-btn.muted {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #b91c1c;
+        }
+
         .rt-btn-cek:hover {
             background: #154ec0;
         }
@@ -1698,7 +1724,16 @@
                 <div class="rt-card-compact rt-gas-card">
                     <div class="rt-card-top">
                         <span class="rt-card-title">Akses Realtime GAS</span>
-                        <span id="gasRealtimeBadge" class="rt-badge-aman">Aman</span>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <button type="button" id="btnSpeakerGas" class="rt-speaker-btn" onclick="togglePeringatanSuara()" title="Suara Peringatan Aktif (Klik untuk mematikan)" aria-label="Toggle Suara Peringatan GAS">
+                            <svg id="iconSpeakerGas" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path class="spk-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path class="spk-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
+                            <span id="gasRealtimeBadge" class="rt-badge-aman">Aman</span>
+                        </div>
                     </div>
                     <div class="rt-gas-body">
                         <div class="rt-gauge-wrap">
@@ -1727,6 +1762,13 @@
                             <span class="rt-card-title">Monitor Kuota / Rate Limit GitHub Gist API</span>
                             <div style="display:flex; align-items:center; gap:4px;">
                                 <button type="button" class="rt-btn-cek" onclick="cekRateLimitGistApi(false)">🔄 Cek</button>
+                                <button type="button" id="btnSpeakerGist" class="rt-speaker-btn" onclick="togglePeringatanSuara()" title="Suara Peringatan Aktif (Klik untuk mematikan)" aria-label="Toggle Suara Peringatan Gist">
+                            <svg id="iconSpeakerGist" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path class="spk-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path class="spk-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
                                 <span id="gistQuotaBadge" class="rt-badge-aman">Aman</span>
                             </div>
                         </div>
@@ -2141,6 +2183,136 @@
 </div>
 
 <script>
+
+// ================= SUARA PERINGATAN ZONA KUNING (1x) & ZONA MERAH (10x) =================
+const WARNING_SOUND_PAGE_URL = "https://pixabay.com/id/sound-effects/film-efek-khusus-warning-sound-6686/";
+const SPEAKER_MUTED_STORAGE_KEY = "smantas_cbt_speaker_muted_v1";
+let isSpeakerMuted = localStorage.getItem(SPEAKER_MUTED_STORAGE_KEY) === "true";
+let warningRepeatTimers = [];
+let lastZoneState = {
+    gas: "aman",
+    gist: "aman"
+};
+const warningAudioEl = new Audio(WARNING_SOUND_PAGE_URL);
+warningAudioEl.preload = "auto";
+
+function renderSpeakerButtons() {
+    const btns = [document.getElementById("btnSpeakerGas"), document.getElementById("btnSpeakerGist")];
+    const mutedSvgInner = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <line x1="23" y1="9" x2="17" y2="15"></line>
+        <line x1="17" y1="9" x2="23" y2="15"></line>
+    `;
+    const activeSvgInner = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+    `;
+
+    btns.forEach(btn => {
+        if (!btn) return;
+        const svg = btn.querySelector("svg");
+        if (isSpeakerMuted) {
+            btn.classList.add("muted");
+            btn.title = "Suara Peringatan Mati (Klik untuk menyalakan)";
+            if (svg) svg.innerHTML = mutedSvgInner;
+        } else {
+            btn.classList.remove("muted");
+            btn.title = "Suara Peringatan Nyala (Klik untuk mematikan)";
+            if (svg) svg.innerHTML = activeSvgInner;
+        }
+    });
+}
+
+function hentikanAntreanSuaraPeringatan() {
+    warningRepeatTimers.forEach(id => clearTimeout(id));
+    warningRepeatTimers = [];
+    try {
+        warningAudioEl.pause();
+        warningAudioEl.currentTime = 0;
+    } catch (e) {}
+}
+
+function togglePeringatanSuara() {
+    isSpeakerMuted = !isSpeakerMuted;
+    try {
+        localStorage.setItem(SPEAKER_MUTED_STORAGE_KEY, String(isSpeakerMuted));
+    } catch (e) {}
+    if (isSpeakerMuted) {
+        hentikanAntreanSuaraPeringatan();
+    }
+    renderSpeakerButtons();
+}
+
+function mainkanSatuEfekWarning() {
+    if (isSpeakerMuted) return;
+    try {
+        const clip = warningAudioEl.cloneNode(true);
+        clip.volume = 0.85;
+        const p = clip.play();
+        if (p && typeof p.catch === "function") {
+            p.catch(() => {
+                playFallbackWarningTone();
+            });
+        }
+    } catch (e) {
+        playFallbackWarningTone();
+    }
+}
+
+function playFallbackWarningTone() {
+    if (isSpeakerMuted) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!playFallbackWarningTone._ctx) {
+            playFallbackWarningTone._ctx = new AudioCtx();
+        }
+        const ctx = playFallbackWarningTone._ctx;
+        if (ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
+        }
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.22);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+    } catch (e) {}
+}
+
+function picuSuaraZona(sourceKey, zoneName) {
+    const prevZone = lastZoneState[sourceKey] || "aman";
+    lastZoneState[sourceKey] = zoneName;
+
+    if (zoneName === "aman") return;
+    if (prevZone === zoneName) return;
+
+    hentikanAntreanSuaraPeringatan();
+    if (isSpeakerMuted) return;
+
+    const repeatCount = zoneName === "merah" ? 10 : 1;
+    const intervalGapMs = 450;
+
+    for (let i = 0; i < repeatCount; i++) {
+        const timerId = setTimeout(() => {
+            if (!isSpeakerMuted) {
+                mainkanSatuEfekWarning();
+            }
+        }, i * intervalGapMs);
+        warningRepeatTimers.push(timerId);
+    }
+}
+
 // ================= KONFIGURASI SISTEM =================
 const CBT_GIST_RAW_URL = "https://gist.githubusercontent.com/by-UC/50cfbd273416be193afd98b4af08fb58/raw/db_cbt.json";
 const CBT_GIST_ID = "50cfbd273416be193afd98b4af08fb58";
@@ -3351,11 +3523,18 @@ function updateGasRealtimeGauge() {
     if (subCntEl) subCntEl.innerText = String(aktifCount);
     if (needleEl) needleEl.setAttribute("transform", `rotate(${angleDeg.toFixed(1)} 60 58)`);
 
+    let gasZone = "aman";
+    if (aktifCount >= 900) {
+        gasZone = "merah";
+    } else if (aktifCount >= 750) {
+        gasZone = "kuning";
+    }
+
     if (badgeEl) {
-        if (aktifCount >= 900) {
+        if (gasZone === "merah") {
             badgeEl.className = "rt-badge-danger";
             badgeEl.innerText = "Padat";
-        } else if (aktifCount >= 750) {
+        } else if (gasZone === "kuning") {
             badgeEl.className = "rt-badge-warn";
             badgeEl.innerText = "Waspada";
         } else {
@@ -3363,6 +3542,7 @@ function updateGasRealtimeGauge() {
             badgeEl.innerText = "Aman";
         }
     }
+    picuSuaraZona("gas", gasZone);
 }
 
 function updateGistSegmentedMeter(remaining, limit) {
@@ -3420,11 +3600,20 @@ async function cekRateLimitGistApi(silent = false) {
             statusEl.innerText = remaining > 500 ? "Raw-First Aktif" : "Waspada Kuota Menipis";
             statusEl.style.color = remaining > 500 ? "#0d9488" : "#dc2626";
         }
+        let gistZone = "aman";
+        if (remaining > 500) {
+            gistZone = "aman";
+        } else if (remaining > 100) {
+            gistZone = "kuning";
+        } else {
+            gistZone = "merah";
+        }
+
         if (badgeEl) {
-            if (remaining > 500) {
+            if (gistZone === "aman") {
                 badgeEl.className = "rt-badge-aman";
                 badgeEl.innerText = "Aman";
-            } else if (remaining > 100) {
+            } else if (gistZone === "kuning") {
                 badgeEl.className = "rt-badge-warn";
                 badgeEl.innerText = "Waspada";
             } else {
@@ -3432,6 +3621,7 @@ async function cekRateLimitGistApi(silent = false) {
                 badgeEl.innerText = "Limit";
             }
         }
+        picuSuaraZona("gist", gistZone);
     } catch (e) {
         if (remEl) {
             remEl.innerText = "Gagal cek";
@@ -7862,6 +8052,7 @@ function renderTabelJadwal() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+    renderSpeakerButtons();
     const nowIso = getLocalIsoNow();
     document.getElementById('waktuMulai').value = nowIso;
     hitungWaktuSelesaiOtomatis();
