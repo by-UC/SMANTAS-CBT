@@ -3364,7 +3364,9 @@ function isMapelTerkunciUntukSiswa(username, namaSiswa, kelasSiswa, mapelName) {
         const stLow = st.toLowerCase();
         const adaNilai = lastLog.nilai !== null && lastLog.nilai !== undefined && String(lastLog.nilai).trim() !== "" && String(lastLog.nilai).trim() !== "-";
 
-        if (st === "Direset" || stLow.includes("direset") || stLow.startsWith("reset")) {
+        const tokensSt = stLow.split(",").map(t => t.trim()).filter(Boolean);
+        const lastTok = tokensSt.length > 0 ? tokensSt[tokensSt.length - 1] : stLow;
+        if (lastTok === "direset" || lastTok.includes("direset") || lastTok.startsWith("reset")) {
             bukaKunciMapelLokal(username, mapelName);
             return false;
         }
@@ -4101,8 +4103,16 @@ async function saveCbtDatabaseToGist() {
 }
 
 function parseTokenCount(token) {
-    const m = String(token || "").trim().match(/^(.*?)(?:\s*\((\d+)x\))?$/i);
-    if (!m) return { base: String(token || "").trim(), count: 1 };
+    const clean = String(token || "").trim();
+    const mCurang = clean.match(/^curang(?:\s*\(?(\d+)x\)?)?(?:\s*:.*)?$/i);
+    if (mCurang) {
+        return {
+            base: "Curang",
+            count: mCurang[1] ? parseInt(mCurang[1], 10) : 1
+        };
+    }
+    const m = clean.match(/^(.*?)(?:\s*\(?(\d+)x\)?)?$/i);
+    if (!m) return { base: clean, count: 1 };
     return {
         base: m[1].trim(),
         count: m[2] ? parseInt(m[2], 10) : 1
@@ -4110,46 +4120,109 @@ function parseTokenCount(token) {
 }
 
 function formatTokenCount(base, count) {
+    if (String(base || "").toLowerCase() === "curang") {
+        return count > 1 ? `Curang ${count}x` : "Curang";
+    }
     return count > 1 ? `${base} (${count}x)` : base;
 }
 
-function gabungRiwayatStatus(statusLama, statusBaru) {
+function hitungTotalCurangDariRiwayat(statusStr) {
+    const tokens = String(statusStr || "").split(",").map(s => s.trim()).filter(Boolean);
+    let totalCurang = 0;
+    tokens.forEach(tok => {
+        const low = tok.toLowerCase();
+        if (low.startsWith("curang")) {
+            const parsed = parseTokenCount(tok);
+            totalCurang += (parsed.count || 1);
+        }
+    });
+    return totalCurang;
+}
+
+function ambilRiwayatStatusMapelLama(nama, kelas, mapel, username = "") {
+    const logs = getLogsBersih();
+    const namaNorm = normStr(nama || "");
+    const kelasNorm = normStr(kelas || "");
+    const mapelNorm = normStr(mapel || "");
+    const unameNorm = normStr(username || "");
+
+    const matched = logs
+        .map((l, idx) => ({ row: l, ts: getLogTimestampMs(l, idx + 1) }))
+        .filter(({ row: l }) => {
+            if (normStr(l.mapel) !== mapelNorm) return false;
+            const logUname = normStr(l.username || l.nis || "");
+            if (unameNorm && logUname && logUname === unameNorm) return true;
+            return (!namaNorm || normStr(l.nama) === namaNorm) && (!kelasNorm || normStr(l.kelas) === kelasNorm);
+        })
+        .sort((a, b) => a.ts - b.ts);
+
+    let maxCurang = 0;
+    let lastStatus = "";
+    matched.forEach(({ row }) => {
+        const st = String(row.status || "").trim();
+        if (st) {
+            lastStatus = st;
+            const c = hitungTotalCurangDariRiwayat(st);
+            if (c > maxCurang) maxCurang = c;
+        }
+    });
+
+    const sess = username ? sesiLoginSiswa[username] : null;
+    if (sess && normStr(sess.mapel) === mapelNorm && sess.status) {
+        const cSess = hitungTotalCurangDariRiwayat(sess.status);
+        if (cSess > maxCurang) maxCurang = cSess;
+        if (!lastStatus) lastStatus = String(sess.status).trim();
+    }
+
+    return { lastStatus, maxCurang };
+}
+
+function gabungStatusLogSiswa(statusLama, statusBaru, maxCurangSebelumnya = 0) {
     const baru = String(statusBaru || "").trim();
-    const lamaRaw = String(statusLama || "").trim();
-    if (!lamaRaw || lamaRaw === "-" || lamaRaw === "Login Aktif") {
-        return baru;
+    const isBaruCurang = baru.toLowerCase().startsWith("curang");
+    const isBaruSelesai = baru.toLowerCase() === "selesai";
+
+    const curangDariLama = hitungTotalCurangDariRiwayat(statusLama);
+    let totalCurang = Math.max(curangDariLama, maxCurangSebelumnya || 0);
+    if (isBaruCurang) {
+        totalCurang += 1;
     }
 
-    const daftarLama = lamaRaw.split(",").map(s => s.trim()).filter(Boolean);
-    if (!baru) return daftarLama.join(", ");
+    const daftarLama = String(statusLama || "")
+        .split(",")
+        .map(s => s.trim())
+        .filter(s => s && s !== "-" && s !== "Login Aktif" && s !== "Sedang Ujian");
 
-    if (daftarLama[daftarLama.length - 1] === "Sedang Ujian" && baru !== "Sedang Ujian") {
-        daftarLama.pop();
+    const daftarNonCurang = daftarLama.filter(tok => {
+        const low = tok.toLowerCase();
+        if (low.startsWith("curang")) return false;
+        if (low === "direset" || low.includes("direset") || low.startsWith("reset")) return false;
+        if (isBaruSelesai && low === "selesai") return false;
+        return true;
+    });
+
+    const hasilTokens = [];
+    if (totalCurang > 0) {
+        hasilTokens.push(totalCurang > 1 ? `Curang ${totalCurang}x` : "Curang");
     }
 
-    if (daftarLama.length === 0) {
-        return baru;
-    }
+    daftarNonCurang.forEach(tok => {
+        if (!hasilTokens.some(x => x.toLowerCase() === tok.toLowerCase())) {
+            hasilTokens.push(tok);
+        }
+    });
 
-    if (baru.toLowerCase().startsWith("curang")) {
-        const parsedBaru = parseTokenCount(baru);
-        const existingIdx = daftarLama.findIndex(tok =>
-            parseTokenCount(tok).base.toLowerCase() === parsedBaru.base.toLowerCase()
-        );
-        if (existingIdx !== -1) {
-            const parsedLama = parseTokenCount(daftarLama[existingIdx]);
-            const totalCount = parsedLama.count + parsedBaru.count;
-            daftarLama[existingIdx] = formatTokenCount(parsedLama.base, totalCount);
-            return daftarLama.join(", ");
+    if (!isBaruCurang && baru) {
+        if (!hasilTokens.some(x => x.toLowerCase() === baru.toLowerCase())) {
+            hasilTokens.push(baru);
         }
     }
 
-    if (daftarLama[daftarLama.length - 1].toLowerCase() === baru.toLowerCase()) {
-        return daftarLama.join(", ");
-    }
+    return hasilTokens.join(", ");
+}
 
-    daftarLama.push(baru);
-    return daftarLama.join(", ");
+function gabungRiwayatStatus(statusLama, statusBaru) {
+    return gabungStatusLogSiswa(statusLama, statusBaru, 0);
 }
 
 function cekStatusTerkunci(statusStr) {
@@ -4164,16 +4237,10 @@ function cekStatusTerkunci(statusStr) {
 
 function formatPelanggaranRingkas(alasan) {
     const low = String(alasan || "").toLowerCase();
-    if (low.includes("full screen") || low.includes("fullscreen")) {
-        return "Curang: Keluar dari mode Full Screen";
-    }
-    if (low.includes("tab") || low.includes("jendela") || low.includes("aplikasi") || low.includes("menyembunyikan")) {
-        return "Curang: Pindah Tab / Aplikasi";
-    }
     if (low.includes("waktu")) {
         return "Waktu Habis";
     }
-    return alasan ? `Curang: ${alasan}` : "Curang";
+    return "Curang";
 }
 
 function renderStatusBadgesHtml(statusStr) {
@@ -5007,7 +5074,8 @@ async function resetMassalMapelBerdasarkanFilter(mapelEnc) {
                         kelas: item.kelasTargetReset,
                         mapel: mapel,
                         namaUjian: item.namaUjianTargetReset,
-                        deletePreviousResult: true,
+                        deletePreviousResult: false,
+                        preserveCheatHistory: true,
                         status: "Direset",
                         nilai: ""
                     })),
@@ -5165,7 +5233,10 @@ function terapkanResetMapelKeStateLokal(username, nama, kelas, mapel) {
                 (!kelasLow || normStr(r.kelas) === kelasLow) &&
                 normStr(r.mapel) === mapelLow
             ) {
-                r.status = "Direset";
+                const jmlCurang = hitungTotalCurangDariRiwayat(r.status);
+                r.status = jmlCurang > 0
+                    ? `${jmlCurang > 1 ? `Curang ${jmlCurang}x` : "Curang"}, Direset`
+                    : "Direset";
             }
         }
         simpanCacheAdminLog(logSiswaLogin);
@@ -5209,7 +5280,8 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
                 kelas: kelasTargetReset,
                 mapel: mapel,
                 namaUjian: namaUjianTargetReset,
-                deletePreviousResult: true,
+                deletePreviousResult: false,
+                preserveCheatHistory: true,
                 status: "Direset",
                 nilai: ""
             })),
@@ -7639,18 +7711,50 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
         } catch (e) {}
     }
 
+    const riwayatLogLama = ambilRiwayatStatusMapelLama(namaSiswaLogin, kelasSiswaLogin, mapelSiswaLogin, unameSiswa);
+    const sesiLama = unameSiswa ? (sesiLoginSiswa[unameSiswa] || {}) : {};
+    const statusLogGabungan = gabungStatusLogSiswa(
+        riwayatLogLama.lastStatus || sesiLama.status || "",
+        statusLabel,
+        riwayatLogLama.maxCurang
+    );
+
     if (unameSiswa) {
-        const sesiLama = sesiLoginSiswa[unameSiswa] || {};
-        const statusGabungan = gabungRiwayatStatus(sesiLama.status, statusLabel);
         await setSesiToGAS({
             username: unameSiswa,
             deviceId: sesiLama.deviceId || devId,
-            status: statusGabungan,
+            status: statusLogGabungan,
             nama: namaSiswaLogin,
             kelas: kelasSiswaLogin,
             mapel: mapelSiswaLogin,
             updatedAt: getLocalIsoNow()
         });
+    }
+
+    // Perbarui state log lokal secara langsung agar riwayat curang tidak hilang
+    if (Array.isArray(logSiswaLogin)) {
+        const idxLogLama = logSiswaLogin.findIndex(r =>
+            r &&
+            normStr(r.nama) === normStr(namaSiswaLogin) &&
+            normStr(r.kelas) === normStr(kelasSiswaLogin) &&
+            normStr(r.mapel) === normStr(mapelSiswaLogin)
+        );
+        const nowStr = getLocalIsoNow();
+        if (idxLogLama !== -1) {
+            logSiswaLogin[idxLogLama].status = statusLogGabungan;
+            logSiswaLogin[idxLogLama].nilai = nilaiAkhir;
+            logSiswaLogin[idxLogLama].timestamp = nowStr;
+        } else {
+            logSiswaLogin.push({
+                timestamp: nowStr,
+                nama: namaSiswaLogin,
+                kelas: kelasSiswaLogin,
+                mapel: mapelSiswaLogin,
+                status: statusLogGabungan,
+                nilai: nilaiAkhir
+            });
+        }
+        simpanCacheAdminLog(logSiswaLogin);
     }
 
     let payload = {
@@ -7661,7 +7765,8 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
         mapel: mapelSiswaLogin,
         namaUjian: namaUjianAktif,
         nilai: nilaiAkhir,
-        status: statusLabel,
+        status: statusLogGabungan,
+        preserveCheatHistory: true,
         isCheating: isCheating,
         cheatReason: cheatReason,
         timestamp: getLocalIsoNow()
