@@ -6127,15 +6127,17 @@ async function unggahSemuaGambarBase64KeDrive(soalArray, onProgress = null) {
             const ext = mimeType.includes("png") ? "png" : (mimeType.includes("gif") ? "gif" : "jpg");
             const fileName = `soal_cbt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
 
+            const mapelFolder = String(document.getElementById('jadwalMapel')?.value || "Soal_Umum").trim().replace(/[^a-zA-Z0-9_-]/g, "_") || "Soal_Umum";
             const res = await axios.post(GAS_URL, JSON.stringify({
-                action: "uploadSoalImage",
+                action: "uploadImage",
+                folderName: mapelFolder,
                 fileName: fileName,
                 mimeType: mimeType,
-                base64Data: base64Data
+                base64: base64Data
             }));
 
-            if (res.data && res.data.status === "success" && res.data.url) {
-                const directUrl = res.data.url;
+            if (res.data && res.data.status === "success" && (res.data.fileUrl || res.data.url)) {
+                const directUrl = res.data.fileUrl || res.data.url;
                 cacheUpload.set(src, directUrl);
                 img.setAttribute("src", directUrl);
             } else {
