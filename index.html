@@ -63,6 +63,186 @@
         }
         .table-jadwal-aktif .col-aksi { width: 15.5%; }
     
+
+        /* TOMBOL KOTAK KECIL MODE HACKER & TEMA HITAM-HIJAU SOFT */
+        .btn-hacker-toggle {
+            width: 24px !important;
+            height: 24px !important;
+            min-width: 24px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #0d1612;
+            color: #4ade80;
+            border: 1px solid #22c55e;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-hacker-toggle:hover {
+            background: #14291f;
+            box-shadow: 0 0 6px rgba(74, 222, 128, 0.45);
+        }
+        body.hacker-mode .btn-hacker-toggle {
+            background: #143324;
+            color: #86efac;
+            border-color: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+        }
+
+        /* TEMA HACKER HITAM-HIJAU SOFT */
+        body.hacker-mode {
+            background: #090d0b !important;
+            color: #b8e6c8 !important;
+        }
+        body.hacker-mode .container {
+            background: #0e1512 !important;
+            border: 1px solid #1f3d2d !important;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12) !important;
+            color: #b8e6c8 !important;
+        }
+        body.hacker-mode .header-box {
+            border-bottom-color: #22c55e !important;
+        }
+        body.hacker-mode h2,
+        body.hacker-mode h3,
+        body.hacker-mode h4,
+        body.hacker-mode .header-admin-title,
+        body.hacker-mode .rt-card-title,
+        body.hacker-mode .rt-active-exams-title,
+        body.hacker-mode .rt-token-title,
+        body.hacker-mode .soal-progress-info {
+            color: #4ade80 !important;
+        }
+        body.hacker-mode label,
+        body.hacker-mode small,
+        body.hacker-mode p,
+        body.hacker-mode span:not(.status-pill):not(.rt-badge-aman):not(.rt-badge-warn):not(.rt-badge-danger):not(.rt-exam-mini-timer):not(.exam-timer-badge),
+        body.hacker-mode .rt-gas-sub,
+        body.hacker-mode .rt-gist-sub,
+        body.hacker-mode .rt-gist-headline,
+        body.hacker-mode .rt-gist-foot,
+        body.hacker-mode .rt-gist-reset-text,
+        body.hacker-mode .token-live-code,
+        body.hacker-mode .token-live-timer,
+        body.hacker-mode .rt-token-subrow,
+        body.hacker-mode .rt-exam-mini-mapel {
+            color: #a7d7b8 !important;
+        }
+        body.hacker-mode .rt-gas-metric,
+        body.hacker-mode .rt-gas-metric .gas-num-highlight,
+        body.hacker-mode .token-live-code,
+        body.hacker-mode .rt-gist-reset-text {
+            color: #4ade80 !important;
+        }
+        body.hacker-mode .rt-card-compact,
+        body.hacker-mode .admin-card,
+        body.hacker-mode .rt-active-exams-panel,
+        body.hacker-mode .rt-token-sidebox,
+        body.hacker-mode .rt-exam-mini-box,
+        body.hacker-mode .rt-exam-empty-box,
+        body.hacker-mode .rt-gas-note,
+        body.hacker-mode .rt-token-code-row,
+        body.hacker-mode .pass-display-box,
+        body.hacker-mode .pagination-bar,
+        body.hacker-mode .checkbox-grid,
+        body.hacker-mode .master-matrix-item,
+        body.hacker-mode .modal-box,
+        body.hacker-mode .modal-body,
+        body.hacker-mode .preview-item,
+        body.hacker-mode .preview-opt,
+        body.hacker-mode .fs-guard-box,
+        body.hacker-mode .soal-nav-bar,
+        body.hacker-mode .exam-header-info-bar {
+            background: #121c17 !important;
+            border-color: #244735 !important;
+            color: #b8e6c8 !important;
+        }
+        body.hacker-mode .modal-header {
+            background: #143324 !important;
+            border-bottom: 1px solid #22c55e !important;
+        }
+        body.hacker-mode .modal-footer {
+            background: #0e1512 !important;
+            border-top-color: #244735 !important;
+        }
+        body.hacker-mode .admin-tab-menu {
+            border-bottom-color: #244735 !important;
+        }
+        body.hacker-mode .admin-tab-btn {
+            background: #132019 !important;
+            color: #7fb896 !important;
+            border: 1px solid #1f3d2d !important;
+        }
+        body.hacker-mode .admin-tab-btn.active {
+            background: #1b4332 !important;
+            color: #86efac !important;
+            border-color: #4ade80 !important;
+        }
+        body.hacker-mode input[type="text"],
+        body.hacker-mode input[type="password"],
+        body.hacker-mode input[type="number"],
+        body.hacker-mode input[type="datetime-local"],
+        body.hacker-mode textarea,
+        body.hacker-mode select {
+            background: #0b120e !important;
+            color: #86efac !important;
+            border: 1px solid #28523d !important;
+        }
+        body.hacker-mode input::placeholder,
+        body.hacker-mode textarea::placeholder {
+            color: #527965 !important;
+        }
+        body.hacker-mode table,
+        body.hacker-mode th,
+        body.hacker-mode td {
+            border-color: #244735 !important;
+        }
+        body.hacker-mode th {
+            background-color: #163828 !important;
+            color: #86efac !important;
+        }
+        body.hacker-mode td {
+            background-color: #0f1713 !important;
+            color: #b8e6c8 !important;
+        }
+        body.hacker-mode tr:hover td {
+            background-color: #15241d !important;
+        }
+        body.hacker-mode .rt-gist-meter {
+            background: #070b09 !important;
+            border: 1px solid #244735 !important;
+        }
+        body.hacker-mode .rt-gist-seg:not(.active) {
+            background-color: #1a2b22 !important;
+        }
+        body.hacker-mode .rt-speaker-btn,
+        body.hacker-mode .btn-pilih-baris {
+            background: #14241c !important;
+            color: #86efac !important;
+            border-color: #2d5a43 !important;
+        }
+        body.hacker-mode .rt-active-exams-count {
+            background: #163828 !important;
+            color: #86efac !important;
+            border: 1px solid #2d5a43 !important;
+        }
+        body.hacker-mode .rt-token-drive-link {
+            color: #4ade80 !important;
+        }
+        /* JARUM PENUNJUK AKSES REALTIME GAS JADI PUTIH SAAT MODE HACKER */
+        body.hacker-mode #gasGaugeNeedle polygon {
+            fill: #ffffff !important;
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
+        }
+        body.hacker-mode #gasGaugeCenter {
+            fill: #ffffff !important;
+        }
+
         /* COMPACT REALTIME GAS, GIST QUOTA & ALIGNED TOKEN ROW */
         .realtime-monitor-row {
             display: flex;
@@ -1621,6 +1801,7 @@
         <div class="header-admin-inline" id="headerAdminInline">
             <span class="header-admin-title">Dashboard Admin CBT</span>
             <div class="header-admin-actions">
+                <button type="button" id="btnToggleHackerMode" class="btn-hacker-toggle" onclick="toggleHackerMode()" title="Aktifkan/Matikan Mode Hacker (Hitam-Hijau Soft)" aria-label="Mode Hacker">⌘</button>
                 <button onclick="refreshSemuaDataAdmin()" style="width: auto; padding: 4px 9px; background: #17a2b8; font-size: 11px;">Refresh Data</button>
                 <button onclick="logoutAdmin()" style="width: auto; padding: 4px 9px; background: #dc3545; font-size: 11px;">Logout</button>
             </div>
@@ -1744,7 +1925,7 @@
                                 <g id="gasGaugeNeedle" transform="rotate(-78 60 58)">
                                     <polygon points="57,60 60,16 63,60" fill="#1e293b"/>
                                 </g>
-                                <circle cx="60" cy="58" r="6.5" fill="#0f172a"/>
+                                <circle id="gasGaugeCenter" cx="60" cy="58" r="6.5" fill="#0f172a"/>
                             </svg>
                         </div>
                         <div class="rt-gas-meta">
@@ -2183,6 +2364,33 @@
 </div>
 
 <script>
+
+
+// ================= MODE HACKER (HITAM - HIJAU SOFT) =================
+const HACKER_MODE_STORAGE_KEY = "smantas_cbt_hacker_mode_v1";
+
+function terapkanStatusHackerMode(aktif) {
+    const isHacker = Boolean(aktif);
+    if (isHacker) {
+        document.body.classList.add("hacker-mode");
+    } else {
+        document.body.classList.remove("hacker-mode");
+    }
+    const btn = document.getElementById("btnToggleHackerMode");
+    if (btn) {
+        btn.title = isHacker
+            ? "Mode Hacker Aktif (Klik untuk kembali ke tema normal)"
+            : "Aktifkan Mode Hacker (Hitam-Hijau Soft)";
+    }
+}
+
+function toggleHackerMode() {
+    const nextState = !document.body.classList.contains("hacker-mode");
+    terapkanStatusHackerMode(nextState);
+    try {
+        localStorage.setItem(HACKER_MODE_STORAGE_KEY, String(nextState));
+    } catch (e) {}
+}
 
 // ================= SUARA PERINGATAN ZONA KUNING (1x) & ZONA MERAH (10x) =================
 const WARNING_SOUND_PAGE_URL = "https://pixabay.com/id/sound-effects/film-efek-khusus-warning-sound-6686/";
@@ -8052,6 +8260,7 @@ function renderTabelJadwal() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+    terapkanStatusHackerMode(localStorage.getItem(HACKER_MODE_STORAGE_KEY) === "true");
     renderSpeakerButtons();
     const nowIso = getLocalIsoNow();
     document.getElementById('waktuMulai').value = nowIso;
