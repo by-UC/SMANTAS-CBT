@@ -1377,6 +1377,32 @@
         .btn-hapus-sesi:hover {
             background: #c82333;
         }
+        .btn-bulk-reset-mapel {
+            width: auto;
+            padding: 2.5px 7px;
+            font-size: 10px;
+            line-height: 1.15;
+            border-radius: 3px;
+            background: #ffc107;
+            color: #212529;
+            font-weight: bold;
+        }
+        .btn-bulk-reset-mapel:hover {
+            background: #e0a800;
+        }
+        .btn-bulk-reset-perangkat {
+            width: auto;
+            padding: 2.5px 7px;
+            font-size: 10px;
+            line-height: 1.15;
+            border-radius: 3px;
+            background: #fd7e14;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .btn-bulk-reset-perangkat:hover {
+            background: #e36a08;
+        }
 
         .checkbox-grid {
             display: flex;
@@ -2023,6 +2049,7 @@
                         <button type="button" onclick="renderTabelSesiAktif()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #008080;">Cari</button>
                         <button type="button" onclick="resetCariNamaSesi()" style="width: auto; padding: 2.5px 6px; font-size: 10px; background: #6c757d;">Reset</button>
                         <button type="button" onclick="fetchSesiFromGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #17a2b8;">Refresh Sesi</button>
+                        <span id="bulkFilterResetButtons" style="display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap;"></span>
                         <button type="button" onclick="hapusSemuaSesiGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #dc3545;">🗑️ Hapus Semua Sesi</button>
                     </div>
                 </div>
@@ -4833,18 +4860,8 @@ function kumpulkanMapelAktifSiswaFast(username, sesiObj, jadwalCache) {
     return Array.from(mapelSet.values());
 }
 
-function renderTabelSesiAktif() {
-    updateGasRealtimeGauge();
-    const tbody = document.getElementById('tbodySesiAktif');
-    if(!tbody) return;
-
-    const keys = Object.keys(sesiLoginSiswa);
-    if(keys.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
-        renderPaginationControls('paginationSesiBar', 0, 1, PAGE_SIZE_SESI, 'gantiHalamanSesi');
-        return;
-    }
-
+function getDaftarSesiTersaringSaatIni() {
+    const keys = Object.keys(sesiLoginSiswa || {});
     const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
     const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
 
@@ -4861,6 +4878,179 @@ function renderTabelSesiAktif() {
             ts: getSesiUpdatedAtMs(s, (s._rowOrder ?? 0) + 1)
         });
     }
+    filteredItems.sort((a, b) => b.ts - a.ts);
+    return filteredItems;
+}
+
+function getLabelFilterStatusAktif(statusFilter) {
+    const mapLabel = {
+        "": "Semua",
+        "curang": "Curang",
+        "reset": "Reset",
+        "login_aktif": "Login Aktif",
+        "sedang_ujian": "Sedang Ujian",
+        "selesai": "Selesai"
+    };
+    return mapLabel[statusFilter] || statusFilter || "Semua";
+}
+
+function renderTombolBulkResetBerdasarkanFilter(filteredItems, jadwalCache) {
+    const container = document.getElementById('bulkFilterResetButtons');
+    if (!container) return;
+
+    const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
+    const labelFilter = getLabelFilterStatusAktif(statusFilter);
+
+    if (!filteredItems || filteredItems.length === 0) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const mapelMap = new Map();
+    for (let i = 0; i < filteredItems.length; i++) {
+        const { username, s } = filteredItems[i];
+        const mapelSiswa = kumpulkanMapelAktifSiswaFast(username, s, jadwalCache);
+        for (let m = 0; m < mapelSiswa.length; m++) {
+            const mp = mapelSiswa[m];
+            const key = normStr(mp);
+            if (!mapelMap.has(key)) {
+                mapelMap.set(key, mp);
+            }
+        }
+    }
+
+    const btns = [];
+    mapelMap.forEach((mpLabel, mpKey) => {
+        const mpEnc = encodeURIComponent(mpLabel);
+        btns.push(
+            `<button type="button" onclick="resetMassalMapelBerdasarkanFilter('${mpEnc}')" class="btn-bulk-reset-mapel" title="Reset mapel ${mpLabel} untuk semua siswa pada filter ${labelFilter}">Reset-${mpLabel} (${labelFilter})</button>`
+        );
+    });
+
+    btns.push(
+        `<button type="button" onclick="resetMassalPerangkatBerdasarkanFilter()" class="btn-bulk-reset-perangkat" title="Reset perangkat untuk semua siswa pada filter ${labelFilter}">Reset-Perangkat (${labelFilter})</button>`
+    );
+
+    container.innerHTML = btns.join("");
+}
+
+async function resetMassalMapelBerdasarkanFilter(mapelEnc) {
+    const mapel = decodeURIComponent(mapelEnc);
+    const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
+    const labelFilter = getLabelFilterStatusAktif(statusFilter);
+    const filteredItems = getDaftarSesiTersaringSaatIni();
+
+    if (filteredItems.length === 0) {
+        alert("Tidak ada siswa yang sesuai dengan filter saat ini.");
+        return;
+    }
+
+    const targetItems = filteredItems.filter(({ username, s }) => {
+        const mapelSiswa = kumpulkanMapelAktifSiswa(username, s);
+        return mapelSiswa.some(m => normStr(m) === normStr(mapel));
+    });
+
+    const daftarEksekusi = targetItems.length > 0 ? targetItems : filteredItems;
+
+    if (!confirm(
+        `Reset mapel "${mapel}" untuk SEMUA siswa pada filter "${labelFilter}" (${daftarEksekusi.length} siswa)?\n` +
+        `Kunci mapel & status pelanggaran/selesai untuk mapel "${mapel}" pada siswa-siswa tersebut akan dibuka.`
+    )) return;
+
+    showLoading(`Mereset mapel ${mapel} untuk ${daftarEksekusi.length} siswa (${labelFilter})...`);
+
+    for (let i = 0; i < daftarEksekusi.length; i++) {
+        const { username, s: sesiLama } = daftarEksekusi[i];
+        tandaiMapelDiresetLokal(username, mapel);
+
+        const siswaData = databaseSiswa.find(item => String(item.username).trim() === String(username).trim());
+        const kelasTargetReset = (sesiLama && sesiLama.kelas) || (siswaData ? siswaData.kelas : "");
+        const namaTargetReset = (sesiLama && sesiLama.nama) || (siswaData ? siswaData.nama : "");
+        const namaUjianTargetReset = kelasTargetReset
+            ? `${mapel.replace(/\s+/g, '_')}_${kelasTargetReset.replace(/\s+/g, '_')}`
+            : "";
+
+        try {
+            await axios.post(GAS_URL, JSON.stringify({
+                action: "resetMapelSiswa",
+                sheetName: "DB_Log_login_CBT",
+                username: username,
+                nis: username,
+                nama: namaTargetReset,
+                kelas: kelasTargetReset,
+                mapel: mapel,
+                namaUjian: namaUjianTargetReset,
+                deletePreviousResult: true,
+                status: "Direset",
+                nilai: ""
+            }));
+        } catch (e) {
+            console.warn(`Gagal resetMapelSiswa untuk ${username}:`, e);
+        }
+
+        await setSesiToGAS({
+            username: username,
+            deviceId: (sesiLama && sesiLama.deviceId) || "",
+            status: `Reset-${mapel} (Direset)`,
+            nama: namaTargetReset,
+            kelas: kelasTargetReset,
+            mapel: mapel,
+            updatedAt: getLocalIsoNow()
+        });
+    }
+
+    await fetchSesiFromGAS(true);
+    await fetchLogLoginFromGAS();
+    hideLoading();
+    alert(`Berhasil me-reset mapel "${mapel}" untuk ${daftarEksekusi.length} siswa pada filter "${labelFilter}"!`);
+}
+
+async function resetMassalPerangkatBerdasarkanFilter() {
+    const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
+    const labelFilter = getLabelFilterStatusAktif(statusFilter);
+    const filteredItems = getDaftarSesiTersaringSaatIni();
+
+    if (filteredItems.length === 0) {
+        alert("Tidak ada siswa yang sesuai dengan filter saat ini.");
+        return;
+    }
+
+    if (!confirm(
+        `Reset perangkat untuk SEMUA siswa pada filter "${labelFilter}" (${filteredItems.length} siswa)?\n` +
+        `Kunci perangkat lama pada siswa-siswa tersebut akan dilepas.`
+    )) return;
+
+    showLoading(`Mereset perangkat untuk ${filteredItems.length} siswa (${labelFilter})...`);
+
+    for (let i = 0; i < filteredItems.length; i++) {
+        const { username } = filteredItems[i];
+        await deleteSesiFromGAS(username);
+    }
+
+    await fetchSesiFromGAS(true);
+    hideLoading();
+    alert(`Berhasil me-reset perangkat untuk ${filteredItems.length} siswa pada filter "${labelFilter}"!`);
+}
+
+function renderTabelSesiAktif() {
+    updateGasRealtimeGauge();
+    const tbody = document.getElementById('tbodySesiAktif');
+    if(!tbody) return;
+
+    const keys = Object.keys(sesiLoginSiswa);
+    if(keys.length === 0) {
+        const bulkEl = document.getElementById('bulkFilterResetButtons');
+        if (bulkEl) bulkEl.innerHTML = "";
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Tidak ada siswa yang sedang terkunci sesi / login aktif di GAS.</td></tr>`;
+        renderPaginationControls('paginationSesiBar', 0, 1, PAGE_SIZE_SESI, 'gantiHalamanSesi');
+        return;
+    }
+
+    const keyword = (document.getElementById('inputCariNamaSesi')?.value || "").trim().toLowerCase();
+    const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
+    const filteredItems = getDaftarSesiTersaringSaatIni();
+    const jadwalCache = buildActiveJadwalCacheMap();
+    renderTombolBulkResetBerdasarkanFilter(filteredItems, jadwalCache);
 
     if (filteredItems.length === 0) {
         const infoFilter = [keyword ? `nama "${keyword}"` : "", statusFilter ? `status terpilih` : ""].filter(Boolean).join(" dan ");
@@ -4869,15 +5059,11 @@ function renderTabelSesiAktif() {
         return;
     }
 
-    filteredItems.sort((a, b) => b.ts - a.ts);
-
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE_SESI));
     if (pageSesiAktif > totalPages) pageSesiAktif = totalPages;
     if (pageSesiAktif < 1) pageSesiAktif = 1;
     const start = (pageSesiAktif - 1) * PAGE_SIZE_SESI;
     const pageSlice = filteredItems.slice(start, start + PAGE_SIZE_SESI);
-
-    const jadwalCache = buildActiveJadwalCacheMap();
     const rowsHtml = new Array(pageSlice.length);
 
     for (let i = 0; i < pageSlice.length; i++) {
