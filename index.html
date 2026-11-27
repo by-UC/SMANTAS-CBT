@@ -2081,8 +2081,16 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
                     <h4 style="margin: 0; color: #008080;">Log Pengerjaan & Nilai Siswa (DB_Log_login_CBT)</h4>
                     <div style="display: flex; gap: 3px; align-items: center; flex-wrap: wrap;">
-                        <select id="filterMapelLog" onchange="renderTabelSiswaLogin()" style="width: auto; min-width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
+                        <select id="filterMapelLog" onchange="pageLogAktif=1; renderTabelSiswaLogin();" style="width: auto; min-width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
                             <option value="__AKTIF__">Mapel Aktif (Jadwal Sekarang)</option>
+                        </select>
+                        <select id="filterStatusLog" onchange="pageLogAktif=1; renderTabelSiswaLogin();" style="width: auto; min-width: 130px; padding: 2.5px 6px; font-size: 10.5px;">
+                            <option value="">Semua Status</option>
+                            <option value="curang">Curang</option>
+                            <option value="reset">Reset</option>
+                            <option value="login_aktif">Login Aktif</option>
+                            <option value="sedang_ujian">Sedang Ujian</option>
+                            <option value="selesai">Selesai</option>
                         </select>
                         <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="debouncedCariLog()" style="width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
                         <button type="button" onclick="sinkronkanStatusLogTertinggal()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #28a745;" title="Sinkronkan baris log 'Sedang Ujian' dengan status akhir di sheet Sesi">🔄 Sinkron Status</button>
@@ -2795,39 +2803,60 @@ async function simpanStateTokenKeGist(plainToken, intervalMenit, wajibToken, cus
     return tokenDriveState;
 }
 
-async function fetchTokenDariDrive(silent = true) {
-    if (isSyncingTokenFromDrive) return tokenDriveState;
+async function fetchTokenDariDrive(silent = true, options = {}) {
+    const isAdminRotator = options.allowRotate === true || localStorage.getItem("isAdminLoggedIn") === "true";
+    const forceApi = options.forceApi === true;
+
+    if (isSyncingTokenFromDrive && !forceApi) return tokenDriveState;
     isSyncingTokenFromDrive = true;
     try {
-        const info = await ensureDbTokenGist(true);
+        const info = await ensureDbTokenGist(isAdminRotator);
         let parsedObj = null;
 
-        const baseRaw = (info.rawUrl || `https://gist.githubusercontent.com/by-UC/${info.gistId}/raw/${TOKEN_GIST_FILE}`)
-            .replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
+        if (info && info.gistId) {
+            const baseRaw = (info.rawUrl || `https://gist.githubusercontent.com/by-UC/${info.gistId}/raw/${TOKEN_GIST_FILE}`)
+                .replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
 
-        try {
-            const rawRes = await axios.get(`${baseRaw}?t=${Date.now()}`);
-            parsedObj = typeof rawRes.data === "string" ? JSON.parse(rawRes.data) : rawRes.data;
-        } catch (rawErr) {
-            const apiRes = await axios.get(`https://api.github.com/gists/${info.gistId}?t=${Date.now()}`, {
-                headers: { "Authorization": `token ${GIST_TOKEN}` }
-            });
-            const files = apiRes.data.files || {};
-            const fname = files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(files)[0];
-            parsedObj = JSON.parse(files[fname]?.content || "{}");
+            if (forceApi) {
+                try {
+                    const apiRes = await axios.get(`https://api.github.com/gists/${info.gistId}?t=${Date.now()}`, {
+                        headers: { "Authorization": `token ${GIST_TOKEN}` },
+                        timeout: 10000
+                    });
+                    const files = apiRes.data.files || {};
+                    const fname = files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(files)[0];
+                    parsedObj = JSON.parse(files[fname]?.content || "{}");
+                } catch (apiErr) {
+                    const rawRes = await axios.get(`${baseRaw}?t=${Date.now()}`, { timeout: 10000 });
+                    parsedObj = typeof rawRes.data === "string" ? JSON.parse(rawRes.data) : rawRes.data;
+                }
+            } else {
+                try {
+                    const rawRes = await axios.get(`${baseRaw}?t=${Date.now()}`, { timeout: 10000 });
+                    parsedObj = typeof rawRes.data === "string" ? JSON.parse(rawRes.data) : rawRes.data;
+                } catch (rawErr) {
+                    const apiRes = await axios.get(`https://api.github.com/gists/${info.gistId}?t=${Date.now()}`, {
+                        headers: { "Authorization": `token ${GIST_TOKEN}` },
+                        timeout: 10000
+                    });
+                    const files = apiRes.data.files || {};
+                    const fname = files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(files)[0];
+                    parsedObj = JSON.parse(files[fname]?.content || "{}");
+                }
+            }
         }
 
         if (parsedObj && typeof parsedObj === "object") {
             const now = Date.now();
             const intervalMenit = Math.max(1, parseInt(parsedObj.intervalMenit, 10) || 5);
             const wajibToken = parsedObj.wajibToken !== false;
-            let expiresAt = Number(parsedObj.expiresAt || 0);
-            let decryptedToken = dekripsiToken4Digit(parsedObj.token_encrypted || "");
+            const expiresAt = Number(parsedObj.expiresAt || 0);
+            const decryptedToken = dekripsiToken4Digit(parsedObj.token_encrypted || "");
 
-            if (!decryptedToken || now >= expiresAt) {
+            if (isAdminRotator && (!decryptedToken || now >= expiresAt)) {
                 const newPlain = generateRandom4DigitClient();
                 await simpanStateTokenKeGist(newPlain, intervalMenit, wajibToken, now);
-            } else {
+            } else if (decryptedToken) {
                 tokenDriveState = {
                     token: decryptedToken,
                     intervalMenit: intervalMenit,
@@ -2838,6 +2867,9 @@ async function fetchTokenDariDrive(silent = true) {
                     syncedAtMs: now
                 };
                 simpanCacheTokenLokal(tokenDriveState);
+            } else {
+                tokenDriveState.wajibToken = wajibToken;
+                tokenDriveState.intervalMenit = intervalMenit;
             }
 
             sinkronkanInputPengaturanToken();
@@ -3708,19 +3740,10 @@ async function tampilkanHalamanPilihUjianSiswa(siswa, skipHeavyGasFetch = false)
     document.getElementById('viewPilihUjianSiswa').classList.add('active');
     sinkronkanHeaderAdmin();
 
-    // Sinkronkan token & status log khusus siswa ini secara non-blocking dengan jitter agar tidak membebani GAS
-    if (!skipHeavyGasFetch) {
-        fetchTokenDariDrive(true).catch(() => {});
-    } else {
-        const tokAge = Date.now() - (tokenDriveState.syncedAtMs || 0);
-        if (!tokenDriveState.token || tokenDriveState.token === "----" || tokAge > 45000) {
-            setTimeout(() => {
-                fetchTokenDariDrive(true).then(() => {
-                    sinkronkanTampilanInputTokenSiswa();
-                }).catch(() => {});
-            }, 300 + Math.floor(Math.random() * 1500));
-        }
-    }
+    // Selalu sinkronkan token terbaru dari db_token.json Gist agar status wajibToken & kode token akurat
+    fetchTokenDariDrive(true, { allowRotate: false, forceApi: false })
+        .then(() => sinkronkanTampilanInputTokenSiswa())
+        .catch(() => {});
 }
 
 function getOrCreateDeviceId() {
@@ -3902,26 +3925,40 @@ async function ubahPasswordAdmin() {
 }
 
 async function simpanPengaturanJp() {
-    const val = parseInt(document.getElementById('settingMenitPerJp').value, 10);
-    if(isNaN(val) || val < 1) {
+    const valJp = parseInt(document.getElementById('settingMenitPerJp').value, 10);
+    const valTimer = parseInt(document.getElementById('settingDefaultTimerMenit').value, 10);
+    if(isNaN(valJp) || valJp < 1) {
         alert("Masukkan durasi menit per JP yang valid (minimal 1 menit)!");
         return;
     }
-    showLoading("Menyimpan pengaturan JP ke Gist...");
-    pengaturanCbt.menitPerJp = val;
+    if(isNaN(valTimer) || valTimer < 1 || valTimer > 300) {
+        alert("Masukkan Default Timer Siswa yang valid (1 - 300 menit)!");
+        return;
+    }
+    showLoading("Menyimpan pengaturan JP & Timer Ujian ke Gist...");
+    pengaturanCbt.menitPerJp = valJp;
+    pengaturanCbt.defaultTimerMenit = valTimer;
     await saveCbtDatabaseToGist();
     updateLabelJp();
     hitungWaktuSelesaiOtomatis();
     hideLoading();
-    alert(`Pengaturan berhasil disimpan! 1 JP = ${val} Menit.`);
+    alert(`Pengaturan berhasil disimpan! 1 JP = ${valJp} Menit, Default Timer Siswa = ${valTimer} Menit.`);
 }
 
 function updateLabelJp() {
     const m = pengaturanCbt.menitPerJp || 40;
+    const t = pengaturanCbt.defaultTimerMenit || 60;
     const lbl = document.getElementById('labelJumlahJp');
     if(lbl) lbl.innerText = `JP (${m}m):`;
     const inp = document.getElementById('settingMenitPerJp');
     if(inp) inp.value = m;
+    const inpTimerSet = document.getElementById('settingDefaultTimerMenit');
+    if(inpTimerSet) inpTimerSet.value = t;
+    const editIdxVal = document.getElementById('editJadwalOrigIndices')?.value;
+    const inpTimerJadwal = document.getElementById('timerMenit');
+    if(inpTimerJadwal && !editIdxVal) {
+        inpTimerJadwal.value = t;
+    }
 }
 
 function hitungWaktuSelesaiOtomatis() {
@@ -7518,15 +7555,137 @@ function keluarFullscreenAman() {
     document.getElementById('fullscreenGuardOverlay').style.display = 'none';
 }
 
+function hitungNilaiSementaraUjian() {
+    let benar = 0;
+    const total = Array.isArray(listSoal) ? listSoal.length : 0;
+    if (total === 0) return "0.00";
+    listSoal.forEach(item => {
+        const kunciHuruf = decodeKunciGist(item.kunci);
+        if (jawabanSiswa[item.id] === kunciHuruf) benar++;
+    });
+    return ((benar / total) * 100).toFixed(2);
+}
+
+function kirimDaruratKeepaliveSaatTutupTab(alasan = "Close Tab / Tutup Layar") {
+    if (!isExamInProgress || isSubmittingExam) return;
+    isSubmittingExam = true;
+    isExamInProgress = false;
+    stopExamTimer();
+
+    const nilaiAkhir = hitungNilaiSementaraUjian();
+    const statusLabel = formatPelanggaranRingkas(alasan);
+    const unameSiswa = currentSiswaObj ? currentSiswaObj.username : "";
+    const devId = getOrCreateDeviceId();
+
+    if (unameSiswa && mapelSiswaLogin) {
+        tandaiMapelTerkunciLokal(unameSiswa, mapelSiswaLogin);
+        bukaKunciMapelLokal(unameSiswa, mapelSiswaLogin);
+    }
+
+    const riwayatLogLama = ambilRiwayatStatusMapelLama(namaSiswaLogin, kelasSiswaLogin, mapelSiswaLogin, unameSiswa);
+    const sesiLama = unameSiswa ? (sesiLoginSiswa[unameSiswa] || {}) : {};
+    const statusLogGabungan = gabungStatusLogSiswa(
+        riwayatLogLama.lastStatus || sesiLama.status || "",
+        statusLabel,
+        riwayatLogLama.maxCurang
+    );
+
+    const nowIso = getLocalIsoNow();
+    const sesiPayloadObj = unameSiswa ? {
+        username: unameSiswa,
+        deviceId: sesiLama.deviceId || devId,
+        status: statusLogGabungan,
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        updatedAt: nowIso
+    } : null;
+
+    if (sesiPayloadObj) {
+        sesiLoginSiswa[unameSiswa] = { ...sesiPayloadObj };
+        simpanCacheAdminSesi(sesiLoginSiswa);
+    }
+
+    const logPayloadObj = {
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        status: statusLogGabungan,
+        nilai: nilaiAkhir
+    };
+
+    const hasilPayloadObj = {
+        nama: namaSiswaLogin,
+        nis: unameSiswa || "-",
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        namaUjian: namaUjianAktif,
+        nilai: nilaiAkhir,
+        status: statusLogGabungan,
+        jawaban: jawabanSiswa
+    };
+
+    simpanPendingSubmitExam({
+        sesi: sesiPayloadObj,
+        log: logPayloadObj,
+        hasil: hasilPayloadObj,
+        createdAt: Date.now()
+    });
+
+    const bundleBody = JSON.stringify({
+        action: "submitExamBundle",
+        sesi: sesiPayloadObj,
+        log: logPayloadObj,
+        hasil: hasilPayloadObj
+    });
+
+    try {
+        fetch(GAS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            keepalive: true,
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: bundleBody
+        }).catch(() => {});
+    } catch (e) {}
+
+    try {
+        if (navigator.sendBeacon) {
+            const blob = new Blob([bundleBody], { type: "text/plain;charset=utf-8" });
+            navigator.sendBeacon(GAS_URL, blob);
+        }
+    } catch (e) {}
+}
+
 function picuPelanggaranUjian(alasan) {
     if (!isExamInProgress || isSubmittingExam) return;
     const labelPelanggaran = formatPelanggaranRingkas(alasan);
-    selesaiUjian(true, labelPelanggaran);
+    selesaiUjian(true, labelPelanggaran, true);
 }
 
 document.addEventListener("visibilitychange", function() {
     if (document.hidden && isExamInProgress && !isSubmittingExam) {
-        picuPelanggaranUjian("Berpindah tab atau menyembunyikan browser");
+        picuPelanggaranUjian("Berpindah tab atau menutup layar");
+    }
+});
+
+window.addEventListener("pagehide", function() {
+    if (isExamInProgress && !isSubmittingExam) {
+        kirimDaruratKeepaliveSaatTutupTab("Close Tab / Pagehide");
+    }
+});
+
+window.addEventListener("beforeunload", function(e) {
+    if (isExamInProgress && !isSubmittingExam) {
+        kirimDaruratKeepaliveSaatTutupTab("Close Tab / Beforeunload");
+        e.preventDefault();
+        e.returnValue = "";
+    }
+});
+
+document.addEventListener("freeze", function() {
+    if (isExamInProgress && !isSubmittingExam) {
+        kirimDaruratKeepaliveSaatTutupTab("Menutup layar / Freeze");
     }
 });
 
@@ -7534,9 +7693,9 @@ window.addEventListener("blur", function() {
     if (isExamInProgress && !isSubmittingExam) {
         setTimeout(() => {
             if (isExamInProgress && !isSubmittingExam && (document.hidden || !document.hasFocus())) {
-                picuPelanggaranUjian("Keluar dari jendela / aplikasi ujian");
+                picuPelanggaranUjian("Keluar dari jendela / buka aplikasi lain");
             }
-        }, 250);
+        }, 120);
     }
 });
 
@@ -7705,14 +7864,33 @@ async function mulaiUjianPilihan() {
         return;
     }
 
+    const inputTok = String(document.getElementById('inputTokenSiswa')?.value || "").trim();
     if (tokenDriveState.wajibToken !== false) {
-        const inputTok = String(document.getElementById('inputTokenSiswa')?.value || "").trim();
-        const tokAktif = String(tokenDriveState.token || "").trim();
         if (!inputTok || inputTok.length !== 4) {
             alert("Masukkan 4 digit Token Ujian terlebih dahulu!");
             return;
         }
-        if (!tokAktif || tokAktif === "----" || inputTok !== tokAktif) {
+    }
+
+    showLoading("Memverifikasi token ujian ke Gist (db_token.json)...");
+    if (!dbTokenGistInfo.gistId) {
+        await fetchCbtDatabase(true, false);
+    }
+    await fetchTokenDariDrive(true, { allowRotate: false, forceApi: false });
+
+    if (tokenDriveState.wajibToken !== false) {
+        let tokAktif = String(tokenDriveState.token || "").trim();
+        const nowCheck = Date.now();
+        const isExpiredOnClient = tokenDriveState.expiresAt > 0 && nowCheck > (tokenDriveState.expiresAt + 15000);
+
+        if (!tokAktif || tokAktif === "----" || inputTok !== tokAktif || isExpiredOnClient) {
+            await fetchTokenDariDrive(true, { allowRotate: false, forceApi: true });
+            tokAktif = String(tokenDriveState.token || "").trim();
+        }
+
+        const isStillExpired = tokenDriveState.expiresAt > 0 && Date.now() > (tokenDriveState.expiresAt + 15000);
+        if (!tokAktif || tokAktif === "----" || inputTok !== tokAktif || isStillExpired) {
+            hideLoading();
             alert("Token Ujian salah atau sudah kadaluarsa! Periksa token terbaru dari pengawas.");
             return;
         }
@@ -7725,8 +7903,21 @@ async function mulaiUjianPilihan() {
 
     showLoading("Memeriksa kunci mapel & memuat soal ujian...");
 
-    const sesiMap = await fetchSesiFromGAS(true);
-    const existingSesi = sesiMap[myUsername];
+    // Hemat kuota GAS: cek cache sesi lokal terlebih dahulu; hanya panggil getSesiByUser (1 baris/cache) bila belum ada
+    let existingSesi = sesiLoginSiswa[myUsername] || null;
+    if (!existingSesi) {
+        try {
+            const resUser = await axios.post(GAS_URL, JSON.stringify({
+                action: "getSesiByUser",
+                username: myUsername
+            }), { timeout: 8000 });
+            if (resUser.data && resUser.data.status === "success" && resUser.data.data) {
+                existingSesi = resUser.data.data;
+                sesiLoginSiswa[myUsername] = existingSesi;
+                simpanCacheAdminSesi(sesiLoginSiswa);
+            }
+        } catch (e) {}
+    }
 
     if (existingSesi && existingSesi.deviceId && existingSesi.deviceId !== devId) {
         hideLoading();
@@ -7751,25 +7942,33 @@ async function mulaiUjianPilihan() {
     mapelSiswaLogin = mapel;
     namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
 
-    await Promise.all([
-        setSesiToGAS({
-            username: myUsername,
-            deviceId: devId,
-            status: "Sedang Ujian",
-            nama: namaSiswaLogin,
-            kelas: kelasSiswaLogin,
-            mapel: mapelSiswaLogin,
-            updatedAt: getLocalIsoNow()
-        }),
-        axios.post(GAS_URL, JSON.stringify({
-            action: "logLogin",
-            nama: namaSiswaLogin,
-            kelas: kelasSiswaLogin,
-            mapel: mapelSiswaLogin,
-            status: "Sedang Ujian",
-            nilai: "-"
-        })).catch(() => {})
-    ]);
+    // Kirim status awal ujian ke GAS secara non-blocking agar tidak menahan siswa & menghemat burst kuota GAS
+    const startIsoNow = getLocalIsoNow();
+    const startSesiObj = {
+        username: myUsername,
+        deviceId: devId,
+        status: "Sedang Ujian",
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        updatedAt: startIsoNow
+    };
+    sesiLoginSiswa[myUsername] = { ...startSesiObj };
+    simpanCacheAdminSesi(sesiLoginSiswa);
+
+    setTimeout(() => {
+        Promise.all([
+            setSesiToGAS(startSesiObj).catch(() => {}),
+            axios.post(GAS_URL, JSON.stringify({
+                action: "logLogin",
+                nama: namaSiswaLogin,
+                kelas: kelasSiswaLogin,
+                mapel: mapelSiswaLogin,
+                status: "Sedang Ujian",
+                nilai: "-"
+            }), { timeout: 15000 }).catch(() => {})
+        ]).catch(() => {});
+    }, Math.floor(Math.random() * 600));
 
     let allSoal = await fetchAllSoalFromGist({ mapel: mapelSiswaLogin, preferRaw: true });
     if(!allSoal || allSoal.length === 0) {
@@ -8043,20 +8242,46 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
         createdAt: Date.now()
     });
 
-    try {
-        await kirimSubmitExamKeGAS(sesiPayloadObj, logPayloadObj, hasilPayloadObj);
-        hapusPendingSubmitExam(namaSiswaLogin, kelasSiswaLogin, mapelSiswaLogin);
-        keluarFullscreenAman();
-        hideLoading();
-        if (isCheating) {
-            alert(`UJIAN DIHENTIKAN OTOMATIS (${statusLabel})!\n\nMata pelajaran "${mapelSiswaLogin}" telah DIKUNCI dan nilai sementara (${nilaiAkhir}) dikirim ke sistem. Hubungi Admin untuk membuka kunci mapel.`);
-        } else {
-            alert(`Ujian Selesai! Nilai Anda: ${nilaiAkhir}\nMata pelajaran "${mapelSiswaLogin}" kini terkunci.`);
-        }
-    } catch(e) {
-        keluarFullscreenAman();
-        hideLoading();
-        alert(`Ujian berakhir (${statusLabel}). Nilai: ${nilaiAkhir}. Data tersimpan di antrean perangkat dan akan otomatis dikirim ulang ke server.`);
+    // Kirim segera tanpa jitter saat curang/close agar nilai & status langsung terekap sebelum halaman tertutup
+    const snapNama = namaSiswaLogin;
+    const snapKelas = kelasSiswaLogin;
+    const snapMapel = mapelSiswaLogin;
+    const jitterMs = isCheating ? 0 : (150 + Math.floor(Math.random() * 1400));
+
+    if (isCheating) {
+        try {
+            const bundleBody = JSON.stringify({
+                action: "submitExamBundle",
+                sesi: sesiPayloadObj,
+                log: logPayloadObj,
+                hasil: hasilPayloadObj
+            });
+            fetch(GAS_URL, {
+                method: "POST",
+                mode: "no-cors",
+                keepalive: true,
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: bundleBody
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    setTimeout(() => {
+        kirimSubmitExamKeGAS(sesiPayloadObj, logPayloadObj, hasilPayloadObj)
+            .then(() => {
+                hapusPendingSubmitExam(snapNama, snapKelas, snapMapel);
+            })
+            .catch((err) => {
+                console.warn("Pengiriman latar belakang tertunda, tersimpan di antrean perangkat:", err?.message || err);
+            });
+    }, jitterMs);
+
+    keluarFullscreenAman();
+    hideLoading();
+    if (isCheating) {
+        alert(`UJIAN DIHENTIKAN OTOMATIS (${statusLabel})!\n\nMata pelajaran "${mapelSiswaLogin}" telah DIKUNCI dan nilai sementara (${nilaiAkhir}) tercatat di sistem. Hubungi Admin untuk membuka kunci mapel.`);
+    } else {
+        alert(`Ujian Selesai! Nilai Anda: ${nilaiAkhir}\nMata pelajaran "${mapelSiswaLogin}" kini terkunci dan hasil sedang disinkronkan di latar belakang.`);
     }
 
     jawabanSiswa = {};
@@ -8223,6 +8448,7 @@ function renderTabelSiswaLogin() {
 
     const bersih = getLogsBersih();
     const selMapelVal = document.getElementById('filterMapelLog')?.value || "__AKTIF__";
+    const selStatusVal = (document.getElementById('filterStatusLog')?.value || "").trim();
     const keyword = (document.getElementById('inputCariNamaLog')?.value || "").trim().toLowerCase();
 
     const activeMapelSet = selMapelVal === "__AKTIF__" ? getMapelJadwalAktifSaatIniSet() : null;
@@ -8241,6 +8467,8 @@ function renderTabelSiswaLogin() {
         } else if (chosenMapelNorm) {
             if (normStr(l.mapel) !== chosenMapelNorm) continue;
         }
+
+        if (selStatusVal && !cekCocokFilterStatusSesi(l.status || '', selStatusVal)) continue;
 
         if (keyword && !String(l.nama || "").toLowerCase().includes(keyword)) continue;
 
@@ -8336,37 +8564,39 @@ async function kirimSubmitExamKeGAS(sesiObj, logObj, hasilObj) {
         sesi: sesiObj,
         log: logObj,
         hasil: hasilObj
-    }), { timeout: 20000 });
+    }), { timeout: 25000 });
 
     if (bundleRes.data && bundleRes.data.status === "success") {
         return bundleRes.data;
     }
 
-    // Fallback ke action individual di kode.gs jika bundle mengalami lock/timeout
-    const reqs = [];
+    const msg = String(bundleRes.data?.message || "");
+    if (!msg.toLowerCase().includes("invalid action")) {
+        throw new Error(msg || "GAS sibuk, akan dicoba ulang dari antrean lokal");
+    }
+
+    // Fallback berurutan hanya jika kode.gs versi lama belum mendukung submitExamBundle
     if (sesiObj && sesiObj.username) {
-        reqs.push(axios.post(GAS_URL, JSON.stringify({
+        await axios.post(GAS_URL, JSON.stringify({
             action: "setSesi",
             username: sesiObj.username,
             sesi: sesiObj
-        }), { timeout: 15000 }));
+        }), { timeout: 15000 });
     }
     if (logObj) {
-        reqs.push(axios.post(GAS_URL, JSON.stringify({
+        await axios.post(GAS_URL, JSON.stringify({
             action: "logLogin",
             ...logObj
-        }), { timeout: 15000 }));
+        }), { timeout: 15000 });
     }
     if (hasilObj) {
-        reqs.push(axios.post(GAS_URL, JSON.stringify({
+        const resHasil = await axios.post(GAS_URL, JSON.stringify({
             action: "submitResult",
             ...hasilObj
-        }), { timeout: 15000 }));
-    }
-    const results = await Promise.all(reqs);
-    const failed = results.find(r => !r.data || r.data.status !== "success");
-    if (failed) {
-        throw new Error(failed.data?.message || "Gagal menyimpan sebagian data ke GAS");
+        }), { timeout: 15000 });
+        if (!resHasil.data || resHasil.data.status !== "success") {
+            throw new Error(resHasil.data?.message || "Gagal menyimpan hasil ke GAS");
+        }
     }
     return { status: "success" };
 }
@@ -8414,12 +8644,15 @@ async function sinkronkanStatusLogTertinggal() {
                 const stSesiLow = stSesi.toLowerCase();
                 if (stSesiLow.includes("selesai") || stSesiLow.includes("curang") || stSesiLow.includes("reset")) {
                     const statusFix = stSesiLow.includes("reset") ? "Direset" : stSesi;
+                    const nilaiFix = (logRow.nilai !== undefined && logRow.nilai !== null && String(logRow.nilai).trim() !== "" && String(logRow.nilai).trim() !== "-")
+                        ? logRow.nilai
+                        : 0;
                     kandidatPerbaikan.push({
                         nama: logRow.nama,
                         kelas: logRow.kelas,
                         mapel: logRow.mapel,
                         status: statusFix,
-                        nilai: logRow.nilai !== undefined && logRow.nilai !== null ? logRow.nilai : "-"
+                        nilai: nilaiFix
                     });
                 }
             }
