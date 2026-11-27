@@ -7216,6 +7216,47 @@ document.getElementById('btnHapusSoalPaket').onclick = async function() {
 
 let activeExportInfo = null;
 
+function susunRowsHasilKelas(mapel, kelas, bersihLogs) {
+    const siswaKelas = databaseSiswa.filter(s => normStr(s.kelas) === normStr(kelas));
+    const logMapelKelas = bersihLogs.filter(l =>
+        normStr(l.mapel) === normStr(mapel) && normStr(l.kelas) === normStr(kelas)
+    );
+
+    const rows = siswaKelas.map((s, idx) => {
+        const cocokLog = logMapelKelas.filter(l => normStr(l.nama) === normStr(s.nama));
+        const latestLog = cocokLog.length > 0 ? cocokLog[cocokLog.length - 1] : null;
+
+        return {
+            "No": idx + 1,
+            "NIS / Username": s.username,
+            "Nama Siswa": s.nama,
+            "Kelas": s.kelas,
+            "Mata Pelajaran": mapel,
+            "Status": latestLog ? (latestLog.status || "Belum Ujian") : "Belum Ujian",
+            "Nilai": (latestLog && latestLog.nilai !== undefined && latestLog.nilai !== "") ? latestLog.nilai : 0,
+            "Waktu Tercatat": latestLog ? getLogRawTimestampStr(latestLog) : "-"
+        };
+    });
+
+    logMapelKelas.forEach(l => {
+        const sudahAda = rows.some(r => normStr(r["Nama Siswa"]) === normStr(l.nama));
+        if (!sudahAda) {
+            rows.push({
+                "No": rows.length + 1,
+                "NIS / Username": "-",
+                "Nama Siswa": l.nama,
+                "Kelas": l.kelas,
+                "Mata Pelajaran": l.mapel,
+                "Status": l.status || "-",
+                "Nilai": (l.nilai !== undefined && l.nilai !== "") ? l.nilai : 0,
+                "Waktu Tercatat": getLogRawTimestampStr(l)
+            });
+        }
+    });
+
+    return rows;
+}
+
 function bukaModalExportHasil(mapelEsc, kelasEsc) {
     const mapel = decodeURIComponent(mapelEsc);
     const kelasList = decodeURIComponent(kelasEsc).split(",").map(k => k.trim()).filter(Boolean);
@@ -7223,9 +7264,16 @@ function bukaModalExportHasil(mapelEsc, kelasEsc) {
     activeExportInfo = { mapel, kelasList };
     document.getElementById('modalExportTitle').innerText = `Export Hasil: ${mapel}`;
 
+    const mapEsc = encodeURIComponent(mapel);
+    const allKelasEsc = encodeURIComponent(kelasList.join(","));
+    const btnSemuaKelas = kelasList.length > 1
+        ? `<button onclick="downloadHasilSemuaKelasExcel(decodeURIComponent('${mapEsc}'), decodeURIComponent('${allKelasEsc}'))" style="background:#0056b3; padding:8px 12px; font-size:12.5px; margin-bottom:4px;">
+            📦 Download Excel Semua Kelas (${kelasList.length} Kelas)
+        </button>`
+        : "";
+
     const btnsHtml = kelasList.map(kls => {
         const klsEsc = encodeURIComponent(kls);
-        const mapEsc = encodeURIComponent(mapel);
         return `<button onclick="downloadHasilExcelKelas(decodeURIComponent('${mapEsc}'), decodeURIComponent('${klsEsc}'))" style="background:#28a745; padding:8px 12px; font-size:12.5px;">
             📥 Download Excel Kelas ${kls}
         </button>`;
@@ -7234,11 +7282,74 @@ function bukaModalExportHasil(mapelEsc, kelasEsc) {
     document.getElementById('modalExportBody').innerHTML = `
         <p style="margin-top:0; font-size:12.5px; color:#444;">
             Mata Pelajaran: <b>${mapel}</b><br>
-            Pilih kelas untuk mengunduh rekap nilai (.xlsx):
+            Pilih export semua kelas sekaligus atau per kelas (.xlsx):
         </p>
-        <div class="export-kelas-btn-list">${btnsHtml}</div>
+        <div class="export-kelas-btn-list">${btnSemuaKelas}${btnsHtml}</div>
     `;
     document.getElementById('modalExportHasil').style.display = "flex";
+}
+
+async function downloadHasilSemuaKelasExcel(mapel, kelasListStr) {
+    const kelasList = String(kelasListStr || "").split(",").map(k => k.trim()).filter(Boolean);
+    if (kelasList.length === 0) return;
+
+    showLoading(`Mengambil & menyusun rekap nilai semua kelas (${kelasList.length} kelas) untuk ${mapel}...`);
+    try {
+        await fetchLogLoginFromGAS();
+        const bersihLogs = getLogsBersih();
+        const wb = XLSX.utils.book_new();
+        const gabunganSemuaRows = [];
+        const usedSheetNames = new Set();
+
+        const makeUniqueSheetName = (rawName) => {
+            let base = String(rawName || "Sheet").replace(/[\/?*\[\]:]/g, "_").slice(0, 31) || "Sheet";
+            let candidate = base;
+            let counter = 2;
+            while (usedSheetNames.has(candidate.toLowerCase())) {
+                const suffix = `_${counter++}`;
+                candidate = base.slice(0, Math.max(1, 31 - suffix.length)) + suffix;
+            }
+            usedSheetNames.add(candidate.toLowerCase());
+            return candidate;
+        };
+
+        kelasList.forEach(kls => {
+            const rowsKelas = susunRowsHasilKelas(mapel, kls, bersihLogs);
+            if (rowsKelas.length > 0) {
+                rowsKelas.forEach(r => {
+                    gabunganSemuaRows.push({
+                        "No": gabunganSemuaRows.length + 1,
+                        "NIS / Username": r["NIS / Username"],
+                        "Nama Siswa": r["Nama Siswa"],
+                        "Kelas": r["Kelas"],
+                        "Mata Pelajaran": r["Mata Pelajaran"],
+                        "Status": r["Status"],
+                        "Nilai": r["Nilai"],
+                        "Waktu Tercatat": r["Waktu Tercatat"]
+                    });
+                });
+                const wsKelas = XLSX.utils.json_to_sheet(rowsKelas);
+                XLSX.utils.book_append_sheet(wb, wsKelas, makeUniqueSheetName(kls));
+            }
+        });
+
+        if (gabunganSemuaRows.length === 0) {
+            hideLoading();
+            alert(`Tidak ada data siswa maupun log pada kelas-kelas terpilih untuk mapel ${mapel}.`);
+            return;
+        }
+
+        const wsGabungan = XLSX.utils.json_to_sheet(gabunganSemuaRows);
+        XLSX.utils.book_append_sheet(wb, wsGabungan, makeUniqueSheetName("Semua_Kelas"));
+
+        const cleanMapel = mapel.replace(/[^a-zA-Z0-9_-]/g, "_");
+        XLSX.writeFile(wb, `Hasil_${cleanMapel}_Semua_Kelas.xlsx`);
+
+        hideLoading();
+    } catch (err) {
+        hideLoading();
+        alert("Gagal mengexport hasil semua kelas ke Excel: " + err.message);
+    }
 }
 
 function tutupModalExport() {
@@ -7250,45 +7361,8 @@ async function downloadHasilExcelKelas(mapel, kelas) {
     showLoading(`Mengambil & menyusun rekap nilai ${mapel} - Kelas ${kelas}...`);
     try {
         await fetchLogLoginFromGAS();
-
-        const siswaKelas = databaseSiswa.filter(s => normStr(s.kelas) === normStr(kelas));
         const bersihLogs = getLogsBersih();
-
-        const logMapelKelas = bersihLogs.filter(l =>
-            normStr(l.mapel) === normStr(mapel) && normStr(l.kelas) === normStr(kelas)
-        );
-
-        const rows = siswaKelas.map((s, idx) => {
-            const cocokLog = logMapelKelas.filter(l => normStr(l.nama) === normStr(s.nama));
-            const latestLog = cocokLog.length > 0 ? cocokLog[cocokLog.length - 1] : null;
-
-            return {
-                "No": idx + 1,
-                "NIS / Username": s.username,
-                "Nama Siswa": s.nama,
-                "Kelas": s.kelas,
-                "Mata Pelajaran": mapel,
-                "Status": latestLog ? (latestLog.status || "Belum Ujian") : "Belum Ujian",
-                "Nilai": (latestLog && latestLog.nilai !== undefined && latestLog.nilai !== "") ? latestLog.nilai : 0,
-                "Waktu Tercatat": latestLog ? getLogRawTimestampStr(latestLog) : "-"
-            };
-        });
-
-        logMapelKelas.forEach(l => {
-            const sudahAda = rows.some(r => normStr(r["Nama Siswa"]) === normStr(l.nama));
-            if (!sudahAda) {
-                rows.push({
-                    "No": rows.length + 1,
-                    "NIS / Username": "-",
-                    "Nama Siswa": l.nama,
-                    "Kelas": l.kelas,
-                    "Mata Pelajaran": l.mapel,
-                    "Status": l.status || "-",
-                    "Nilai": (l.nilai !== undefined && l.nilai !== "") ? l.nilai : 0,
-                    "Waktu Tercatat": getLogRawTimestampStr(l)
-                });
-            }
-        });
+        const rows = susunRowsHasilKelas(mapel, kelas, bersihLogs);
 
         if (rows.length === 0) {
             hideLoading();
