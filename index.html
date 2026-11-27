@@ -2014,11 +2014,11 @@
 
                     <div class="rt-token-sidebox">
                         <div class="rt-token-top">
-                            <span class="rt-token-title">Token Ujian (Drive)</span>
-                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" class="rt-token-drive-link">Folder Drive ↗</a>
+                            <span class="rt-token-title">Token Ujian (Gist)</span>
+                            <a id="linkGistDbToken" href="https://gist.github.com/by-UC" target="_blank" class="rt-token-drive-link">Gist db_token ↗</a>
                         </div>
                         <div class="rt-token-subrow">
-                            <span style="font-family:monospace;">token_cbt.xlsx</span>
+                            <span style="font-family:monospace;">db_token.json</span>
                             <span style="font-weight:bold; color:#006666;">Ganti: <span id="adminTokenCountdown">05:00</span></span>
                         </div>
                         <div class="rt-token-code-row">
@@ -2085,6 +2085,7 @@
                             <option value="__AKTIF__">Mapel Aktif (Jadwal Sekarang)</option>
                         </select>
                         <input type="text" id="inputCariNamaLog" placeholder="Cari berdasarkan nama..." oninput="debouncedCariLog()" style="width: 165px; padding: 2.5px 6px; font-size: 10.5px;">
+                        <button type="button" onclick="sinkronkanStatusLogTertinggal()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #28a745;" title="Sinkronkan baris log 'Sedang Ujian' dengan status akhir di sheet Sesi">🔄 Sinkron Status</button>
                         <button type="button" onclick="fetchLogLoginFromGAS()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #17a2b8;">Refresh Log</button>
                         <button type="button" onclick="hapusSemuaLogSpreadsheet()" style="width: auto; padding: 2.5px 7px; font-size: 10px; background: #dc3545;">🗑️ Hapus Semua Log</button>
                     </div>
@@ -2099,7 +2100,7 @@
                                 <th>Mata Pelajaran</th>
                                 <th>Status</th>
                                 <th>Nilai</th>
-                                <th style="width: 78px;">Aksi</th>
+                                <th style="width: 128px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodySiswaLogin">
@@ -2307,8 +2308,8 @@
                 <div class="admin-card">
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:5px; flex-wrap:wrap;">
-                            <h4 style="margin: 0; color: #008080;">Pengaturan Token Ujian (Google Drive)</h4>
-                            <a href="https://drive.google.com/drive/folders/1BG_uSbSbUjThUdLOcel0aMSkjFJ99Nup" target="_blank" style="font-size:10px; color:#0056b3; text-decoration:underline;">Folder Drive ↗</a>
+                            <h4 style="margin: 0; color: #008080;">Pengaturan Token Ujian (GitHub Gist)</h4>
+                            <a id="linkGistDbTokenSettings" href="https://gist.github.com/by-UC" target="_blank" style="font-size:10px; color:#0056b3; text-decoration:underline;">Gist db_token ↗</a>
                         </div>
                         <div class="row-flex" style="margin-bottom:5px;">
                             <div class="form-group" style="margin-bottom:0;">
@@ -2325,7 +2326,7 @@
                         </div>
                         <small style="color: #666; display: block; margin-top: 3px; font-size:10.5px;">Kode token aktif & tombol Salin/Acak tersedia di tab <b>Monitoring Akun</b>.</small>
                     </div>
-                    <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 6px 9px;">Simpan Token ke Drive</button>
+                    <button type="button" onclick="simpanPengaturanToken()" style="background: #008080; padding: 6px 9px;">Simpan Token ke Gist</button>
                 </div>
 
                 <div class="admin-card">
@@ -2590,16 +2591,53 @@ async function buatGistBaruUntukMapel(namaMapel) {
     };
 }
 
-// ================= TOKEN 4 DIGIT DI GOOGLE DRIVE (token_cbt.xlsx) =================
+// ================= TOKEN 4 DIGIT TERENKRIPSI DI GITHUB GIST ("db_token" -> db_token.json) =================
+const TOKEN_GIST_DESC = "db_token";
+const TOKEN_GIST_FILE = "db_token.json";
+const TOKEN_GIST_ID_STORAGE_KEY = "smantas_cbt_db_token_gist_id_v1";
+const TOKEN_CIPHER_PEPPER = "SMANTAS_CBT_DB_TOKEN_AES256_KEY_2026";
+
+let dbTokenGistInfo = {
+    gistId: localStorage.getItem(TOKEN_GIST_ID_STORAGE_KEY) || "",
+    rawUrl: ""
+};
+
 let tokenDriveState = {
     token: "----",
     intervalMenit: 5,
     wajibToken: true,
     expiresAt: 0,
+    updatedAt: 0,
     serverOffsetMs: 0,
     syncedAtMs: 0
 };
-const TOKEN_CACHE_STORAGE_KEY = "smantas_cbt_token_cache_v1";
+const TOKEN_CACHE_STORAGE_KEY = "smantas_cbt_token_cache_v2";
+
+function getTokenCryptoKey() {
+    return CryptoJS.SHA256(TOKEN_CIPHER_PEPPER + "::" + (CBT_GIST_ID || "smantas")).toString();
+}
+
+function enkripsiToken4Digit(plainToken) {
+    const clean = String(plainToken || "").trim();
+    if (!clean || clean === "----") return "";
+    return CryptoJS.AES.encrypt(clean, getTokenCryptoKey()).toString();
+}
+
+function dekripsiToken4Digit(cipherText) {
+    if (!cipherText) return "";
+    try {
+        const bytes = CryptoJS.AES.decrypt(String(cipherText), getTokenCryptoKey());
+        const plain = bytes.toString(CryptoJS.enc.Utf8);
+        return /^\d{4}$/.test(plain) ? plain : "";
+    } catch (e) {
+        return "";
+    }
+}
+
+function generateRandom4DigitClient() {
+    const num = Math.floor(Math.random() * 10000);
+    return ("0000" + num).slice(-4);
+}
 
 function simpanCacheTokenLokal(stateObj) {
     try {
@@ -2634,28 +2672,179 @@ function formatDetikKeMmSs(totalSec) {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function perbaruiLinkGistTokenUI(gistId) {
+    if (!gistId) return;
+    const url = `https://gist.github.com/by-UC/${gistId}`;
+    const l1 = document.getElementById("linkGistDbToken");
+    const l2 = document.getElementById("linkGistDbTokenSettings");
+    if (l1) l1.href = url;
+    if (l2) l2.href = url;
+}
+
+async function ensureDbTokenGist(forceCreateIfMissing = true) {
+    if (dbTokenGistInfo.gistId) {
+        perbaruiLinkGistTokenUI(dbTokenGistInfo.gistId);
+        return dbTokenGistInfo;
+    }
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    try {
+        const listRes = await axios.get(`https://api.github.com/gists?per_page=100&t=${Date.now()}`, githubHeaders);
+        const gists = Array.isArray(listRes.data) ? listRes.data : [];
+        const found = gists.find(g =>
+            (g.files && g.files[TOKEN_GIST_FILE]) ||
+            String(g.description || "").trim().toLowerCase() === TOKEN_GIST_DESC.toLowerCase()
+        );
+        if (found) {
+            const fname = found.files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(found.files)[0];
+            dbTokenGistInfo = {
+                gistId: found.id,
+                rawUrl: found.files[fname]?.raw_url || `https://gist.githubusercontent.com/by-UC/${found.id}/raw/${TOKEN_GIST_FILE}`
+            };
+            localStorage.setItem(TOKEN_GIST_ID_STORAGE_KEY, found.id);
+            perbaruiLinkGistTokenUI(found.id);
+            return dbTokenGistInfo;
+        }
+    } catch (e) {
+        console.warn("Gagal mencari Gist db_token:", e.message);
+    }
+
+    if (!forceCreateIfMissing) return dbTokenGistInfo;
+
+    const now = Date.now();
+    const intervalMenit = 5;
+    const initialPlain = generateRandom4DigitClient();
+    const initialCipher = enkripsiToken4Digit(initialPlain);
+    const initialPayload = {
+        name: TOKEN_GIST_DESC,
+        algorithm: "AES-256",
+        token_encrypted: initialCipher,
+        intervalMenit: intervalMenit,
+        wajibToken: true,
+        updatedAt: now,
+        expiresAt: now + (intervalMenit * 60000),
+        status: "AKTIF"
+    };
+
+    const createRes = await axios.post("https://api.github.com/gists", {
+        description: TOKEN_GIST_DESC,
+        public: false,
+        files: {
+            [TOKEN_GIST_FILE]: {
+                content: JSON.stringify(initialPayload, null, 2)
+            }
+        }
+    }, githubHeaders);
+
+    const newId = createRes.data.id;
+    const newRaw = createRes.data.files?.[TOKEN_GIST_FILE]?.raw_url || `https://gist.githubusercontent.com/by-UC/${newId}/raw/${TOKEN_GIST_FILE}`;
+    dbTokenGistInfo = { gistId: newId, rawUrl: newRaw };
+    localStorage.setItem(TOKEN_GIST_ID_STORAGE_KEY, newId);
+    perbaruiLinkGistTokenUI(newId);
+
+    if (typeof pengaturanCbt === "object") {
+        pengaturanCbt.dbTokenGistId = newId;
+        pengaturanCbt.dbTokenRawUrl = newRaw;
+    }
+    return dbTokenGistInfo;
+}
+
+async function simpanStateTokenKeGist(plainToken, intervalMenit, wajibToken, customNow = null) {
+    const info = await ensureDbTokenGist(true);
+    const now = customNow || Date.now();
+    const cleanInterval = Math.max(1, parseInt(intervalMenit, 10) || 5);
+    const isWajib = wajibToken !== false;
+    const expiresAt = now + (cleanInterval * 60000);
+    const cipherToken = enkripsiToken4Digit(plainToken);
+
+    const payload = {
+        name: TOKEN_GIST_DESC,
+        algorithm: "AES-256",
+        token_encrypted: cipherToken,
+        intervalMenit: cleanInterval,
+        wajibToken: isWajib,
+        updatedAt: now,
+        expiresAt: expiresAt,
+        status: isWajib ? "AKTIF" : "NONAKTIF"
+    };
+
+    const githubHeaders = { headers: { "Authorization": `token ${GIST_TOKEN}` } };
+    const patchRes = await axios.patch(`https://api.github.com/gists/${info.gistId}`, {
+        description: TOKEN_GIST_DESC,
+        files: {
+            [TOKEN_GIST_FILE]: {
+                content: JSON.stringify(payload, null, 2)
+            }
+        }
+    }, githubHeaders);
+
+    if (patchRes.data?.files?.[TOKEN_GIST_FILE]?.raw_url) {
+        dbTokenGistInfo.rawUrl = patchRes.data.files[TOKEN_GIST_FILE].raw_url;
+    }
+
+    tokenDriveState = {
+        token: plainToken,
+        intervalMenit: cleanInterval,
+        wajibToken: isWajib,
+        updatedAt: now,
+        expiresAt: expiresAt,
+        serverOffsetMs: 0,
+        syncedAtMs: Date.now()
+    };
+    simpanCacheTokenLokal(tokenDriveState);
+    return tokenDriveState;
+}
+
 async function fetchTokenDariDrive(silent = true) {
     if (isSyncingTokenFromDrive) return tokenDriveState;
     isSyncingTokenFromDrive = true;
     try {
-        const res = await axios.post(GAS_URL, JSON.stringify({ action: "getTokenConfig" }));
-        if (res.data && res.data.status === "success" && res.data.data) {
-            const d = res.data.data;
-            const serverNow = Number(d.serverNow || Date.now());
-            tokenDriveState = {
-                token: String(d.token || "----"),
-                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
-                wajibToken: d.wajibToken !== false,
-                expiresAt: Number(d.expiresAt || 0),
-                serverOffsetMs: serverNow - Date.now(),
-                syncedAtMs: Date.now()
-            };
-            simpanCacheTokenLokal(tokenDriveState);
+        const info = await ensureDbTokenGist(true);
+        let parsedObj = null;
+
+        const baseRaw = (info.rawUrl || `https://gist.githubusercontent.com/by-UC/${info.gistId}/raw/${TOKEN_GIST_FILE}`)
+            .replace(/\/raw\/[a-f0-9]{40}\//i, "/raw/");
+
+        try {
+            const rawRes = await axios.get(`${baseRaw}?t=${Date.now()}`);
+            parsedObj = typeof rawRes.data === "string" ? JSON.parse(rawRes.data) : rawRes.data;
+        } catch (rawErr) {
+            const apiRes = await axios.get(`https://api.github.com/gists/${info.gistId}?t=${Date.now()}`, {
+                headers: { "Authorization": `token ${GIST_TOKEN}` }
+            });
+            const files = apiRes.data.files || {};
+            const fname = files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(files)[0];
+            parsedObj = JSON.parse(files[fname]?.content || "{}");
+        }
+
+        if (parsedObj && typeof parsedObj === "object") {
+            const now = Date.now();
+            const intervalMenit = Math.max(1, parseInt(parsedObj.intervalMenit, 10) || 5);
+            const wajibToken = parsedObj.wajibToken !== false;
+            let expiresAt = Number(parsedObj.expiresAt || 0);
+            let decryptedToken = dekripsiToken4Digit(parsedObj.token_encrypted || "");
+
+            if (!decryptedToken || now >= expiresAt) {
+                const newPlain = generateRandom4DigitClient();
+                await simpanStateTokenKeGist(newPlain, intervalMenit, wajibToken, now);
+            } else {
+                tokenDriveState = {
+                    token: decryptedToken,
+                    intervalMenit: intervalMenit,
+                    wajibToken: wajibToken,
+                    updatedAt: Number(parsedObj.updatedAt || now),
+                    expiresAt: expiresAt,
+                    serverOffsetMs: 0,
+                    syncedAtMs: now
+                };
+                simpanCacheTokenLokal(tokenDriveState);
+            }
+
             sinkronkanInputPengaturanToken();
             sinkronkanTampilanInputTokenSiswa();
         }
     } catch (e) {
-        if (!silent) console.error("Gagal mengambil token_cbt.xlsx dari Google Drive:", e);
+        if (!silent) console.error("Gagal mengambil/menyinkronkan db_token di Gist:", e);
     } finally {
         isSyncingTokenFromDrive = false;
     }
@@ -2707,62 +2896,37 @@ async function simpanPengaturanToken() {
         return;
     }
 
-    showLoading("Menyimpan pengaturan & file token_cbt.xlsx ke Google Drive...");
+    showLoading("Mengenkripsi & menyimpan token ke Gist db_token...");
     try {
-        const res = await axios.post(GAS_URL, JSON.stringify({
-            action: "saveTokenConfig",
-            intervalMenit: intervalVal,
-            wajibToken: wajibVal,
-            regenerate: false
-        }));
-        if (res.data && res.data.status === "success" && res.data.data) {
-            const d = res.data.data;
-            const serverNow = Number(d.serverNow || Date.now());
-            tokenDriveState = {
-                token: String(d.token || "----"),
-                intervalMenit: parseInt(d.intervalMenit, 10) || intervalVal,
-                wajibToken: d.wajibToken !== false,
-                expiresAt: Number(d.expiresAt || 0),
-                serverOffsetMs: serverNow - Date.now()
-            };
-            sinkronkanInputPengaturanToken();
-            sinkronkanTampilanInputTokenSiswa();
-            hideLoading();
-            alert(`Berhasil! File token_cbt.xlsx di Google Drive diperbarui (interval ${intervalVal} menit).`);
-        } else {
-            hideLoading();
-            alert("Gagal menyimpan token ke Drive: " + (res.data?.message || "Unknown error"));
-        }
+        const now = Date.now();
+        const existingValid = /^\d{4}$/.test(String(tokenDriveState.token || "")) && now < (tokenDriveState.expiresAt || 0);
+        const tokenToSave = existingValid ? String(tokenDriveState.token) : generateRandom4DigitClient();
+
+        await simpanStateTokenKeGist(tokenToSave, intervalVal, wajibVal, now);
+        sinkronkanInputPengaturanToken();
+        sinkronkanTampilanInputTokenSiswa();
+        hideLoading();
+        alert(`Berhasil! Token terenkripsi (AES-256) disimpan ke Gist "db_token" (interval ${intervalVal} menit).`);
     } catch (e) {
         hideLoading();
-        alert("Gagal terhubung ke GAS saat menyimpan token: " + e.message);
+        alert("Gagal menyimpan token ke Gist db_token: " + (e.response?.data?.message || e.message));
     }
 }
 
 async function acakUlangTokenDrive() {
-    if (!confirm("Acak ulang token 4 digit di file token_cbt.xlsx (Google Drive) sekarang?")) return;
-    showLoading("Mengacak ulang token_cbt.xlsx di Google Drive...");
+    if (!confirm('Acak ulang & enkripsi token 4 digit baru di Gist "db_token" sekarang?')) return;
+    showLoading("Mengacak & mengenkripsi token baru ke Gist db_token...");
     try {
-        const res = await axios.post(GAS_URL, JSON.stringify({
-            action: "saveTokenConfig",
-            intervalMenit: tokenDriveState.intervalMenit || 5,
-            wajibToken: tokenDriveState.wajibToken !== false,
-            regenerate: true
-        }));
-        if (res.data && res.data.status === "success" && res.data.data) {
-            const d = res.data.data;
-            const serverNow = Number(d.serverNow || Date.now());
-            tokenDriveState = {
-                token: String(d.token || "----"),
-                intervalMenit: parseInt(d.intervalMenit, 10) || 5,
-                wajibToken: d.wajibToken !== false,
-                expiresAt: Number(d.expiresAt || 0),
-                serverOffsetMs: serverNow - Date.now()
-            };
-            updateTampilanTokenAdmin();
-        }
+        const newPlain = generateRandom4DigitClient();
+        await simpanStateTokenKeGist(
+            newPlain,
+            tokenDriveState.intervalMenit || 5,
+            tokenDriveState.wajibToken !== false,
+            Date.now()
+        );
+        updateTampilanTokenAdmin();
     } catch (e) {
-        alert("Gagal mengacak token di Drive: " + e.message);
+        alert("Gagal mengacak token di Gist db_token: " + (e.response?.data?.message || e.message));
     }
     hideLoading();
 }
@@ -3963,6 +4127,12 @@ function terapkanDataCbtMaster(data) {
     if (Array.isArray(data.db_jadwal)) daftarJadwalUjian = data.db_jadwal;
     if (data.db_pengaturan && typeof data.db_pengaturan === 'object') {
         pengaturanCbt = { ...pengaturanCbt, ...data.db_pengaturan };
+        if (data.db_pengaturan.dbTokenGistId) {
+            dbTokenGistInfo.gistId = String(data.db_pengaturan.dbTokenGistId);
+            dbTokenGistInfo.rawUrl = String(data.db_pengaturan.dbTokenRawUrl || "");
+            localStorage.setItem(TOKEN_GIST_ID_STORAGE_KEY, dbTokenGistInfo.gistId);
+            perbaruiLinkGistTokenUI(dbTokenGistInfo.gistId);
+        }
         if (data.db_pengaturan.adminPasswordSalt) {
             localStorage.setItem(ADMIN_SALT_STORAGE_KEY, String(data.db_pengaturan.adminPasswordSalt));
         }
@@ -7507,15 +7677,25 @@ async function mulaiUjianPilihan() {
     mapelSiswaLogin = mapel;
     namaUjianAktif = `${mapel.replace(/\s+/g, '_')}_${kelasSiswaLogin.replace(/\s+/g, '_')}`;
 
-    await setSesiToGAS({
-        username: myUsername,
-        deviceId: devId,
-        status: "Sedang Ujian",
-        nama: namaSiswaLogin,
-        kelas: kelasSiswaLogin,
-        mapel: mapelSiswaLogin,
-        updatedAt: getLocalIsoNow()
-    });
+    await Promise.all([
+        setSesiToGAS({
+            username: myUsername,
+            deviceId: devId,
+            status: "Sedang Ujian",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapelSiswaLogin,
+            updatedAt: getLocalIsoNow()
+        }),
+        axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            nama: namaSiswaLogin,
+            kelas: kelasSiswaLogin,
+            mapel: mapelSiswaLogin,
+            status: "Sedang Ujian",
+            nilai: "-"
+        })).catch(() => {})
+    ]);
 
     let allSoal = await fetchAllSoalFromGist({ mapel: mapelSiswaLogin, preferRaw: true });
     if(!allSoal || allSoal.length === 0) {
@@ -7721,16 +7901,20 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
         riwayatLogLama.maxCurang
     );
 
-    if (unameSiswa) {
-        await setSesiToGAS({
-            username: unameSiswa,
-            deviceId: sesiLama.deviceId || devId,
-            status: statusLogGabungan,
-            nama: namaSiswaLogin,
-            kelas: kelasSiswaLogin,
-            mapel: mapelSiswaLogin,
-            updatedAt: getLocalIsoNow()
-        });
+    const nowIso = getLocalIsoNow();
+    const sesiPayloadObj = unameSiswa ? {
+        username: unameSiswa,
+        deviceId: sesiLama.deviceId || devId,
+        status: statusLogGabungan,
+        nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        updatedAt: nowIso
+    } : null;
+
+    if (sesiPayloadObj) {
+        sesiLoginSiswa[unameSiswa] = { ...sesiPayloadObj };
+        simpanCacheAdminSesi(sesiLoginSiswa);
     }
 
     // Perbarui state log lokal secara langsung agar riwayat curang tidak hilang
@@ -7741,14 +7925,13 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
             normStr(r.kelas) === normStr(kelasSiswaLogin) &&
             normStr(r.mapel) === normStr(mapelSiswaLogin)
         );
-        const nowStr = getLocalIsoNow();
         if (idxLogLama !== -1) {
             logSiswaLogin[idxLogLama].status = statusLogGabungan;
             logSiswaLogin[idxLogLama].nilai = nilaiAkhir;
-            logSiswaLogin[idxLogLama].timestamp = nowStr;
+            logSiswaLogin[idxLogLama].timestamp = nowIso;
         } else {
             logSiswaLogin.push({
-                timestamp: nowStr,
+                timestamp: nowIso,
                 nama: namaSiswaLogin,
                 kelas: kelasSiswaLogin,
                 mapel: mapelSiswaLogin,
@@ -7759,23 +7942,36 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
         simpanCacheAdminLog(logSiswaLogin);
     }
 
-    let payload = {
-        action: "saveResult",
-        sheetName: "DB_Log_login_CBT",
+    const logPayloadObj = {
         nama: namaSiswaLogin,
+        kelas: kelasSiswaLogin,
+        mapel: mapelSiswaLogin,
+        status: statusLogGabungan,
+        nilai: nilaiAkhir
+    };
+
+    const hasilPayloadObj = {
+        nama: namaSiswaLogin,
+        nis: unameSiswa || "-",
         kelas: kelasSiswaLogin,
         mapel: mapelSiswaLogin,
         namaUjian: namaUjianAktif,
         nilai: nilaiAkhir,
         status: statusLogGabungan,
-        preserveCheatHistory: true,
-        isCheating: isCheating,
-        cheatReason: cheatReason,
-        timestamp: getLocalIsoNow()
+        jawaban: jawabanSiswa
     };
 
+    // Simpan ke antrean pending lokal jika sewaktu-waktu jaringan putus
+    simpanPendingSubmitExam({
+        sesi: sesiPayloadObj,
+        log: logPayloadObj,
+        hasil: hasilPayloadObj,
+        createdAt: Date.now()
+    });
+
     try {
-        await axios.post(GAS_URL, JSON.stringify(payload));
+        await kirimSubmitExamKeGAS(sesiPayloadObj, logPayloadObj, hasilPayloadObj);
+        hapusPendingSubmitExam(namaSiswaLogin, kelasSiswaLogin, mapelSiswaLogin);
         keluarFullscreenAman();
         hideLoading();
         if (isCheating) {
@@ -7786,7 +7982,7 @@ async function selesaiUjian(isCheating = false, cheatReason = "") {
     } catch(e) {
         keluarFullscreenAman();
         hideLoading();
-        alert(`Ujian berakhir (${statusLabel}). Nilai: ${nilaiAkhir}. Gagal mengirim ke server: ` + e.message);
+        alert(`Ujian berakhir (${statusLabel}). Nilai: ${nilaiAkhir}. Data tersimpan di antrean perangkat dan akan otomatis dikirim ulang ke server.`);
     }
 
     jawabanSiswa = {};
@@ -8012,6 +8208,7 @@ function renderTabelSiswaLogin() {
             <td>${statusHtml}</td>
             <td>${nilaiTampil}</td>
             <td>
+                ${String(l.status || '').toLowerCase().includes('sedang ujian') ? `<button type="button" onclick="tandaiLogSelesaiManual(${origIndex})" class="btn-sm btn-success" title="Tandai Selesai">Selesai</button>` : ''}
                 <button type="button" onclick="hapusBarisLogSpreadsheet(${origIndex})" class="btn-sm btn-danger">Hapus</button>
             </td>
         </tr>`;
@@ -8019,6 +8216,195 @@ function renderTabelSiswaLogin() {
 
     tbody.innerHTML = rowsHtml.join("");
     renderPaginationControls('paginationLogBar', indexed.length, pageLogAktif, PAGE_SIZE_LOG, 'gantiHalamanLog');
+}
+
+
+const PENDING_SUBMIT_STORAGE_KEY = "smantas_cbt_pending_submit_v1";
+
+function bacaPendingSubmitExam() {
+    try {
+        const raw = localStorage.getItem(PENDING_SUBMIT_STORAGE_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function simpanPendingSubmitExam(item) {
+    try {
+        const list = bacaPendingSubmitExam().filter(x =>
+            !(x && x.log &&
+              normStr(x.log.nama) === normStr(item.log.nama) &&
+              normStr(x.log.kelas) === normStr(item.log.kelas) &&
+              normStr(x.log.mapel) === normStr(item.log.mapel))
+        );
+        list.push(item);
+        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+function hapusPendingSubmitExam(nama, kelas, mapel) {
+    try {
+        const list = bacaPendingSubmitExam().filter(x =>
+            !(x && x.log &&
+              normStr(x.log.nama) === normStr(nama) &&
+              normStr(x.log.kelas) === normStr(kelas) &&
+              normStr(x.log.mapel) === normStr(mapel))
+        );
+        localStorage.setItem(PENDING_SUBMIT_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+async function kirimSubmitExamKeGAS(sesiObj, logObj, hasilObj) {
+    const bundleRes = await axios.post(GAS_URL, JSON.stringify({
+        action: "submitExamBundle",
+        sesi: sesiObj,
+        log: logObj,
+        hasil: hasilObj
+    }), { timeout: 20000 });
+
+    if (bundleRes.data && bundleRes.data.status === "success") {
+        return bundleRes.data;
+    }
+
+    // Fallback ke action individual di kode.gs jika bundle mengalami lock/timeout
+    const reqs = [];
+    if (sesiObj && sesiObj.username) {
+        reqs.push(axios.post(GAS_URL, JSON.stringify({
+            action: "setSesi",
+            username: sesiObj.username,
+            sesi: sesiObj
+        }), { timeout: 15000 }));
+    }
+    if (logObj) {
+        reqs.push(axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            ...logObj
+        }), { timeout: 15000 }));
+    }
+    if (hasilObj) {
+        reqs.push(axios.post(GAS_URL, JSON.stringify({
+            action: "submitResult",
+            ...hasilObj
+        }), { timeout: 15000 }));
+    }
+    const results = await Promise.all(reqs);
+    const failed = results.find(r => !r.data || r.data.status !== "success");
+    if (failed) {
+        throw new Error(failed.data?.message || "Gagal menyimpan sebagian data ke GAS");
+    }
+    return { status: "success" };
+}
+
+async function prosesAntreanPendingSubmitExam() {
+    const queue = bacaPendingSubmitExam();
+    if (queue.length === 0) return;
+    for (const item of queue) {
+        if (!item || !item.log) continue;
+        try {
+            await kirimSubmitExamKeGAS(item.sesi, item.log, item.hasil);
+            hapusPendingSubmitExam(item.log.nama, item.log.kelas, item.log.mapel);
+        } catch (e) {
+            console.warn("Retry pending submit ujian tertunda:", e.message);
+        }
+    }
+}
+
+async function sinkronkanStatusLogTertinggal() {
+    showLoading("Memeriksa & menyinkronkan status log yang masih 'Sedang Ujian'...");
+    try {
+        await Promise.all([fetchSesiFromGAS(true), fetchLogLoginFromGAS()]);
+        const bersih = getLogsBersih();
+        const sesiList = Object.values(sesiLoginSiswa || {});
+        const kandidatPerbaikan = [];
+
+        for (let i = 0; i < bersih.length; i++) {
+            const logRow = bersih[i];
+            const stLogLow = String(logRow.status || "").trim().toLowerCase();
+            if (!stLogLow.includes("sedang ujian") && !stLogLow.includes("login / mengerjakan")) continue;
+
+            const logNamaNorm = normStr(logRow.nama);
+            const logKelasNorm = normStr(logRow.kelas);
+            const logMapelNorm = normStr(logRow.mapel);
+
+            // Cari kecocokan pada data Sesi yang sudah Selesai / Curang / Direset
+            const sesiCocok = sesiList.find(s =>
+                normStr(s.nama) === logNamaNorm &&
+                (!logKelasNorm || normStr(s.kelas) === logKelasNorm) &&
+                (!logMapelNorm || normStr(s.mapel) === logMapelNorm)
+            );
+
+            if (sesiCocok) {
+                const stSesi = String(sesiCocok.status || "").trim();
+                const stSesiLow = stSesi.toLowerCase();
+                if (stSesiLow.includes("selesai") || stSesiLow.includes("curang") || stSesiLow.includes("reset")) {
+                    const statusFix = stSesiLow.includes("reset") ? "Direset" : stSesi;
+                    kandidatPerbaikan.push({
+                        nama: logRow.nama,
+                        kelas: logRow.kelas,
+                        mapel: logRow.mapel,
+                        status: statusFix,
+                        nilai: logRow.nilai !== undefined && logRow.nilai !== null ? logRow.nilai : "-"
+                    });
+                }
+            }
+        }
+
+        if (kandidatPerbaikan.length === 0) {
+            hideLoading();
+            alert("Tidak ditemukan baris log 'Sedang Ujian' yang memiliki status akhir berbeda di sheet Sesi.\n\nJika siswa memang tidak menekan tombol Selesai / menutup paksa browser saat ujian berlangsung, gunakan tombol 'Reset-[Mapel]' di tab Monitoring Akun atau klik 'Selesaikan' pada baris log terkait.");
+            return;
+        }
+
+        await jalankanBatchParalel(kandidatPerbaikan, 5, async (item) => {
+            await axios.post(GAS_URL, JSON.stringify({
+                action: "logLogin",
+                nama: item.nama,
+                kelas: item.kelas,
+                mapel: item.mapel,
+                status: item.status,
+                nilai: item.nilai
+            }));
+        });
+
+        await fetchLogLoginFromGAS();
+        hideLoading();
+        alert(`Berhasil menyinkronkan ${kandidatPerbaikan.length} baris log siswa yang tertinggal status 'Sedang Ujian'!`);
+    } catch (e) {
+        hideLoading();
+        alert("Gagal menyinkronkan status log: " + e.message);
+    }
+}
+
+async function tandaiLogSelesaiManual(origIndex) {
+    const bersih = getLogsBersih();
+    if (origIndex < 0 || origIndex >= bersih.length) return;
+    const row = bersih[origIndex];
+    if (!confirm(`Ubah status log "${row.nama}" (${row.kelas} - ${row.mapel}) dari "${row.status}" menjadi "Selesai"?`)) return;
+
+    showLoading("Memperbarui status log di Spreadsheet...");
+    try {
+        const nilaiVal = (row.nilai !== undefined && row.nilai !== null && String(row.nilai).trim() !== "") ? row.nilai : 0;
+        const res = await axios.post(GAS_URL, JSON.stringify({
+            action: "logLogin",
+            nama: row.nama,
+            kelas: row.kelas,
+            mapel: row.mapel,
+            status: "Selesai",
+            nilai: nilaiVal
+        }));
+        if (res.data && res.data.status === "success") {
+            await fetchLogLoginFromGAS();
+            hideLoading();
+        } else {
+            hideLoading();
+            alert("Gagal memperbarui status log: " + (res.data?.message || "Unknown error"));
+        }
+    } catch (e) {
+        hideLoading();
+        alert("Gagal memperbarui status log: " + e.message);
+    }
 }
 
 function prefetchBackgroundDataOnce() {
@@ -8092,6 +8478,7 @@ window.onload = async function() {
         sinkronkanHeaderAdmin();
         prefetchBackgroundDataOnce();
     }
+    prosesAntreanPendingSubmitExam().catch(() => {});
 };
 </script>
 </body>
