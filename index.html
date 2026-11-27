@@ -4934,6 +4934,17 @@ function renderTombolBulkResetBerdasarkanFilter(filteredItems, jadwalCache) {
     container.innerHTML = btns.join("");
 }
 
+async function jalankanBatchParalel(items, concurrencyLimit, workerFn) {
+    let idx = 0;
+    const workers = Array.from({ length: Math.min(concurrencyLimit, items.length) }, async () => {
+        while (idx < items.length) {
+            const currentIdx = idx++;
+            await workerFn(items[currentIdx], currentIdx);
+        }
+    });
+    await Promise.all(workers);
+}
+
 async function resetMassalMapelBerdasarkanFilter(mapelEnc) {
     const mapel = decodeURIComponent(mapelEnc);
     const statusFilter = (document.getElementById('filterStatusSesi')?.value || "").trim();
@@ -4945,8 +4956,9 @@ async function resetMassalMapelBerdasarkanFilter(mapelEnc) {
         return;
     }
 
+    const jadwalCache = buildActiveJadwalCacheMap();
     const targetItems = filteredItems.filter(({ username, s }) => {
-        const mapelSiswa = kumpulkanMapelAktifSiswa(username, s);
+        const mapelSiswa = kumpulkanMapelAktifSiswaFast(username, s, jadwalCache);
         return mapelSiswa.some(m => normStr(m) === normStr(mapel));
     });
 
@@ -4957,52 +4969,65 @@ async function resetMassalMapelBerdasarkanFilter(mapelEnc) {
         `Kunci mapel & status pelanggaran/selesai untuk mapel "${mapel}" pada siswa-siswa tersebut akan dibuka.`
     )) return;
 
-    showLoading(`Mereset mapel ${mapel} untuk ${daftarEksekusi.length} siswa (${labelFilter})...`);
-
-    for (let i = 0; i < daftarEksekusi.length; i++) {
-        const { username, s: sesiLama } = daftarEksekusi[i];
-        tandaiMapelDiresetLokal(username, mapel);
-
-        const siswaData = databaseSiswa.find(item => String(item.username).trim() === String(username).trim());
+    const nowIso = getLocalIsoNow();
+    const payloads = daftarEksekusi.map(({ username, s: sesiLama }) => {
+        const siswaData = studentFastMap.get(String(username).trim().toLowerCase()) || databaseSiswa.find(item => String(item.username).trim() === String(username).trim());
         const kelasTargetReset = (sesiLama && sesiLama.kelas) || (siswaData ? siswaData.kelas : "");
         const namaTargetReset = (sesiLama && sesiLama.nama) || (siswaData ? siswaData.nama : "");
         const namaUjianTargetReset = kelasTargetReset
             ? `${mapel.replace(/\s+/g, '_')}_${kelasTargetReset.replace(/\s+/g, '_')}`
             : "";
 
-        try {
-            await axios.post(GAS_URL, JSON.stringify({
-                action: "resetMapelSiswa",
-                sheetName: "DB_Log_login_CBT",
-                username: username,
-                nis: username,
-                nama: namaTargetReset,
-                kelas: kelasTargetReset,
-                mapel: mapel,
-                namaUjian: namaUjianTargetReset,
-                deletePreviousResult: true,
-                status: "Direset",
-                nilai: ""
-            }));
-        } catch (e) {
-            console.warn(`Gagal resetMapelSiswa untuk ${username}:`, e);
-        }
+        terapkanResetMapelKeStateLokal(username, namaTargetReset, kelasTargetReset, mapel);
 
-        await setSesiToGAS({
-            username: username,
+        return {
+            username,
             deviceId: (sesiLama && sesiLama.deviceId) || "",
-            status: `Reset-${mapel} (Direset)`,
-            nama: namaTargetReset,
-            kelas: kelasTargetReset,
-            mapel: mapel,
-            updatedAt: getLocalIsoNow()
-        });
-    }
+            namaTargetReset,
+            kelasTargetReset,
+            namaUjianTargetReset
+        };
+    });
 
-    await fetchSesiFromGAS(true);
-    await fetchLogLoginFromGAS();
-    hideLoading();
-    alert(`Berhasil me-reset mapel "${mapel}" untuk ${daftarEksekusi.length} siswa pada filter "${labelFilter}"!`);
+    // Optimistic UI: langsung tampilkan hasil reset di tabel tanpa menunggu antrean GAS
+    renderTabelSesiAktif();
+    renderTabelSiswaLogin();
+
+    showLoading(`Menyinkronkan reset mapel ${mapel} (${payloads.length} siswa) ke GAS...`);
+    try {
+        await jalankanBatchParalel(payloads, 6, async (item) => {
+            try {
+                await Promise.all([
+                    axios.post(GAS_URL, JSON.stringify({
+                        action: "resetMapelSiswa",
+                        sheetName: "DB_Log_login_CBT",
+                        username: item.username,
+                        nis: item.username,
+                        nama: item.namaTargetReset,
+                        kelas: item.kelasTargetReset,
+                        mapel: mapel,
+                        namaUjian: item.namaUjianTargetReset,
+                        deletePreviousResult: true,
+                        status: "Direset",
+                        nilai: ""
+                    })),
+                    setSesiToGAS({
+                        username: item.username,
+                        deviceId: item.deviceId,
+                        status: `Reset-${mapel} (Direset)`,
+                        nama: item.namaTargetReset,
+                        kelas: item.kelasTargetReset,
+                        mapel: mapel,
+                        updatedAt: nowIso
+                    })
+                ]);
+            } catch (e) {
+                console.warn(`Gagal resetMapelSiswa untuk ${item.username}:`, e);
+            }
+        });
+    } finally {
+        hideLoading();
+    }
 }
 
 async function resetMassalPerangkatBerdasarkanFilter() {
@@ -5020,16 +5045,28 @@ async function resetMassalPerangkatBerdasarkanFilter() {
         `Kunci perangkat lama pada siswa-siswa tersebut akan dilepas.`
     )) return;
 
-    showLoading(`Mereset perangkat untuk ${filteredItems.length} siswa (${labelFilter})...`);
+    const usernames = filteredItems.map(item => item.username);
+    usernames.forEach(uname => {
+        delete sesiLoginSiswa[uname];
+    });
+    simpanCacheAdminSesi(sesiLoginSiswa);
+    renderTabelSesiAktif();
 
-    for (let i = 0; i < filteredItems.length; i++) {
-        const { username } = filteredItems[i];
-        await deleteSesiFromGAS(username);
+    showLoading(`Menyinkronkan reset perangkat (${usernames.length} siswa) ke GAS...`);
+    try {
+        await jalankanBatchParalel(usernames, 6, async (uname) => {
+            try {
+                await axios.post(GAS_URL, JSON.stringify({
+                    action: "resetSesi",
+                    username: uname
+                }));
+            } catch (e) {
+                console.warn(`Gagal resetSesi untuk ${uname}:`, e);
+            }
+        });
+    } finally {
+        hideLoading();
     }
-
-    await fetchSesiFromGAS(true);
-    hideLoading();
-    alert(`Berhasil me-reset perangkat untuk ${filteredItems.length} siswa pada filter "${labelFilter}"!`);
 }
 
 function renderTabelSesiAktif() {
@@ -5095,14 +5132,51 @@ function renderTabelSesiAktif() {
     renderPaginationControls('paginationSesiBar', filteredItems.length, pageSesiAktif, PAGE_SIZE_SESI, 'gantiHalamanSesi');
 }
 
+function terapkanResetMapelKeStateLokal(username, nama, kelas, mapel) {
+    tandaiMapelDiresetLokal(username, mapel);
+    const nowIso = getLocalIsoNow();
+    const sesiLama = sesiLoginSiswa[username] || {
+        username: username,
+        deviceId: "",
+        nama: nama || "",
+        kelas: kelas || ""
+    };
+    sesiLoginSiswa[username] = {
+        ...sesiLama,
+        username: username,
+        nama: nama || sesiLama.nama || "",
+        kelas: kelas || sesiLama.kelas || "",
+        mapel: mapel,
+        status: `Reset-${mapel} (Direset)`,
+        updatedAt: nowIso,
+        updaetdAt: nowIso
+    };
+    simpanCacheAdminSesi(sesiLoginSiswa);
+
+    if (Array.isArray(logSiswaLogin) && logSiswaLogin.length > 0) {
+        const namaLow = normStr(nama || sesiLama.nama || "");
+        const kelasLow = normStr(kelas || sesiLama.kelas || "");
+        const mapelLow = normStr(mapel);
+        for (let i = 0; i < logSiswaLogin.length; i++) {
+            const r = logSiswaLogin[i];
+            if (!r) continue;
+            if (
+                (!namaLow || normStr(r.nama) === namaLow) &&
+                (!kelasLow || normStr(r.kelas) === kelasLow) &&
+                normStr(r.mapel) === mapelLow
+            ) {
+                r.status = "Direset";
+            }
+        }
+        simpanCacheAdminLog(logSiswaLogin);
+    }
+}
+
 async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
     const username = decodeURIComponent(usernameEnc);
     const mapel = decodeURIComponent(mapelEnc);
 
     if(!confirm(`Reset ujian mata pelajaran "${mapel}" untuk akun "${username}"?\nKunci mapel & status pelanggaran/selesai untuk mapel ini akan dibuka agar siswa bisa mengerjakan ulang.`)) return;
-
-    showLoading(`Mereset mapel ${mapel} untuk ${username}...`);
-    tandaiMapelDiresetLokal(username, mapel);
 
     const sesiLama = sesiLoginSiswa[username] || {
         username: username,
@@ -5113,53 +5187,56 @@ async function resetMapelSiswaAdmin(usernameEnc, mapelEnc) {
         mapel: mapel
     };
 
-    const kelasTargetReset = sesiLama.kelas || (databaseSiswa.find(s => String(s.username).trim() === String(username).trim())?.kelas || "");
-    const namaTargetReset = sesiLama.nama || (databaseSiswa.find(s => String(s.username).trim() === String(username).trim())?.nama || "");
+    const siswaMatch = studentFastMap.get(String(username).trim().toLowerCase()) || databaseSiswa.find(s => String(s.username).trim() === String(username).trim());
+    const kelasTargetReset = sesiLama.kelas || (siswaMatch ? siswaMatch.kelas : "");
+    const namaTargetReset = sesiLama.nama || (siswaMatch ? siswaMatch.nama : "");
     const namaUjianTargetReset = kelasTargetReset ? `${mapel.replace(/\s+/g, '_')}_${kelasTargetReset.replace(/\s+/g, '_')}` : "";
+    const nowIso = getLocalIsoNow();
+
+    // Optimistic UI update: langsung perbarui tabel & buka layar tanpa menunggu round-trip lambat
+    terapkanResetMapelKeStateLokal(username, namaTargetReset, kelasTargetReset, mapel);
+    renderTabelSesiAktif();
+    renderTabelSiswaLogin();
 
     try {
-        await axios.post(GAS_URL, JSON.stringify({
-            action: "resetMapelSiswa",
-            sheetName: "DB_Log_login_CBT",
-            username: username,
-            nis: username,
-            nama: namaTargetReset,
-            kelas: kelasTargetReset,
-            mapel: mapel,
-            namaUjian: namaUjianTargetReset,
-            deletePreviousResult: true,
-            status: "Direset",
-            nilai: ""
-        }));
+        await Promise.all([
+            axios.post(GAS_URL, JSON.stringify({
+                action: "resetMapelSiswa",
+                sheetName: "DB_Log_login_CBT",
+                username: username,
+                nis: username,
+                nama: namaTargetReset,
+                kelas: kelasTargetReset,
+                mapel: mapel,
+                namaUjian: namaUjianTargetReset,
+                deletePreviousResult: true,
+                status: "Direset",
+                nilai: ""
+            })),
+            setSesiToGAS({
+                username: username,
+                deviceId: sesiLama.deviceId || "",
+                status: `Reset-${mapel} (Direset)`,
+                nama: namaTargetReset,
+                kelas: kelasTargetReset,
+                mapel: mapel,
+                updatedAt: nowIso
+            })
+        ]);
     } catch (e) {
-        console.warn("Peringatan saat memanggil resetMapelSiswa ke GAS:", e);
+        console.warn("Peringatan saat sinkron resetMapelSiswa ke GAS:", e);
     }
-
-    await setSesiToGAS({
-        username: username,
-        deviceId: sesiLama.deviceId || "",
-        status: `Reset-${mapel} (Direset)`,
-        nama: sesiLama.nama || "",
-        kelas: sesiLama.kelas || "",
-        mapel: mapel,
-        updatedAt: getLocalIsoNow()
-    });
-
-    await fetchSesiFromGAS(true);
-    await fetchLogLoginFromGAS();
-    hideLoading();
-    alert(`Ujian mapel "${mapel}" untuk "${username}" berhasil di-reset dan tidak lagi terkunci!`);
 }
 
 async function resetPerangkatSiswaAdmin(usernameEnc) {
     const username = decodeURIComponent(usernameEnc);
     if(!confirm(`Reset kunci perangkat untuk akun "${username}"?\nPerangkat lama akan dilepas dan sesi direset agar bersih / dapat digunakan kembali.`)) return;
 
-    showLoading(`Mereset kunci perangkat untuk ${username}...`);
-    await deleteSesiFromGAS(username);
-    await fetchSesiFromGAS(true);
-    hideLoading();
-    alert(`Kunci perangkat untuk "${username}" berhasil di-reset!`);
+    delete sesiLoginSiswa[username];
+    simpanCacheAdminSesi(sesiLoginSiswa);
+    renderTabelSesiAktif();
+
+    deleteSesiFromGAS(username).catch(e => console.warn("Gagal sinkron reset perangkat ke GAS:", e));
 }
 
 async function hapusSesiSiswaAdmin(usernameEnc) {
@@ -5169,11 +5246,11 @@ async function hapusSesiSiswaAdmin(usernameEnc) {
 
     if (!confirm(`Hapus baris sesi untuk "${labelSiswa}" dari tabel Kontrol Sesi & sheet Sesi GAS?`)) return;
 
-    showLoading(`Menghapus sesi untuk ${labelSiswa}...`);
-    await deleteSesiFromGAS(username);
-    await fetchSesiFromGAS(true);
-    hideLoading();
-    alert(`Sesi untuk "${labelSiswa}" berhasil dihapus!`);
+    delete sesiLoginSiswa[username];
+    simpanCacheAdminSesi(sesiLoginSiswa);
+    renderTabelSesiAktif();
+
+    deleteSesiFromGAS(username).catch(e => console.warn("Gagal sinkron hapus sesi ke GAS:", e));
 }
 
 async function hapusSemuaSesiGAS() {
