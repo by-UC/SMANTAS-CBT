@@ -3483,7 +3483,7 @@ function parseTimestampFlexibleMs(val) {
 
 function getLogTimestampMs(row, fallbackIdx = 0) {
     if (!row || typeof row !== "object") return fallbackIdx;
-    const rawTs = row.timestamp ?? row.Timestamp ?? row.updaetdAt ?? row.UpdaetdAt ?? row.updatedAt ?? row.UpdatedAt ?? row.waktu ?? row.Waktu ?? "";
+    const rawTs = row.timestamp ?? row.Timestamp ?? row.updatedAt ?? row.UpdatedAt ?? row.updatedAt ?? row.UpdatedAt ?? row.waktu ?? row.Waktu ?? "";
     const parsed = parseTimestampFlexibleMs(rawTs);
     return parsed > 0 ? parsed : fallbackIdx;
 }
@@ -3513,8 +3513,8 @@ function formatTimestampTampil(rawVal) {
 function getSesiRawTimestampStr(sesiObj) {
     if (!sesiObj || typeof sesiObj !== "object") return "-";
     const raw =
-        sesiObj.updaetdAt ??
-        sesiObj.UpdaetdAt ??
+        sesiObj.updatedAt ??
+        sesiObj.UpdatedAt ??
         sesiObj.updatedAt ??
         sesiObj.UpdatedAt ??
         sesiObj.UpdateAt ??
@@ -3530,8 +3530,8 @@ function getLogRawTimestampStr(logRow) {
     const raw =
         logRow.timestamp ??
         logRow.Timestamp ??
-        logRow.updaetdAt ??
-        logRow.UpdaetdAt ??
+        logRow.updatedAt ??
+        logRow.UpdatedAt ??
         logRow.updatedAt ??
         logRow.UpdatedAt ??
         logRow.waktu ??
@@ -3560,7 +3560,7 @@ function getLogRawTimestampStr(logRow) {
 
 function getSesiUpdatedAtMs(sesiObj, fallbackIdx = 0) {
     if (!sesiObj || typeof sesiObj !== "object") return fallbackIdx;
-    const rawTs = sesiObj.updaetdAt ?? sesiObj.UpdaetdAt ?? sesiObj.updatedAt ?? sesiObj.UpdatedAt ?? sesiObj.UpdateAt ?? sesiObj.updateAt ?? sesiObj.timestamp ?? sesiObj.Timestamp ?? "";
+    const rawTs = sesiObj.updatedAt ?? sesiObj.UpdatedAt ?? sesiObj.updatedAt ?? sesiObj.UpdatedAt ?? sesiObj.UpdateAt ?? sesiObj.updateAt ?? sesiObj.timestamp ?? sesiObj.Timestamp ?? "";
     const parsed = parseTimestampFlexibleMs(rawTs);
     return parsed > 0 ? parsed : fallbackIdx;
 }
@@ -4534,8 +4534,8 @@ function normalisasiSesiDariGAS(rawData) {
                     nama: item.nama || "",
                     kelas: item.kelas || "",
                     mapel: item.mapel || "-",
-                    updaetdAt: item.updaetdAt || item.UpdaetdAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
-                    updatedAt: item.updaetdAt || item.UpdaetdAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
+                    updatedAt: item.updatedAt || item.UpdatedAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
+                    updatedAt: item.updatedAt || item.UpdatedAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
                     _rowOrder: idx
                 };
             }
@@ -4553,8 +4553,8 @@ function normalisasiSesiDariGAS(rawData) {
                         nama: item.nama || "",
                         kelas: item.kelas || "",
                         mapel: item.mapel || "-",
-                        updaetdAt: item.updaetdAt || item.UpdaetdAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
-                    updatedAt: item.updaetdAt || item.UpdaetdAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
+                        updatedAt: item.updatedAt || item.UpdatedAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
+                    updatedAt: item.updatedAt || item.UpdatedAt || item.updatedAt || item.UpdatedAt || item.UpdateAt || item.updateAt || item.timestamp || item.Timestamp || "",
                         _rowOrder: idx
                     };
                 }
@@ -5456,7 +5456,7 @@ function terapkanResetMapelKeStateLokal(username, nama, kelas, mapel) {
         mapel: mapel,
         status: `Reset-${mapel} (Direset)`,
         updatedAt: nowIso,
-        updaetdAt: nowIso
+        updatedAt: nowIso
     };
     simpanCacheAdminSesi(sesiLoginSiswa);
 
