@@ -2690,6 +2690,14 @@ function perbaruiLinkGistTokenUI(gistId) {
 }
 
 async function ensureDbTokenGist(forceCreateIfMissing = true) {
+    if (!dbTokenGistInfo.gistId && typeof pengaturanCbt === "object" && pengaturanCbt && pengaturanCbt.dbTokenGistId) {
+        dbTokenGistInfo.gistId = String(pengaturanCbt.dbTokenGistId).trim();
+        dbTokenGistInfo.rawUrl = String(pengaturanCbt.dbTokenRawUrl || "").trim();
+        if (dbTokenGistInfo.gistId) {
+            localStorage.setItem(TOKEN_GIST_ID_STORAGE_KEY, dbTokenGistInfo.gistId);
+        }
+    }
+
     if (dbTokenGistInfo.gistId) {
         perbaruiLinkGistTokenUI(dbTokenGistInfo.gistId);
         return dbTokenGistInfo;
@@ -2705,12 +2713,21 @@ async function ensureDbTokenGist(forceCreateIfMissing = true) {
         );
         if (found) {
             const fname = found.files[TOKEN_GIST_FILE] ? TOKEN_GIST_FILE : Object.keys(found.files)[0];
+            const foundRaw = found.files[fname]?.raw_url || `https://gist.githubusercontent.com/by-UC/${found.id}/raw/${TOKEN_GIST_FILE}`;
             dbTokenGistInfo = {
                 gistId: found.id,
-                rawUrl: found.files[fname]?.raw_url || `https://gist.githubusercontent.com/by-UC/${found.id}/raw/${TOKEN_GIST_FILE}`
+                rawUrl: foundRaw
             };
             localStorage.setItem(TOKEN_GIST_ID_STORAGE_KEY, found.id);
             perbaruiLinkGistTokenUI(found.id);
+
+            if (typeof pengaturanCbt === "object" && pengaturanCbt.dbTokenGistId !== found.id) {
+                pengaturanCbt.dbTokenGistId = found.id;
+                pengaturanCbt.dbTokenRawUrl = foundRaw;
+                if (localStorage.getItem("isAdminLoggedIn") === "true" && typeof saveCbtDatabaseToGist === "function") {
+                    saveCbtDatabaseToGist().catch(() => {});
+                }
+            }
             return dbTokenGistInfo;
         }
     } catch (e) {
@@ -2720,7 +2737,7 @@ async function ensureDbTokenGist(forceCreateIfMissing = true) {
     if (!forceCreateIfMissing) return dbTokenGistInfo;
 
     const now = Date.now();
-    const intervalMenit = 5;
+    const intervalMenit = Math.max(1, parseInt(document.getElementById("settingTokenIntervalMenit")?.value, 10) || 5);
     const initialPlain = generateRandom4DigitClient();
     const initialCipher = enkripsiToken4Digit(initialPlain);
     const initialPayload = {
@@ -2753,6 +2770,9 @@ async function ensureDbTokenGist(forceCreateIfMissing = true) {
     if (typeof pengaturanCbt === "object") {
         pengaturanCbt.dbTokenGistId = newId;
         pengaturanCbt.dbTokenRawUrl = newRaw;
+        if (typeof saveCbtDatabaseToGist === "function") {
+            await saveCbtDatabaseToGist().catch(() => {});
+        }
     }
     return dbTokenGistInfo;
 }
@@ -2790,6 +2810,14 @@ async function simpanStateTokenKeGist(plainToken, intervalMenit, wajibToken, cus
         dbTokenGistInfo.rawUrl = patchRes.data.files[TOKEN_GIST_FILE].raw_url;
     }
 
+    if (typeof pengaturanCbt === "object" && pengaturanCbt.dbTokenGistId !== info.gistId) {
+        pengaturanCbt.dbTokenGistId = info.gistId;
+        pengaturanCbt.dbTokenRawUrl = dbTokenGistInfo.rawUrl;
+        if (typeof saveCbtDatabaseToGist === "function") {
+            saveCbtDatabaseToGist().catch(() => {});
+        }
+    }
+
     tokenDriveState = {
         token: plainToken,
         intervalMenit: cleanInterval,
@@ -2805,7 +2833,7 @@ async function simpanStateTokenKeGist(plainToken, intervalMenit, wajibToken, cus
 
 async function fetchTokenDariDrive(silent = true, options = {}) {
     const isAdminRotator = options.allowRotate === true || localStorage.getItem("isAdminLoggedIn") === "true";
-    const forceApi = options.forceApi === true;
+    const forceApi = options.forceApi === true || isAdminRotator;
 
     if (isSyncingTokenFromDrive && !forceApi) return tokenDriveState;
     isSyncingTokenFromDrive = true;
@@ -2901,7 +2929,7 @@ function updateTampilanTokenAdmin() {
     timerEl.innerText = formatDetikKeMmSs(remainingSec);
 
     if (remainingMs <= 0 && !isSyncingTokenFromDrive) {
-        fetchTokenDariDrive(true);
+        fetchTokenDariDrive(true, { allowRotate: true, forceApi: true });
     }
 }
 
@@ -2914,8 +2942,12 @@ function mulaiTimerTokenAdmin() {
 function sinkronkanInputPengaturanToken() {
     const inpInterval = document.getElementById("settingTokenIntervalMenit");
     const selWajib = document.getElementById("settingWajibToken");
-    if (inpInterval) inpInterval.value = tokenDriveState.intervalMenit || 5;
-    if (selWajib) selWajib.value = tokenDriveState.wajibToken !== false ? "true" : "false";
+    if (inpInterval && document.activeElement !== inpInterval) {
+        inpInterval.value = tokenDriveState.intervalMenit || 5;
+    }
+    if (selWajib && document.activeElement !== selWajib) {
+        selWajib.value = tokenDriveState.wajibToken !== false ? "true" : "false";
+    }
     updateTampilanTokenAdmin();
 }
 
@@ -2928,7 +2960,7 @@ async function simpanPengaturanToken() {
         return;
     }
 
-    showLoading("Mengenkripsi & menyimpan token ke Gist db_token...");
+    showLoading("Mengenkripsi & menyimpan pengaturan interval token ke Gist db_token.json...");
     try {
         const now = Date.now();
         const existingValid = /^\d{4}$/.test(String(tokenDriveState.token || "")) && now < (tokenDriveState.expiresAt || 0);
@@ -2938,10 +2970,10 @@ async function simpanPengaturanToken() {
         sinkronkanInputPengaturanToken();
         sinkronkanTampilanInputTokenSiswa();
         hideLoading();
-        alert(`Berhasil! Token terenkripsi (AES-256) disimpan ke Gist "db_token" (interval ${intervalVal} menit).`);
+        alert(`Berhasil! Pengaturan interval (${intervalVal} menit) & token terenkripsi tersimpan ke db_token.json di Gist.`);
     } catch (e) {
         hideLoading();
-        alert("Gagal menyimpan token ke Gist db_token: " + (e.response?.data?.message || e.message));
+        alert("Gagal menyimpan token ke Gist db_token.json: " + (e.response?.data?.message || e.message));
     }
 }
 
@@ -8392,6 +8424,7 @@ function switchAdminTab(tabName) {
         document.getElementById('adminTabSettings').classList.add('active');
         updateLabelJp();
         sinkronkanInputPengaturanToken();
+        fetchTokenDariDrive(true, { forceApi: true }).catch(() => {});
         renderAdminPasswordDisplay();
     }
 }
